@@ -35,7 +35,7 @@ class T55Card:
 
 
 class LabModelTests(unittest.TestCase):
-    def setUp(self):self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
+    def setUp(self):self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name).resolve()
     def pump_lf(self,plan,card):
         for _ in range(100):
             op=plan.next_operation()
@@ -68,7 +68,7 @@ class LabModelTests(unittest.TestCase):
             try:plan.consume(*response)
             except ValueError as exc:plan.fail(exc);break
         self.assertFalse(plan.verified);self.assertEqual(card.writes,1);self.assertIsNone(plan.next_operation())
-        self.assertTrue(json.loads((self.root/'lf-write-report.json').read_text())['may_have_written'])
+        self.assertTrue(json.loads((self.root/'lf-write-report.json').read_text(encoding='utf-8'))['may_have_written'])
     def test_resume_skips_known_data_but_rechecks_uid_and_preserves_old_checkpoint(self):
         card=Card(classic_image());det=Detection('mfc',UID,'MIFARE Classic','1k',True)
         keys=[{'sector':s,'type':t,'key_hex':'FFFFFFFFFFFF'} for s in range(2) for t in ('A','B')]
@@ -119,7 +119,7 @@ class LabAppTests(unittest.TestCase):
         self.run=self.enterContext(patch('pm3gui.app.ClientRunner.run'))
         self.operations=self.enterContext(patch('pm3gui.app.ClientRunner.run_operation'))
         from pm3gui.app import MainWindow
-        self.window=MainWindow(Path(self.temp.name));self.addCleanup(self.cleanup)
+        self.window=MainWindow(Path(self.temp.name).resolve());self.addCleanup(self.cleanup)
     def cleanup(self):
         w=self.window
         if hasattr(w,'emulation_timer'):w.emulation_timer.stop()
@@ -191,7 +191,7 @@ class LabAppTests(unittest.TestCase):
     def test_resume_controller_checks_uid_and_keys_before_only_missing_sectors(self):
         from pm3gui.operations import key_file_for_session,sector_trailer
         w=self.window;card=Card(classic_image());keys=[{'sector':0,'type':t,'key_hex':'FFFFFFFFFFFF'} for t in ('A','B')]
-        first=ClassicPartialRead(Detection('mfc',UID,'MIFARE Classic','1k',True),keys,Path(self.temp.name)/'prior')
+        first=ClassicPartialRead(Detection('mfc',UID,'MIFARE Classic','1k',True),keys,Path(self.temp.name).resolve()/'prior')
         while (op:=first.next_operation()) is not None:first.consume(*card.respond(op))
         cid=w.library.create_card('Partial',first.dump(),uid=UID,protocol='MIFARE Classic 1K');w.load_card(cid)
         w.open_resume_read();w.resume_dialog.start.click();self.assertEqual(w.read_job['stage'],'resume_select')

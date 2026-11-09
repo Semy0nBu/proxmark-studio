@@ -148,7 +148,7 @@ class FirmwareTests(unittest.TestCase):
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.setup = self.root/'outputs/device-setup'
         self.setup.mkdir(parents=True)
         self.manifests = {}
@@ -218,7 +218,7 @@ class FirmwareTests(unittest.TestCase):
         manifest['artifact_files']['fullimage.elf']['path'] = 'fullimage.elf'
         manifest['artifact_files']['proxmark3.exe']['path'] = 'client/proxmark3.exe'
         path = root/'portable.json'
-        path.write_text(json.dumps(manifest))
+        path.write_text(json.dumps(manifest), encoding='utf-8')
         self.assertEqual(self.catalog.prepare('usb', manifest_path=path).image_path, root/'fullimage.elf')
 
     def test_compatible_client_only_extension_overrides_stale_client_hash(self):
@@ -231,11 +231,11 @@ class FirmwareTests(unittest.TestCase):
         certificate = {'status': 'ready_offline_verified', 'arm_and_metadata_unchanged': True,
                        'client': str(prepared.client_path), 'new_exe_sha256': digest(new), 'before': entries, 'after': entries}
         path = self.setup/'gui-scoped-cancel-client-build-result.json'
-        path.write_text(json.dumps(certificate))
+        path.write_text(json.dumps(certificate), encoding='utf-8')
         updated = self.prepared('blueshark')
         self.assertEqual(updated.client_sha256, digest(new))
         certificate['after'] = dict(entries, **{'armsrc/obj/fullimage.elf': {'exists': True, 'sha256': 'c'*64}})
-        path.write_text(json.dumps(certificate))
+        path.write_text(json.dumps(certificate), encoding='utf-8')
         with self.assertRaises(FirmwareError):
             self.prepared('blueshark')
 
@@ -287,7 +287,7 @@ class FirmwareTests(unittest.TestCase):
         self.assertEqual(writes, [prepared.flash_argv()[1:]])
         for name, size in [('before-internal.bin', INTERNAL_SIZE), ('before-spi-1.bin', SPI_SIZE), ('after-internal.bin', INTERNAL_SIZE)]:
             self.assertEqual((prepared.backup_directory/name).stat().st_size, size)
-        self.assertEqual(json.loads(Path(result['report_path']).read_text())['status'], 'installed_readback_verified')
+        self.assertEqual(json.loads(Path(result['report_path']).read_text(encoding='utf-8'))['status'], 'installed_readback_verified')
 
     def test_bad_usb_and_resident_client_stop_before_any_flash(self):
         prepared = self.prepared()
@@ -317,7 +317,7 @@ class FirmwareTests(unittest.TestCase):
         with self.assertRaises(FirmwareError):
             execute_flash(prepared, io=io)
         self.assertEqual(io.flash_calls, 0)
-        report = json.loads((prepared.backup_directory/'report.json').read_text())
+        report = json.loads((prepared.backup_directory/'report.json').read_text(encoding='utf-8'))
         self.assertIsNone(report['bootrom_preserved'])
         self.assertFalse(report['verified'])
 
@@ -327,7 +327,7 @@ class FirmwareTests(unittest.TestCase):
         io.flash_output = 'The flashing procedure failed...\n[+] All done\n'
         with self.assertRaises(FirmwareError):
             execute_flash(prepared, io=io)
-        report = json.loads((prepared.backup_directory/'report.json').read_text())
+        report = json.loads((prepared.backup_directory/'report.json').read_text(encoding='utf-8'))
         self.assertTrue(report['flash_may_have_written'])
         self.assertIsNone(report['firmware_flashed'])
         self.assertIsNone(report['bootrom_preserved'])
@@ -347,7 +347,7 @@ class FirmwareTests(unittest.TestCase):
                 io.internal[-1] = bytes(changed)
             with self.subTest(fault=fault), self.assertRaises(FirmwareError):
                 execute_flash(prepared, io=io)
-            state = json.loads((prepared.backup_directory/'report.json').read_text())
+            state = json.loads((prepared.backup_directory/'report.json').read_text(encoding='utf-8'))
             self.assertFalse(state['verified'])
             self.assertIsNone(state['bootrom_preserved'])
             self.assertEqual(state['status'], 'failed_after_flash')
@@ -409,7 +409,7 @@ class FirmwareTests(unittest.TestCase):
         python = prepared.client_path.parent / 'python'
         encodings = python / 'lib/python3.14/encodings'
         encodings.mkdir(parents=True)
-        (encodings/'__init__.py').write_text('')
+        (encodings/'__init__.py').write_text('', encoding='utf-8')
         (python/'bin').mkdir()
         (prepared.runtime_dir/'platforms').mkdir()
         scripts = prepared.client_path.parent / 'pyscripts'

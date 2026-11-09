@@ -22,7 +22,7 @@ class HFAppTests(unittest.TestCase):
 
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
-        self.root=Path(self.temp.name)
+        self.root=Path(self.temp.name).resolve()
         self.enterContext(patch('pm3gui.app.available_ports',return_value=[]))
         self.enterContext(patch('pm3gui.app.discover_client',return_value=''))
         self.enterContext(patch('pm3gui.app.QMessageBox.warning'))
@@ -83,7 +83,7 @@ class HFAppTests(unittest.TestCase):
         self.assertTrue(self.window.read_button.isEnabled())
         self.assertEqual(dialog.first.value(),0)
         self.assertEqual(dialog.last.value(),63)
-        report=json.loads((dialog.plan.directory/'write-report.json').read_text())
+        report=json.loads((dialog.plan.directory/'write-report.json').read_text(encoding='utf-8'))
         self.assertEqual(report['status'],'verified')
 
     def test_cancel_at_review_never_sends_write(self):
@@ -117,7 +117,7 @@ class HFAppTests(unittest.TestCase):
         self.finish(('[+] Write ( ok )',0))
         self.assertIsNone(self.window.read_job)
         self.assertEqual(self.operations.call_count,before)
-        report=json.loads((plan.directory/'write-report.json').read_text())
+        report=json.loads((plan.directory/'write-report.json').read_text(encoding='utf-8'))
         self.assertEqual(report['may_have_written'],[1])
         self.assertEqual(report['verified_blocks'],[])
         self.assertEqual(dialog.first.value(),1)

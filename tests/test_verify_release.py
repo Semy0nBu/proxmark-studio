@@ -52,7 +52,7 @@ def checksum_manifest(root):
 class VerifyReleaseTests(unittest.TestCase):
     def setUp(self):
         self.temporary=tempfile.TemporaryDirectory();self.addCleanup(self.temporary.cleanup)
-        self.root=Path(self.temporary.name)/'Application';self.root.mkdir();gui_fixture(self.root)
+        self.root=Path(self.temporary.name).resolve()/'Application';self.root.mkdir();gui_fixture(self.root)
 
     def test_gui_only_release_with_sources_and_complete_checksums_passes(self):
         with zipfile.ZipFile(self.root/'sources/proxmark-studio-source.zip','a') as source:

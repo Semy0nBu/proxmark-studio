@@ -56,7 +56,7 @@ class DeviceTests(unittest.TestCase):
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.script = self.root / "fake client.py"
         self.script.write_text(FAKE_CLIENT, encoding="utf-8")
         self.config = self.script.with_suffix(".json")

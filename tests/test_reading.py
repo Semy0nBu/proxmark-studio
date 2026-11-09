@@ -10,7 +10,7 @@ from test_writing import Card,classic_image,UID
 
 class IncrementalReadTests(unittest.TestCase):
     def setUp(self):
-        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name).resolve()
         self.detected=Detection('mfc',UID,'MIFARE Classic 1K','1k',True)
         self.card=Card(classic_image())
 
@@ -30,7 +30,7 @@ class IncrementalReadTests(unittest.TestCase):
         self.assertIn(4,info['missing_blocks']);self.assertEqual(dump.data[64:128],bytes(64))
         self.assertEqual(dump.metadata['read_validation']['confirmed_sectors'],[0,2])
         self.assertEqual(dump.data[16:32],self.card.data[16:32]);self.assertEqual(self.card.writes,[])
-        self.assertEqual(json.loads(plan.path.read_text())['ProxmarkStudioRead']['status'],'finished')
+        self.assertEqual(json.loads(plan.path.read_text(encoding='utf-8'))['ProxmarkStudioRead']['status'],'finished')
 
     def test_disconnect_keeps_previous_sector_and_discards_current_unconfirmed_bytes(self):
         plan=self.plan((0,1))
@@ -44,7 +44,7 @@ class IncrementalReadTests(unittest.TestCase):
         dump=plan.dump()
         self.assertEqual(dump.metadata['partial_dump']['read_blocks'],[0,1,2,3])
         self.assertEqual(dump.data[64:80],bytes(16));self.assertIsNone(plan.next_operation())
-        self.assertEqual(set(json.loads(plan.path.read_text())['blocks']),{'0','1','2','3'})
+        self.assertEqual(set(json.loads(plan.path.read_text(encoding='utf-8'))['blocks']),{'0','1','2','3'})
 
     def test_lost_final_sector_select_does_not_publish_that_sector(self):
         plan=self.plan((0,1))
@@ -71,7 +71,7 @@ class IncrementalReadTests(unittest.TestCase):
     def test_stop_before_first_uid_guard_refuses_empty_dump(self):
         plan=self.plan();plan.stop('cancelled')
         with self.assertRaisesRegex(ValueError,'ни одного'):plan.dump()
-        self.assertEqual(json.loads(plan.path.read_text())['blocks'],{})
+        self.assertEqual(json.loads(plan.path.read_text(encoding='utf-8'))['blocks'],{})
 
     def test_read_tries_the_other_known_key_only_once_when_authentication_fails(self):
         plan=ClassicPartialRead(self.detected,[{'sector':0,'type':t,'key_hex':k} for t,k in

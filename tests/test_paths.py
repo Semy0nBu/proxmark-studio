@@ -25,7 +25,7 @@ from pm3gui import process_env
 class _PathFixture:
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.bundle = self.root / 'Read only installation' / 'Proxmark Studio'
         self.bundle.mkdir(parents=True)
         self.exe = self.bundle / 'Proxmark Studio.exe'
@@ -194,7 +194,7 @@ class PackagedProfileTests(_PathFixture, unittest.TestCase):
 class NativePythonEnvironmentTests(unittest.TestCase):
     def test_private_native_python_does_not_inherit_gui_python_or_qt(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory);client = root / 'client' / 'proxmark3.exe'
+            root = Path(directory).resolve();client = root / 'client' / 'proxmark3.exe'
             client.parent.mkdir();client.touch();(client.parent / 'libs' / 'platforms').mkdir(parents=True)
             prefix = client.parent / 'python';encodings = prefix / 'lib' / 'python3.14' / 'encodings'
             encodings.mkdir(parents=True);(encodings / '__init__.py').touch();(prefix / 'bin').mkdir()
@@ -217,7 +217,7 @@ class NativePythonEnvironmentTests(unittest.TestCase):
 
     def test_incomplete_private_prefix_never_replaces_an_external_client_python_home(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory);client = root / 'proxmark3.exe';client.touch();(root / 'python').mkdir()
+            root = Path(directory).resolve();client = root / 'proxmark3.exe';client.touch();(root / 'python').mkdir()
             with patch.dict(os.environ, {'PYTHONHOME': 'external-python'}):
                 _, _, _, env = build_invocation(DeviceSettings(str(client), 'COM1'), 'hw version')
                 self.assertEqual(env.value('PYTHONHOME'), 'external-python')
