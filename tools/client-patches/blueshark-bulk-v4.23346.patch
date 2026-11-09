@@ -1,0 +1,1092 @@
+--- a/client/src/comms.c
++++ b/client/src/comms.c
+@@ -32,6 +32,7 @@
+ #include "util_posix.h" // msclock
+ #include "util_darwin.h" // en/dis-ableNapp();
+ #include "usart_defs.h"
++#include "comms_bulk_download.h"
+ #include "proxmark3.h" // framed GUI cancellation while waiting for firmware
+ 
+ // #define COMMS_DEBUG
+@@ -1267,6 +1268,148 @@
+     return WaitForResponseTimeoutW(cmd, response, -1, true);
+ }
+ 
++typedef struct {
++    PacketResponseNG packet;
++    uint64_t started;
++    bool show_warning;
++    bool cancelled;
++} bulk_download_context_t;
++
++static uint64_t bulk_download_now(void *context) {
++    (void)context;
++    return msclock();
++}
++
++static bool bulk_download_cancelled(void *context) {
++    bulk_download_context_t *download = context;
++    if (download->cancelled == false && kbd_enter_pressed() != 0) {
++        download->cancelled = true;
++    }
++    return download->cancelled;
++}
++
++static bool bulk_download_connected(void *context) {
++    (void)context;
++    return g_session.pm3_present && IsCommunicationThreadDead() == false;
++}
++
++static bool bulk_download_send(void *context, uint32_t start, uint32_t bytes) {
++    if (bulk_download_cancelled(context) || bulk_download_connected(context) == false) {
++        return false;
++    }
++    download_req_t req = {.start_index = start, .bytes = bytes};
++    SendCommandNG(CMD_DOWNLOAD_BIGBUF, (uint8_t *)&req, sizeof(req));
++    return true;
++}
++
++static bool bulk_download_receive(void *context, pm3_bulk_packet_t *packet) {
++    bulk_download_context_t *download = context;
++    if (getReply(&download->packet) == false) {
++        return false;
++    }
++    PacketResponseNG *response = &download->packet;
++    if (response->length > sizeof(response->data.asBytes)) {
++        memset(packet, 0, sizeof(*packet));
++        packet->type = PM3_BULK_INVALID;
++        return true;
++    }
++    pm3_bulk_decode(packet, response->ng, response->cmd, response->status,
++                    response->data.asBytes, response->length,
++                    CMD_DOWNLOADED_BIGBUF, CMD_DOWNLOAD_BIGBUF, CMD_ACK);
++    return true;
++}
++
++static void bulk_download_idle(void *context) {
++    bulk_download_context_t *download = context;
++    if (download->show_warning && msclock() - download->started > 3000) {
++        PrintAndLogEx(INFO, "Waiting for a response from the Proxmark3...");
++        PrintAndLogEx(INFO, "You can cancel this operation by pressing Enter");
++        download->show_warning = false;
++    }
++    xyield();
++}
++
++static uint64_t bulk_download_add_budget(uint64_t budget, uint64_t extra) {
++    return (extra >= UINT64_MAX - budget) ? UINT64_MAX - 1 : budget + extra;
++}
++
++static uint64_t bulk_download_budget(uint32_t bytes, size_t ms_timeout, bool fpc) {
++    if (ms_timeout == (size_t) -1) {
++        return UINT64_MAX;
++    }
++    uint64_t budget = ms_timeout;
++    if (g_conn.uart_speed == 0) {
++        return budget;
++    }
++    uint64_t delay = communication_delay();
++    if (fpc == false) {
++        return bulk_download_add_budget(budget, delay);
++    }
++
++    const uint64_t segments = ((uint64_t)bytes + 511) / 512;
++    const uint64_t response_overhead = sizeof(PacketResponseNGPreamble) + sizeof(PacketResponseNGPostamble);
++    const uint64_t segment_overhead = sizeof(PacketCommandNGPreamble) + sizeof(download_req_t) +
++                                      sizeof(PacketCommandNGPostamble) + 2 * response_overhead +
++                                      sizeof(download_chunk_t) + sizeof(download_done_t);
++    const uint64_t wire_bytes = bytes + segments * segment_overhead;
++    const uint64_t wire_ms = (wire_bytes * 10000 + g_conn.uart_speed - 1) / g_conn.uart_speed;
++    budget = bulk_download_add_budget(budget, wire_ms);
++    return bulk_download_add_budget(budget, 2 * segments * delay);
++}
++
++static bool download_bigbuf(uint8_t *dest, uint32_t bytes, uint32_t start_index,
++                            PacketResponseNG *response, size_t ms_timeout, bool show_warning) {
++    if (start_index > g_pm3_capabilities.bigbuf_size ||
++            bytes > g_pm3_capabilities.bigbuf_size - start_index) {
++        PrintAndLogEx(FAILED, "ERROR: BigBuf download outside device memory");
++        return false;
++    }
++    bulk_download_context_t context = {.started = msclock(), .show_warning = show_warning};
++    const pm3_bulk_io_t io = {
++        .now = bulk_download_now,
++        .cancelled = bulk_download_cancelled,
++        .connected = bulk_download_connected,
++        .send = bulk_download_send,
++        .receive = bulk_download_receive,
++        .idle = bulk_download_idle,
++    };
++    bool fpc = g_conn.send_via_fpc_usart && g_pm3_capabilities.via_fpc && !g_pm3_capabilities.via_usb;
++    uint64_t budget = bulk_download_budget(bytes, ms_timeout, fpc);
++    if (fpc && bytes > 512) {
++        PrintAndLogEx(DEBUG, "BigBuf FPC download: %u bytes, 512-byte segments, total budget %" PRIu64 " ms", bytes, budget);
++    }
++    pm3_bulk_result_t result = pm3_bulk_download_run(dest, bytes, start_index, fpc ? 512 : 0,
++                                                    budget, &io, &context);
++    switch (result) {
++        case PM3_BULK_OK: {
++            *response = context.packet;
++            download_done_t *done = (download_done_t *)response->data.asBytes;
++            done->bytes_sent = bytes;
++            return true;
++        }
++        case PM3_BULK_CANCELLED:
++            PrintAndLogEx(WARNING, "BigBuf download cancelled; partial data discarded");
++            break;
++        case PM3_BULK_TIMEOUT:
++            PrintAndLogEx(FAILED, "Timed out while trying to download data from device");
++            break;
++        case PM3_BULK_DISCONNECTED:
++            PrintAndLogEx(FAILED, "ERROR: device disconnected during BigBuf download");
++            break;
++        case PM3_BULK_PROTOCOL_ERROR:
++            PrintAndLogEx(FAILED, "ERROR: invalid or incomplete BigBuf download; partial data discarded");
++            break;
++        case PM3_BULK_ALLOCATION_FAILED:
++            PrintAndLogEx(FAILED, "ERROR: failed to allocate BigBuf download staging buffer");
++            break;
++        case PM3_BULK_SEND_FAILED:
++        default:
++            PrintAndLogEx(FAILED, "ERROR: failed to send BigBuf download request");
++            break;
++    }
++    return false;
++}
++
+ /**
+ * Data transfer from Proxmark to client. This method times out after
+ * ms_timeout milliseconds.
+@@ -1304,9 +1447,7 @@
+ 
+     switch (memtype) {
+         case BIG_BUF: {
+-            download_req_t req = { .start_index = start_index, .bytes = bytes };
+-            SendCommandNG(CMD_DOWNLOAD_BIGBUF, (uint8_t *)&req, sizeof(req));
+-            return dl_it(dest, bytes, response, ms_timeout, show_warning, false, CMD_DOWNLOADED_BIGBUF, CMD_DOWNLOAD_BIGBUF);
++            return download_bigbuf(dest, bytes, start_index, response, ms_timeout, show_warning);
+         }
+         case BIG_BUF_EML: {
+             download_req_t req = { .start_index = start_index, .bytes = bytes };
+--- /dev/null
++++ b/client/src/comms_bulk_download.h
+@@ -0,0 +1,200 @@
++//-----------------------------------------------------------------------------
++// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
++//
++// This program is free software: you can redistribute it and/or modify
++// it under the terms of the GNU General Public License as published by
++// the Free Software Foundation, either version 3 of the License, or
++// (at your option) any later version.
++//
++// This program is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// See LICENSE.txt for the text of the license.
++//-----------------------------------------------------------------------------
++
++#ifndef COMMS_BULK_DOWNLOAD_H_
++#define COMMS_BULK_DOWNLOAD_H_
++
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <string.h>
++
++enum pm3_bulk_packet_type {
++    PM3_BULK_IGNORE,
++    PM3_BULK_CHUNK,
++    PM3_BULK_DONE,
++    PM3_BULK_INVALID
++};
++
++typedef struct {
++    enum pm3_bulk_packet_type type;
++    int status;
++    uint32_t offset;
++    uint32_t length;
++    uint32_t bytes_sent;
++    const uint8_t *data;
++} pm3_bulk_packet_t;
++
++typedef enum {
++    PM3_BULK_OK,
++    PM3_BULK_CANCELLED,
++    PM3_BULK_TIMEOUT,
++    PM3_BULK_DISCONNECTED,
++    PM3_BULK_PROTOCOL_ERROR,
++    PM3_BULK_ALLOCATION_FAILED,
++    PM3_BULK_SEND_FAILED
++} pm3_bulk_result_t;
++
++typedef struct {
++    uint64_t (*now)(void *context);
++    bool (*cancelled)(void *context);
++    bool (*connected)(void *context);
++    bool (*send)(void *context, uint32_t start, uint32_t bytes);
++    bool (*receive)(void *context, pm3_bulk_packet_t *packet);
++    void (*idle)(void *context);
++} pm3_bulk_io_t;
++
++static inline void pm3_bulk_decode(pm3_bulk_packet_t *out, bool ng, uint32_t command,
++                                   int status, const uint8_t *data, uint32_t length,
++                                   uint32_t chunk_command, uint32_t done_command,
++                                   uint32_t ack_command) {
++    memset(out, 0, sizeof(*out));
++    out->type = PM3_BULK_IGNORE;
++    out->status = status;
++    if (command == ack_command) {
++        out->type = PM3_BULK_INVALID;
++    } else if (command == chunk_command) {
++        if (ng == false || data == NULL || length < sizeof(uint32_t)) {
++            out->type = PM3_BULK_INVALID;
++            return;
++        }
++        out->type = PM3_BULK_CHUNK;
++        memcpy(&out->offset, data, sizeof(uint32_t));
++        out->length = length - sizeof(uint32_t);
++        out->data = data + sizeof(uint32_t);
++    } else if (command == done_command) {
++        if (ng == false || data == NULL || length != 2 * sizeof(uint32_t)) {
++            out->type = PM3_BULK_INVALID;
++            return;
++        }
++        out->type = PM3_BULK_DONE;
++        memcpy(&out->bytes_sent, data, sizeof(uint32_t));
++    }
++}
++
++static inline pm3_bulk_result_t pm3_bulk_check(const pm3_bulk_io_t *io, void *context,
++                                              uint64_t started, uint64_t timeout_ms) {
++    if (io->cancelled(context)) {
++        return PM3_BULK_CANCELLED;
++    }
++    if (io->connected(context) == false) {
++        return PM3_BULK_DISCONNECTED;
++    }
++    if (timeout_ms != UINT64_MAX && io->now(context) - started >= timeout_ms) {
++        return PM3_BULK_TIMEOUT;
++    }
++    return PM3_BULK_OK;
++}
++
++// A zero segment size keeps the original single-request USB transfer.
++static inline pm3_bulk_result_t pm3_bulk_download_run(uint8_t *dest, uint32_t bytes,
++                                                      uint32_t start_index, uint32_t segment_size,
++                                                      uint64_t timeout_ms, const pm3_bulk_io_t *io,
++                                                      void *context) {
++    if (dest == NULL || io == NULL || io->now == NULL || io->cancelled == NULL ||
++            io->connected == NULL || io->send == NULL || io->receive == NULL ||
++            bytes > UINT32_MAX - start_index) {
++        return PM3_BULK_PROTOCOL_ERROR;
++    }
++    if (bytes == 0) {
++        return PM3_BULK_OK;
++    }
++
++    const uint64_t started = io->now(context);
++    pm3_bulk_result_t result = pm3_bulk_check(io, context, started, timeout_ms);
++    if (result != PM3_BULK_OK) {
++        return result;
++    }
++    uint8_t *staging = malloc(bytes);
++    if (staging == NULL) {
++        return PM3_BULK_ALLOCATION_FAILED;
++    }
++
++    uint32_t completed = 0;
++    while (completed < bytes) {
++        uint32_t requested = bytes - completed;
++        if (segment_size != 0 && requested > segment_size) {
++            requested = segment_size;
++        }
++        result = pm3_bulk_check(io, context, started, timeout_ms);
++        if (result != PM3_BULK_OK) {
++            goto out;
++        }
++        if (io->send(context, start_index + completed, requested) == false) {
++            result = pm3_bulk_check(io, context, started, timeout_ms);
++            if (result == PM3_BULK_OK) {
++                result = PM3_BULK_SEND_FAILED;
++            }
++            goto out;
++        }
++
++        uint32_t received = 0;
++        bool done = false;
++        while (done == false) {
++            result = pm3_bulk_check(io, context, started, timeout_ms);
++            if (result != PM3_BULK_OK) {
++                goto out;
++            }
++            pm3_bulk_packet_t packet = {0};
++            bool available = io->receive(context, &packet);
++            result = pm3_bulk_check(io, context, started, timeout_ms);
++            if (result != PM3_BULK_OK) {
++                goto out;
++            }
++            if (available == false) {
++                if (io->idle != NULL) {
++                    io->idle(context);
++                }
++                continue;
++            }
++            switch (packet.type) {
++                case PM3_BULK_CHUNK:
++                    if (packet.status != 0 || packet.offset != received || packet.length == 0 ||
++                            packet.length > requested - received || packet.data == NULL) {
++                        result = PM3_BULK_PROTOCOL_ERROR;
++                        goto out;
++                    }
++                    memcpy(staging + completed + received, packet.data, packet.length);
++                    received += packet.length;
++                    break;
++                case PM3_BULK_DONE:
++                    if (packet.status != 0 || packet.bytes_sent != requested || received != requested) {
++                        result = PM3_BULK_PROTOCOL_ERROR;
++                        goto out;
++                    }
++                    done = true;
++                    break;
++                case PM3_BULK_IGNORE:
++                    break;
++                case PM3_BULK_INVALID:
++                default:
++                    result = PM3_BULK_PROTOCOL_ERROR;
++                    goto out;
++            }
++        }
++        completed += requested;
++    }
++
++    result = pm3_bulk_check(io, context, started, timeout_ms);
++    if (result == PM3_BULK_OK) {
++        memcpy(dest, staging, bytes);
++    }
++out:
++    free(staging);
++    return result;
++}
++
++#endif
+--- a/client/src/cmddata.c
++++ b/client/src/cmddata.c
+@@ -1833,9 +1833,21 @@
+ 
+ int getSamplesEx(uint32_t start, uint32_t end, bool verbose, bool ignore_lf_config) {
+ 
++    // An unsuccessful online download must not leave the previous capture
++    // available to a caller that subsequently attempts to demodulate it.
++    ClearGraph(false);
++    computeSignalProperties(NULL, 0);
++    if (kbd_enter_pressed()) {
++        return PM3_EOPABORTED;
++    }
++
+     if (end < start) {
+         PrintAndLogEx(WARNING, "error, end (%u) is smaller than start (%u)", end, start);
+         return PM3_EINVARG;
++    }
++    if (g_pm3_capabilities.bigbuf_size < 2) {
++        PrintAndLogEx(WARNING, "device sample buffer size is unavailable");
++        return PM3_ESOFT;
+     }
+ 
+     // If we get all but the last byte in bigbuf,
+@@ -1857,8 +1869,14 @@
+ 
+     PacketResponseNG resp;
+     if (GetFromDevice(BIG_BUF, got, n, start, NULL, 0, &resp, 10000, true) == false) {
+-        PrintAndLogEx(WARNING, "timeout while waiting for reply");
+-        return PM3_ETIMEOUT;
++        // The bool API covers cancellation and corrupt/incomplete transfers
++        // as well as timeouts. Do not relabel every failure as a timeout.
++        PrintAndLogEx(WARNING, "sample download failed or was cancelled; graph buffer cleared");
++        RepaintGraphWindow();
++        return PM3_ESOFT;
++    }
++    if (kbd_enter_pressed()) {
++        return PM3_EOPABORTED;
+     }
+ 
+     if (verbose) {
+@@ -1869,19 +1887,46 @@
+ 
+     if (IfPm3Lf() && ignore_lf_config == false) {
+         sample_config sc;
+-        lf_getconfig(&sc);
++        int result = lf_getconfig(&sc);
++        if (result != PM3_SUCCESS) {
++            PrintAndLogEx(WARNING, "failed to read sample format; graph buffer cleared");
++            RepaintGraphWindow();
++            return result;
++        }
+         if (verbose) {
+             PrintAndLogEx(INFO, "Samples @ " _YELLOW_("%d") " bits/smpl, decimation 1:%d ", sc.bits_per_sample, sc.decimation);
+         }
+         bits_per_sample = sc.bits_per_sample;
+     }
+ 
+-    return getSamplesFromBufEx(got, n, bits_per_sample, verbose);;
++    // A matching format reply can arrive in the same wait that observes a
++    // scoped cancellation. Do not publish that completed-but-cancelled capture.
++    if (kbd_enter_pressed()) {
++        return PM3_EOPABORTED;
++    }
++    return getSamplesFromBufEx(got, n, bits_per_sample, verbose);
+ }
+ 
+ int getSamplesFromBufEx(uint8_t *data, size_t sample_num, uint8_t bits_per_sample, bool verbose) {
+ 
++    ClearGraph(false);
++    computeSignalProperties(NULL, 0);
++    if (data == NULL || sample_num == 0 || bits_per_sample < 1 || bits_per_sample > 8) {
++        PrintAndLogEx(WARNING, "invalid sample data or format; graph buffer cleared");
++        RepaintGraphWindow();
++        return PM3_EINVARG;
++    }
++
+     size_t max_num = MIN(sample_num, MAX_GRAPH_TRACE_LEN);
++    // Allocate all fallible preprocessing storage before publishing samples.
++    // A failed allocation must not leave a partially refreshed graph paired
++    // with demodulation or signal properties from an older capture.
++    uint8_t *bits = calloc(max_num, sizeof(uint8_t));
++    if (bits == NULL) {
++        PrintAndLogEx(WARNING, "Failed to allocate memory; graph buffer cleared");
++        RepaintGraphWindow();
++        return PM3_EMALLOC;
++    }
+ 
+     if (sample_num > MAX_GRAPH_TRACE_LEN) {
+         PrintAndLogEx(WARNING, "graph buffer holds " _YELLOW_("%d") " samples, dropping the last " _YELLOW_("%zu")
+@@ -1900,22 +1945,15 @@
+             uint8_t sample = getByte(bits_per_sample, &bout);
+             g_GraphBuffer[j] = ((int) sample) - 127;
+         }
+-        g_GraphTraceLen = j;
+-
+         if (verbose) PrintAndLogEx(INFO, "Unpacked %zu samples", j);
+ 
+     } else {
+         for (size_t j = 0; j < max_num; j++) {
+             g_GraphBuffer[j] = ((int)data[j]) - 127;
+         }
+-        g_GraphTraceLen = max_num;
+-    }
+-
+-    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+-    if (bits == NULL) {
+-        PrintAndLogEx(WARNING, "Failed to allocate memory");
+-        return PM3_EMALLOC;
+-    }
++    }
++
++    g_GraphTraceLen = max_num;
+     size_t size = getFromGraphBuffer(bits);
+     // set signal properties low/high/mean/amplitude and is_noise detection
+     computeSignalProperties(bits, size);
+--- a/client/src/cmdlf.c
++++ b/client/src/cmdlf.c
+@@ -464,6 +464,8 @@
+ 
+     int ret = PM3_SUCCESS;
+     do {
++        ClearGraph(false);
++        computeSignalProperties(NULL, 0);
+         clearCommandBuffer();
+         SendCommandNG(CMD_LF_MOD_THEN_ACQ_RAW_ADC, (uint8_t *)&payload, PAYLOAD_HEADER_SIZE + cmd_len + 1);
+ 
+@@ -493,8 +495,10 @@
+             if (verbose) {
+                 PrintAndLogEx(SUCCESS, "downloading response signal data");
+             }
+-            getSamples(samples, false);
+-            ret = PM3_SUCCESS;
++            ret = getSamples(samples, false);
++            if (ret != PM3_SUCCESS) {
++                return ret;
++            }
+         } else {
+             PrintAndLogEx(WARNING, "timeout while waiting for reply");
+             return PM3_ETIMEOUT;
+@@ -638,6 +642,10 @@
+     if (WaitForResponseTimeout(CMD_LF_SAMPLING_GET_CONFIG, &resp, 2000) == false) {
+         PrintAndLogEx(WARNING, "command execution time out");
+         return PM3_ETIMEOUT;
++    }
++    if (resp.status != PM3_SUCCESS || resp.length < sizeof(sample_config)) {
++        PrintAndLogEx(WARNING, "invalid LF sampling config response");
++        return (resp.status != PM3_SUCCESS) ? resp.status : PM3_ESOFT;
+     }
+     memcpy(config, resp.data.asBytes, sizeof(sample_config));
+     return PM3_SUCCESS;
+@@ -781,7 +789,18 @@
+ }
+ 
+ static int lf_read_internal(bool realtime, bool verbose, uint64_t samples, bool cotag) {
++    ClearGraph(false);
++    computeSignalProperties(NULL, 0);
+     if (!g_session.pm3_present) return PM3_ENOTTY;
++    // Firmware realtime acquisition streams raw USB endpoint data. Reject a
++    // negotiated FPC route before loading FPGA state or starting acquisition.
++    if (realtime && (g_conn.send_via_fpc_usart || g_pm3_capabilities.via_fpc)) {
++        PrintAndLogEx(WARNING, "USB realtime sampling is unavailable over FPC UART; use a finite capture below BigBuf size");
++        return PM3_ENOTIMPL;
++    }
++    if (kbd_enter_pressed()) {
++        return PM3_EOPABORTED;
++    }
+ 
+     lf_sample_payload_t payload = {0};
+     payload.realtime = realtime;
+@@ -795,8 +814,17 @@
+         PrintAndLogEx(ERR, "failed to get current device config");
+         return retval;
+     }
++    // The response wait may receive a valid config after observing Stop.
++    // Check again before changing FPGA state or starting another RF command.
++    if (kbd_enter_pressed()) {
++        return PM3_EOPABORTED;
++    }
+     clearCommandBuffer();
+     const uint8_t bits_per_sample = current_config.bits_per_sample;
++    if (bits_per_sample < 1 || bits_per_sample > 8) {
++        PrintAndLogEx(WARNING, "invalid LF sample format");
++        return PM3_ESOFT;
++    }
+     const bool is_trigger_threshold_set = (current_config.trigger_threshold > 0);
+ 
+     if (realtime) {
+@@ -812,11 +840,20 @@
+ 
+         // In real-time mode, the LF bitstream should be loaded before receiving raw data.
+         // Otherwise, the first batch of raw data might contain the response of CMD_WTX.
++        if (kbd_enter_pressed()) {
++            free(realtimeBuf);
++            return PM3_EOPABORTED;
++        }
+         int result = set_fpga_mode(FPGA_BITSTREAM_LF);
+         if (result != PM3_SUCCESS) {
+             PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+             free(realtimeBuf);
+             return result;
++        }
++
++        if (kbd_enter_pressed()) {
++            free(realtimeBuf);
++            return PM3_EOPABORTED;
+         }
+ 
+         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+@@ -837,26 +874,32 @@
+         if (verbose) {
+             PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+         }
+-        if (samples != 0) {
+-            getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
+-        }
+-
+-        free(realtimeBuf);
+-
+         if (sample_bytes < expected_bytes) {
+-            // keep what did arrive, but don't let it look like a complete read
+             PrintAndLogEx(WARNING, "transfer stopped early, got " _YELLOW_("%zu") " of " _YELLOW_("%zu") " bytes"
+                           , sample_bytes
+                           , expected_bytes
+                          );
++            free(realtimeBuf);
+             return PM3_ETIMEOUT;
+         }
++        if (kbd_enter_pressed()) {
++            free(realtimeBuf);
++            return PM3_EOPABORTED;
++        }
++        result = getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
++        free(realtimeBuf);
++        return result;
+     } else {
++        if (kbd_enter_pressed()) {
++            return PM3_EOPABORTED;
++        }
+         SendCommandNG(CMD_LF_ACQ_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+         PacketResponseNG resp;
+ 
+         if (is_trigger_threshold_set) {
+-            WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp);
++            if (WaitForResponse(CMD_LF_ACQ_RAW_ADC, &resp) == false) {
++                return PM3_ESOFT;
++            }
+         } else {
+ 
+             if (WaitForResponseTimeout(CMD_LF_ACQ_RAW_ADC, &resp, 2500) == false) {
+@@ -864,9 +907,20 @@
+                 return PM3_ETIMEOUT;
+             }
+         }
++        if (resp.status != PM3_SUCCESS || resp.length < sizeof(uint32_t)) {
++            PrintAndLogEx(WARNING, "LF acquisition failed or returned an invalid sample count");
++            return (resp.status != PM3_SUCCESS) ? resp.status : PM3_ESOFT;
++        }
++        if (kbd_enter_pressed()) {
++            return PM3_EOPABORTED;
++        }
+         // response is number of bits read
+         uint32_t size = (resp.data.asDwords[0] / bits_per_sample);
+-        getSamples(size, verbose);
++        if (size == 0) {
++            PrintAndLogEx(WARNING, "LF acquisition returned no samples");
++            return PM3_ESOFT;
++        }
++        return getSamples(size, verbose);
+     }
+ 
+     return PM3_SUCCESS;
+@@ -925,11 +979,9 @@
+     int ret = PM3_SUCCESS;
+     do {
+         ret = lf_read_internal(realtime, verbose, samples, false);
+-    } while (cm && (kbd_enter_pressed() == false));
+-
+-    // a truncated transfer still leaves usable samples in the graph buffer,
+-    // so report them. lf_read_internal() has already said it was short.
+-    if (ret == PM3_SUCCESS || ret == PM3_ETIMEOUT) {
++    } while (ret == PM3_SUCCESS && cm && (kbd_enter_pressed() == false));
++
++    if (ret == PM3_SUCCESS) {
+         PrintAndLogEx(SUCCESS, "Got " _YELLOW_("%zu") " samples", g_GraphTraceLen);
+ 
+         if (getSignalProperties()->isnoise) {
+@@ -940,7 +992,16 @@
+ }
+ 
+ int lf_sniff(bool realtime, bool verbose, uint64_t samples) {
++    ClearGraph(false);
++    computeSignalProperties(NULL, 0);
+     if (!g_session.pm3_present) return PM3_ENOTTY;
++    if (realtime && (g_conn.send_via_fpc_usart || g_pm3_capabilities.via_fpc)) {
++        PrintAndLogEx(WARNING, "USB realtime sampling is unavailable over FPC UART; use a finite capture below BigBuf size");
++        return PM3_ENOTIMPL;
++    }
++    if (kbd_enter_pressed()) {
++        return PM3_EOPABORTED;
++    }
+ 
+     lf_sample_payload_t payload = {0};
+     payload.realtime = realtime;
+@@ -953,8 +1014,15 @@
+         PrintAndLogEx(ERR, "failed to get current device config");
+         return retval;
+     }
++    if (kbd_enter_pressed()) {
++        return PM3_EOPABORTED;
++    }
+     clearCommandBuffer();
+     const uint8_t bits_per_sample = current_config.bits_per_sample;
++    if (bits_per_sample < 1 || bits_per_sample > 8) {
++        PrintAndLogEx(WARNING, "invalid LF sample format");
++        return PM3_ESOFT;
++    }
+     const bool is_trigger_threshold_set = (current_config.trigger_threshold > 0);
+ 
+     if (realtime) {
+@@ -970,11 +1038,20 @@
+ 
+         // In real-time mode, the LF bitstream should be loaded before receiving raw data.
+         // Otherwise, the first batch of raw data might contain the response of CMD_WTX.
++        if (kbd_enter_pressed()) {
++            free(realtimeBuf);
++            return PM3_EOPABORTED;
++        }
+         int result = set_fpga_mode(FPGA_BITSTREAM_LF);
+         if (result != PM3_SUCCESS) {
+             PrintAndLogEx(FAILED, "failed to load LF bitstream to FPGA");
+             free(realtimeBuf);
+             return result;
++        }
++
++        if (kbd_enter_pressed()) {
++            free(realtimeBuf);
++            return PM3_EOPABORTED;
+         }
+ 
+         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+@@ -995,34 +1072,51 @@
+         if (verbose) {
+             PrintAndLogEx(INFO, "Done: %" PRIu64 " samples (%zu bytes)", samples, sample_bytes);
+         }
+-        if (samples != 0) {
+-            getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
+-        }
+-
+-        free(realtimeBuf);
+-
+         if (sample_bytes < expected_bytes) {
+-            // keep what did arrive, but don't let it look like a complete read
+             PrintAndLogEx(WARNING, "transfer stopped early, got " _YELLOW_("%zu") " of " _YELLOW_("%zu") " bytes"
+                           , sample_bytes
+                           , expected_bytes
+                          );
++            free(realtimeBuf);
+             return PM3_ETIMEOUT;
+         }
++        if (kbd_enter_pressed()) {
++            free(realtimeBuf);
++            return PM3_EOPABORTED;
++        }
++        result = getSamplesFromBufEx(realtimeBuf, samples, bits_per_sample, verbose);
++        free(realtimeBuf);
++        return result;
+     } else {
++        if (kbd_enter_pressed()) {
++            return PM3_EOPABORTED;
++        }
+         SendCommandNG(CMD_LF_SNIFF_RAW_ADC, (uint8_t *)&payload, sizeof(payload));
+         PacketResponseNG resp;
+         if (is_trigger_threshold_set) {
+-            WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp);
++            if (WaitForResponse(CMD_LF_SNIFF_RAW_ADC, &resp) == false) {
++                return PM3_ESOFT;
++            }
+         } else {
+             if (WaitForResponseTimeout(CMD_LF_SNIFF_RAW_ADC, &resp, 2500) == false) {
+                 PrintAndLogEx(WARNING, "(lf_read) command execution time out");
+                 return PM3_ETIMEOUT;
+             }
+         }
++        if (resp.status != PM3_SUCCESS || resp.length < sizeof(uint32_t)) {
++            PrintAndLogEx(WARNING, "LF sniff failed or returned an invalid sample count");
++            return (resp.status != PM3_SUCCESS) ? resp.status : PM3_ESOFT;
++        }
++        if (kbd_enter_pressed()) {
++            return PM3_EOPABORTED;
++        }
+         // response is number of bits read
+         uint32_t size = (resp.data.asDwords[0] / bits_per_sample);
+-        getSamples(size, verbose);
++        if (size == 0) {
++            PrintAndLogEx(WARNING, "LF sniff returned no samples");
++            return PM3_ESOFT;
++        }
++        return getSamples(size, verbose);
+     }
+ 
+     return PM3_SUCCESS;
+@@ -1076,7 +1170,7 @@
+     int ret = PM3_SUCCESS;
+     do {
+         ret = lf_sniff(realtime, verbose, samples);
+-    } while (cm && (kbd_enter_pressed() == false));
++    } while (ret == PM3_SUCCESS && cm && (kbd_enter_pressed() == false));
+     return ret;
+ }
+ 
+@@ -1975,7 +2069,11 @@
+     int found = 0;
+     bool is_online = (g_session.pm3_present && (use_gb == false));
+     if (is_online) {
+-        lf_read(false, 30000);
++        int result = lf_read(false, 30000);
++        if (result != PM3_SUCCESS) {
++            PrintAndLogEx(WARNING, "LF capture failed; search stopped without decoding old samples");
++            return result;
++        }
+     }
+ 
+     size_t min_length = 2000;
+--- a/client/src/cmdhftexkom.c
++++ b/client/src/cmdhftexkom.c
+@@ -28,6 +28,7 @@
+ #include "cmdhf14a.h"
+ #include "cmddata.h"
+ #include "graph.h"
++#include "lfdemod.h"      // clear signal properties when a capture is cancelled
+ 
+ #define TEXKOM_NOISE_THRESHOLD (10)
+ #define TEXKOM_BITSTRING_SIZE   256
+@@ -438,6 +439,12 @@
+     if (card == NULL) {
+         return PM3_EINVARG;
+     }
++    memset(card, 0, sizeof(*card));
++    ClearGraph(false);
++    computeSignalProperties(NULL, 0);
++    if (kbd_enter_pressed()) {
++        return PM3_EOPABORTED;
++    }
+ 
+     // get samples from tag.
+ 
+@@ -452,14 +459,28 @@
+         return PM3_ETIMEOUT;
+     }
+ 
++    if (kbd_enter_pressed()) {
++        return PM3_EOPABORTED;
++    }
++
++    if (resp.status != PM3_SUCCESS || resp.length < sizeof(uint32_t)) {
++        return (resp.status != PM3_SUCCESS) ? resp.status : PM3_EIO;
++    }
+     uint32_t size = (resp.data.asDwords[0]);
+-    if (size > 0) {
+-        if (getSamples(samplesCount, false) != PM3_SUCCESS) {
+-            if (verbose)
+-                PrintAndLogEx(ERR, "Get samples error");
+-
+-            return PM3_EFAILED;
+-        };
++    if (size != samplesCount) {
++        if (verbose) PrintAndLogEx(WARNING, "incomplete Texkom ADC capture");
++        return PM3_EIO;
++    }
++    // HF ADC bytes are always eight-bit samples, independent of LF settings.
++    int sample_result = getSamplesEx(0, samplesCount, false, true);
++    if (sample_result != PM3_SUCCESS) {
++        if (verbose) PrintAndLogEx(ERR, "Get samples error");
++        return sample_result;
++    }
++    if (kbd_enter_pressed()) {
++        ClearGraph(false);
++        computeSignalProperties(NULL, 0);
++        return PM3_EOPABORTED;
+     }
+ 
+     // decode samples to 8 bytes
+@@ -558,28 +579,14 @@
+ 
+         int res = texkom_get_type(&card, verbose);
+ 
+-        if (loop) {
+-            if (res != PM3_SUCCESS) {
++        if (res != PM3_SUCCESS) {
++            // A valid fresh capture with no tag may be retried in continuous
++            // mode. Transport/download failures must leave the loop instead.
++            if (loop && res == PM3_ESOFT && g_GraphTraceLen > 0) {
+                 continue;
+             }
+-        } else {
+-            switch (res) {
+-                case PM3_EFAILED:
+-                case PM3_EINVARG:
+-                    return res;
+-                case PM3_ETIMEOUT:
+-                    if (verbose) {
+-                        PrintAndLogEx(WARNING, "command execution time out");
+-                    }
+-                    return res;
+-                case PM3_ESOFT:
+-                    if (verbose) {
+-                        PrintAndLogEx(WARNING, "texkom card select failed");
+-                    }
+-                    return PM3_ESOFT;
+-                default:
+-                    break;
+-            }
++            if (verbose) PrintAndLogEx(WARNING, "texkom read failed (%d)", res);
++            return res;
+         }
+ 
+         // decoding code
+@@ -662,6 +669,11 @@
+     if (gbuffer) {
+         samplesCount = g_GraphTraceLen;
+     } else {
++        ClearGraph(false);
++        computeSignalProperties(NULL, 0);
++        if (kbd_enter_pressed()) {
++            return PM3_EOPABORTED;
++        }
+         clearCommandBuffer();
+         SendCommandNG(CMD_HF_ACQ_RAW_ADC, (uint8_t *)&samplesCount, sizeof(uint32_t));
+ 
+@@ -671,13 +683,31 @@
+             return PM3_ETIMEOUT;
+         }
+ 
++        if (kbd_enter_pressed()) {
++            return PM3_EOPABORTED;
++        }
++
++        if (resp.status != PM3_SUCCESS || resp.length < sizeof(uint32_t)) {
++            return (resp.status != PM3_SUCCESS) ? resp.status : PM3_EIO;
++        }
+         uint32_t size = (resp.data.asDwords[0]);
+-        if (size > 0) {
+-            if (getSamples(samplesCount, false) != PM3_SUCCESS) {
+-                PrintAndLogEx(ERR, "Get samples error");
+-                return PM3_EFAILED;
+-            };
+-        }
++        if (size != samplesCount) {
++            PrintAndLogEx(WARNING, "incomplete Texkom ADC capture");
++            return PM3_EIO;
++        }
++        int result = getSamplesEx(0, samplesCount, false, true);
++        if (result != PM3_SUCCESS) {
++            PrintAndLogEx(ERR, "Get samples error");
++            return result;
++        }
++    }
++    if (kbd_enter_pressed()) {
++        ClearGraph(false);
++        computeSignalProperties(NULL, 0);
++        return PM3_EOPABORTED;
++    }
++    if (samplesCount < 5) {
++        return PM3_ENODATA;
+     }
+ 
+     char bitstring[TEXKOM_BITSTRING_SIZE] = {0};
+--- a/client/src/cmdhf.c
++++ b/client/src/cmdhf.c
+@@ -69,6 +69,14 @@
+ 
+ static int CmdHelp(const char *Cmd);
+ 
++static bool hf_search_cancelled(void) {
++    if (!kbd_enter_pressed()) {
++        return false;
++    }
++    DropField();
++    return true;
++}
++
+ int CmdHFSearch(const char *Cmd) {
+ 
+     CLIParserContext *ctx;
+@@ -92,6 +100,7 @@
+ 
+     uint8_t success[COUNT_OF_PROTOCOLS] = {0};
+ 
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for ThinFilm tag...");
+     if (IfPm3NfcBarcode()) {
+@@ -102,6 +111,7 @@
+         }
+     }
+ 
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for Topaz tag...");
+     if (IfPm3Iso14443a()) {
+@@ -112,6 +122,7 @@
+         }
+     }
+ 
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for LTO-CM tag...");
+     if (IfPm3Iso14443a()) {
+@@ -122,6 +133,7 @@
+         }
+     }
+ 
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for ISO14443-A tag...");
+     if (IfPm3Iso14443a()) {
+@@ -131,8 +143,10 @@
+             success[ISO_14443A] = true;
+             res = PM3_SUCCESS;
+ 
+-            if (sel_state == 1)
++            if (sel_state == 1) {
++                if (hf_search_cancelled()) return PM3_EOPABORTED;
+                 infoHF14A4Applications(verbose);
++            }
+         }
+     }
+ 
+@@ -151,6 +165,7 @@
+     }
+     */
+ 
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for LEGIC tag...");
+     if (IfPm3Legicrf()) {
+@@ -162,15 +177,21 @@
+     }
+ 
+     // texkom
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for TEXKOM tag...");
+-    if (read_texkom_uid(false, false) == PM3_SUCCESS) {
++    int texkom_result = read_texkom_uid(false, false);
++    if (texkom_result == PM3_SUCCESS) {
+         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("TEXKOM tag") " found\n");
+         success[PROTO_TEXKOM] = true;
+         res = PM3_SUCCESS;
++    } else if (g_GraphTraceLen == 0) {
++        DropField();
++        return texkom_result;
+     }
+ 
+     // xerox
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for Fuji/Xerox tag...");
+     if (IfPm3Iso14443b()) {
+@@ -182,6 +203,7 @@
+     }
+ 
+     // 14b is the longest test
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for ISO14443-B tag...");
+     if (IfPm3Iso14443b()) {
+@@ -194,6 +216,7 @@
+ 
+     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_15 == 1.5sec delay
+ 
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for ISO15693 tag...");
+     if (IfPm3Iso15693()) {
+@@ -204,6 +227,7 @@
+         }
+     }
+ 
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for iCLASS / PicoPass tag...");
+     if (IfPm3Iclass()) {
+@@ -216,6 +240,7 @@
+ 
+     // OBS!  This triggers a swap to FPGA_BITSTREAM_HF_FELICA == 1.5sec delay
+ 
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     PROMPT_CLEARLINE;
+     PrintAndLogEx(INPLACE, "Searching for FeliCa tag...");
+     if (IfPm3Felica()) {
+@@ -223,7 +248,7 @@
+             PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("ISO 18092 / FeliCa tag") " found\n");
+             success[FELICA] = true;
+             res = PM3_SUCCESS;
+-        } else if (info_felica_seac() == PM3_SUCCESS) {
++        } else if (!hf_search_cancelled() && info_felica_seac() == PM3_SUCCESS) {
+             PrintAndLogEx(SUCCESS, "Valid " _GREEN_("FeliCa SEAC tag") " found\n");
+             success[FELICA] = true;
+             res = PM3_SUCCESS;
+@@ -242,6 +267,7 @@
+     }
+     */
+ 
++    if (hf_search_cancelled()) return PM3_EOPABORTED;
+     DropField();
+ 
+     PROMPT_CLEARLINE;
+--- a/client/src/proxmark3.c
++++ b/client/src/proxmark3.c
+@@ -1066,6 +1066,7 @@
+         PrintAndLogEx(NORMAL, "      --gui-pipe <32lowerhex>              typed GUI stdio bridge with cwd and return-code frames");
+ #ifdef _WIN32
+         PrintAndLogEx(NORMAL, "      --gui-pipe-cancel                    scoped !CANCEL controls in GUI command waits (optional)");
++        PrintAndLogEx(NORMAL, "      --gui-pipe-bulk-cancel               scoped !CANCEL for finite BigBuf/LF/Texkom reads (capability)");
+ #endif
+         PrintAndLogEx(NORMAL, "      --ncpu <num_cores>                  override number of CPU cores");
+         PrintAndLogEx(NORMAL, "      -c/--command \"<command>\"          execute one Proxmark3 command (or several separated by ';').");

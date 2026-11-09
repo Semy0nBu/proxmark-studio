@@ -1,0 +1,25 @@
+name: Windows checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install application dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Run offline tests
+        run: python -m unittest discover -s tests -v
+      - name: Audit English catalog
+        run: python tools/audit_english_catalog.py --output build/catalog-audit.json

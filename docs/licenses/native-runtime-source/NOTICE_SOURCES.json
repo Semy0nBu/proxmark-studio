@@ -1,0 +1,14 @@
+{
+  "source_index": "https://repo.msys2.org/mingw/sources/",
+  "extracted_from": {
+    "x264": "mingw-w64-x264-0.165.r3222.b35605a-3.src.tar.zst; git b35605a:COPYING",
+    "x265": "mingw-w64-x265-4.3-1.src.tar.zst; x265_4.3/COPYING",
+    "lz4": "mingw-w64-lz4-1.11.0-1.src.tar.zst; lib/LICENSE and programs/COPYING"
+  },
+  "files": {
+    "lz4/COPYING": "609b910ef05c9c855ecc1da155a36ed0f57514eac452cf93446530b5ea4b3bc3",
+    "lz4/LICENSE": "8b58c446121a109ccf32edc094bba3010a3d85e4ee3702950db55e4d3e87736c",
+    "x264/COPYING": "32b1062f7da84967e7019d01ab805935caa7ab7321a7ced0e30ebe75e5df1670",
+    "x265/COPYING": "d8afb1bcc7a2cfc603683b168d6987ef0a48e59e0da3693bf55c5d33b67e2b49"
+  }
+}

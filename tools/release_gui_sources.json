@@ -1,0 +1,96 @@
+{
+  "kind": "proxmark-studio-gui-source-lock-v1",
+  "python": "3.12.14",
+  "pyside": "6.12.0",
+  "qt": "6.12.0",
+  "pyinstaller": "6.22.3",
+  "pyserial": "3.5",
+  "components": [
+    {
+      "id": "qtbase",
+      "version": "6.12.0",
+      "file": "qtbase-everywhere-src-6.12.0.tar.xz",
+      "sha256": "a951bd163c7b80fc6b8c88d7668fb56abf91c152373e13c10666763238131307",
+      "bytes": 51220268,
+      "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtbase-everywhere-src-6.12.0.tar.xz",
+      "mirror": "https://qt.mirror.constant.com/archive/qt/6.12/6.12.0/submodules/qtbase-everywhere-src-6.12.0.tar.xz",
+      "checksum_source": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtbase-everywhere-src-6.12.0.tar.xz.mirrorlist"
+    },
+    {
+      "id": "qtsvg",
+      "version": "6.12.0",
+      "file": "qtsvg-everywhere-src-6.12.0.tar.xz",
+      "sha256": "e4ab39534ec97987b1b9b60ef7f4d3253d5912a69f8c713a01753174a4029331",
+      "bytes": 2341876,
+      "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtsvg-everywhere-src-6.12.0.tar.xz",
+      "mirror": "https://qt.mirror.constant.com/archive/qt/6.12/6.12.0/submodules/qtsvg-everywhere-src-6.12.0.tar.xz",
+      "checksum_source": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtsvg-everywhere-src-6.12.0.tar.xz.mirrorlist"
+    },
+    {
+      "id": "qtimageformats",
+      "version": "6.12.0",
+      "file": "qtimageformats-everywhere-src-6.12.0.tar.xz",
+      "sha256": "0943132b5db8de6b6a7f1d162682173e8763c7ed94e80fd39113292845f67762",
+      "bytes": 1848620,
+      "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtimageformats-everywhere-src-6.12.0.tar.xz",
+      "mirror": "https://qt.mirror.constant.com/archive/qt/6.12/6.12.0/submodules/qtimageformats-everywhere-src-6.12.0.tar.xz",
+      "checksum_source": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qtimageformats-everywhere-src-6.12.0.tar.xz.mirrorlist"
+    },
+    {
+      "id": "qttranslations",
+      "version": "6.12.0",
+      "file": "qttranslations-everywhere-src-6.12.0.tar.xz",
+      "sha256": "85929c0c30d6f273f23bd879bb69803ea17b010ab73cab2f8abf95357f6f6bbb",
+      "bytes": 1745884,
+      "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qttranslations-everywhere-src-6.12.0.tar.xz",
+      "mirror": "https://qt.mirror.constant.com/archive/qt/6.12/6.12.0/submodules/qttranslations-everywhere-src-6.12.0.tar.xz",
+      "checksum_source": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qttranslations-everywhere-src-6.12.0.tar.xz.mirrorlist"
+    },
+    {
+      "id": "qttools",
+      "version": "6.12.0",
+      "file": "qttools-everywhere-src-6.12.0.tar.xz",
+      "sha256": "8dab8f3611496486a470ad5f115ceea584f36bc22a2b8b6f6ebdbafbb8160693",
+      "bytes": 10819720,
+      "url": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qttools-everywhere-src-6.12.0.tar.xz",
+      "mirror": "https://qt.mirror.constant.com/archive/qt/6.12/6.12.0/submodules/qttools-everywhere-src-6.12.0.tar.xz",
+      "checksum_source": "https://download.qt.io/official_releases/qt/6.12/6.12.0/submodules/qttools-everywhere-src-6.12.0.tar.xz.mirrorlist"
+    },
+    {
+      "id": "pyside-setup",
+      "version": "6.12.0",
+      "file": "pyside-setup-everywhere-src-6.12.0.tar.xz",
+      "sha256": "099c1a597cf33c1b000e11cf68a0b82d216fb802bf81726efc720394f10c7751",
+      "bytes": 18211772,
+      "url": "https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-6.12.0-src/pyside-setup-everywhere-src-6.12.0.tar.xz",
+      "mirror": "https://qt.mirror.constant.com/official_releases/QtForPython/pyside6/PySide6-6.12.0-src/pyside-setup-everywhere-src-6.12.0.tar.xz",
+      "checksum_source": "https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-6.12.0-src/pyside-setup-everywhere-src-6.12.0.tar.xz.mirrorlist"
+    },
+    {
+      "id": "python",
+      "version": "3.12.14",
+      "file": "Python-3.12.14.tar.xz",
+      "sha256": "5c8462af5790baf43a321a1559dbe0db06d1be4300fb85fb53c40060668e548a",
+      "url": "https://www.python.org/ftp/python/3.12.14/Python-3.12.14.tar.xz",
+      "checksum_source": "https://www.python.org/ftp/python/3.12.14/Python-3.12.14.tar.xz.sigstore"
+    },
+    {
+      "id": "pyinstaller",
+      "version": "6.22.3",
+      "file": "pyinstaller-6.22.3.tar.gz",
+      "sha256": "05eb2f5615503e72939a7224d68b4aff572c6b0438ee4a17d0a4b481f399362d",
+      "bytes": 4437180,
+      "url": "https://files.pythonhosted.org/packages/63/41/f90302845945abd4ed647933ff5ee7c6ac93983187be67f897b6cb613331/pyinstaller-6.22.3.tar.gz",
+      "checksum_source": "https://pypi.org/pypi/pyinstaller/6.22.3/json"
+    },
+    {
+      "id": "pyserial",
+      "version": "3.5",
+      "file": "pyserial-3.5.tar.gz",
+      "sha256": "3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb",
+      "bytes": 159125,
+      "url": "https://files.pythonhosted.org/packages/1e/7d/ae3f0a63f41e4d2f6cb66a5b57197850f919f59e558159a4dd3a818f5082/pyserial-3.5.tar.gz",
+      "checksum_source": "https://pypi.org/pypi/pyserial/3.5/json"
+    }
+  ]
+}

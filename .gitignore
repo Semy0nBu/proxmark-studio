@@ -1,0 +1,16 @@
+/.venv/
+/.venv-release/
+/reference/
+/*.zip
+/*.7z
+/data/
+/outputs/
+/.proxmark3/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+/build/
+/dist/
+/publication/
+/SOURCE_SNAPSHOT.json
+*.spec

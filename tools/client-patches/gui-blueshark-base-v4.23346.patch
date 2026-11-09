@@ -1,0 +1,443 @@
+diff --git a/armsrc/mifarecmd.c b/armsrc/mifarecmd.c
+index 9abecc6..edbaecf 100644
+--- a/armsrc/mifarecmd.c
++++ b/armsrc/mifarecmd.c
+@@ -1143,8 +1143,9 @@ void MifareAcquireEncryptedNonces(const mf_acquire_nonces_t *payload) {
+ 
+     while (num_pairs < MFC_MAX_NONCE_PAIRS) {
+ 
+-        // Test if the action was cancelled
+-        if (BUTTON_PRESS()) {
++        // Leave pending host data for the main loop to handle after cleanup.
++        // A new host command must be able to stop an unsuccessful acquisition.
++        if (BUTTON_PRESS() || data_available()) {
+             isOK = PM3_EOPABORTED;
+             field_off = true;
+             break;
+diff --git a/client/src/cmdhfmfhard.c b/client/src/cmdhfmfhard.c
+index 8820443..405f255 100644
+--- a/client/src/cmdhfmfhard.c
++++ b/client/src/cmdhfmfhard.c
+@@ -1672,6 +1672,14 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
+ 
+     do {
+ 
++        // Never start another acquisition after a scoped GUI cancellation,
++        // including a race where the preceding nonce reply already arrived.
++        if (pm3_gui_pipe_cancel_poll()) {
++            if (fnonces != NULL) fclose(fnonces);
++            DropField();
++            return PM3_EOPABORTED;
++        }
++
+         if (field_off) {
+             DropField();
+             break;
+diff --git a/client/src/comms.c b/client/src/comms.c
+index 375a941..7fca145 100644
+--- a/client/src/comms.c
++++ b/client/src/comms.c
+@@ -30,6 +30,7 @@
+ #include "util_posix.h" // msclock
+ #include "util_darwin.h" // en/dis-ableNapp();
+ #include "usart_defs.h"
++#include "proxmark3.h" // framed GUI cancellation while waiting for firmware
+ 
+ // #define COMMS_DEBUG
+ // #define COMMS_DEBUG_RAW
+@@ -1164,6 +1165,19 @@ bool WaitForResponseTimeoutW(uint32_t cmd, PacketResponseNG *response, size_t ms
+     // Wait until the command is received
+     while (true) {
+ 
++        if (pm3_gui_pipe_cancel_poll()) {
++            if (pm3_gui_pipe_cancel_take_break()) {
++                PrintAndLogEx(INFO, "GUI cancellation requested; waiting for firmware acknowledgement");
++                SendCommandNG(CMD_BREAK_LOOP, NULL, 0);
++            }
++            // Incoming debug packets reset timeout_start_time. This deadline
++            // deliberately does not, so an Auth2 storm cannot hold us forever.
++            if (msclock() - pm3_gui_pipe_cancel_started_at() >= 5000) {
++                PrintAndLogEx(WARNING, "GUI cancellation acknowledgement timed out; resynchronization required");
++                return false;
++            }
++        }
++
+         // if device gets disconnected or resets,  break out of this loop
+         if (IsCommunicationThreadDead()) {
+             break;
+diff --git a/client/src/proxmark3.c b/client/src/proxmark3.c
+index dd0ac05..7d261c6 100644
+--- a/client/src/proxmark3.c
++++ b/client/src/proxmark3.c
+@@ -41,10 +41,230 @@
+ 
+ #ifndef _WIN32
+ #include <locale.h>
++#else
++#include <windows.h>
++#include <io.h>
++#include <fcntl.h>
+ #endif
+ 
+ static int mainret = PM3_SUCCESS;
+ 
++// Host-only bridge for the typed GUI catalog. This does not change firmware.
++static char gui_pipe_token[33] = {0};
++static char gui_pipe_active_id[33] = {0};
++static bool gui_pipe_cancel_requested = false;
++static bool gui_pipe_cancel_break_sent = false;
++static uint64_t gui_pipe_cancel_started = 0;
++static pthread_mutex_t gui_pipe_control_lock = PTHREAD_MUTEX_INITIALIZER;
++#define GUI_PIPE_MAX_LINE 65536
++#define GUI_PIPE_MAX_FIELD 8192
++
++static bool gui_pipe_id_valid(const char *value) {
++    if (strlen(value) != 32) return false;
++    for (size_t i = 0; i < 32; i++) {
++        if (!((value[i] >= '0' && value[i] <= '9') || (value[i] >= 'a' && value[i] <= 'f'))) return false;
++    }
++    return true;
++}
++
++static void gui_pipe_frame_begin(const char *id) {
++    pthread_mutex_lock(&gui_pipe_control_lock);
++    strcpy(gui_pipe_active_id, id);
++    gui_pipe_cancel_requested = false;
++    gui_pipe_cancel_break_sent = false;
++    gui_pipe_cancel_started = 0;
++    pthread_mutex_unlock(&gui_pipe_control_lock);
++}
++
++static void gui_pipe_frame_end(void) {
++    pthread_mutex_lock(&gui_pipe_control_lock);
++    gui_pipe_active_id[0] = '\0';
++    gui_pipe_cancel_requested = false;
++    gui_pipe_cancel_break_sent = false;
++    gui_pipe_cancel_started = 0;
++    pthread_mutex_unlock(&gui_pipe_control_lock);
++}
++
++bool pm3_gui_pipe_cancel_poll(void) {
++    pthread_mutex_lock(&gui_pipe_control_lock);
++#ifdef _WIN32
++    if (gui_pipe_token[0] && gui_pipe_active_id[0] && !gui_pipe_cancel_requested) {
++        // The host waits for BEGIN before sending a control record, so stdio
++        // has not prefetched this later input while reading the request frame.
++        HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
++        for (unsigned int discarded = 0; discarded < 8; discarded++) {
++            char control[74]; // !CANCEL + space + token32 + space + id32 + LF
++            DWORD copied = 0;
++            if (!PeekNamedPipe(input, control, sizeof(control), &copied, NULL, NULL) || copied != sizeof(control)) break;
++            if (memcmp(control, "!CANCEL ", 8) || control[40] != ' ' || control[73] != '\n') break;
++            char token[33] = {0};
++            char id[33] = {0};
++            memcpy(token, control + 8, 32);
++            memcpy(id, control + 41, 32);
++            if (!gui_pipe_id_valid(token) || !gui_pipe_id_valid(id)) break;
++            DWORD consumed = 0;
++            if (!ReadFile(input, control, sizeof(control), &consumed, NULL) || consumed != sizeof(control)) break;
++            // Syntactically valid controls for older/different requests are
++            // discarded without cancelling or touching an ordinary frame.
++            if (!strcmp(token, gui_pipe_token) && !strcmp(id, gui_pipe_active_id)) {
++                gui_pipe_cancel_requested = true;
++                gui_pipe_cancel_started = msclock();
++                break;
++            }
++        }
++    }
++#endif
++    bool requested = gui_pipe_active_id[0] && gui_pipe_cancel_requested;
++    pthread_mutex_unlock(&gui_pipe_control_lock);
++    return requested;
++}
++
++bool pm3_gui_pipe_cancel_take_break(void) {
++    pthread_mutex_lock(&gui_pipe_control_lock);
++    bool send_break = gui_pipe_active_id[0] && gui_pipe_cancel_requested && !gui_pipe_cancel_break_sent;
++    if (send_break) gui_pipe_cancel_break_sent = true;
++    pthread_mutex_unlock(&gui_pipe_control_lock);
++    return send_break;
++}
++
++uint64_t pm3_gui_pipe_cancel_started_at(void) {
++    pthread_mutex_lock(&gui_pipe_control_lock);
++    uint64_t started = gui_pipe_cancel_started;
++    pthread_mutex_unlock(&gui_pipe_control_lock);
++    return started;
++}
++
++static int gui_pipe_hex_digit(char value) {
++    if (value >= '0' && value <= '9') return value - '0';
++    if (value >= 'a' && value <= 'f') return value - 'a' + 10;
++    if (value >= 'A' && value <= 'F') return value - 'A' + 10;
++    return -1;
++}
++
++static bool gui_pipe_utf8_valid(const unsigned char *value) {
++    while (*value) {
++        uint32_t scalar = *value++;
++        unsigned int count;
++        uint32_t minimum;
++        if (scalar < 0x80) continue;
++        if (scalar >= 0xc2 && scalar <= 0xdf) { count = 1; minimum = 0x80; scalar &= 0x1f; }
++        else if (scalar >= 0xe0 && scalar <= 0xef) { count = 2; minimum = 0x800; scalar &= 0x0f; }
++        else if (scalar >= 0xf0 && scalar <= 0xf4) { count = 3; minimum = 0x10000; scalar &= 0x07; }
++        else return false;
++        for (unsigned int i = 0; i < count; i++) {
++            if (*value < 0x80 || *value > 0xbf) return false;
++            scalar = (scalar << 6) | (*value++ & 0x3f);
++        }
++        if (scalar < minimum || scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff)) return false;
++    }
++    return true;
++}
++
++static bool gui_pipe_decode(const char *hex, char *decoded) {
++    size_t length = strlen(hex);
++    if (!length || length % 2 || length / 2 > GUI_PIPE_MAX_FIELD) return false;
++    for (size_t i = 0; i < length; i += 2) {
++        int high = gui_pipe_hex_digit(hex[i]);
++        int low = gui_pipe_hex_digit(hex[i + 1]);
++        if (high < 0 || low < 0) return false;
++        unsigned char value = (unsigned char)((high << 4) | low);
++        if (value == 0 || value == '\r' || value == '\n') return false;
++        decoded[i / 2] = (char)value;
++    }
++    decoded[length / 2] = '\0';
++    return gui_pipe_utf8_valid((const unsigned char *)decoded);
++}
++
++static void gui_pipe_marker(const char *id, const char *phase, int result) {
++    // Firmware debug output shares this lock with ordinary CLI printing.
++    pthread_mutex_lock(&g_print_lock);
++    if (id == NULL) fprintf(stdout, "\n[PM3GUI %s READY]\n", gui_pipe_token);
++    else if (strcmp(phase, "BEGIN") == 0) fprintf(stdout, "\n[PM3GUI %s %s BEGIN]\n", gui_pipe_token, id);
++    else fprintf(stdout, "\n[PM3GUI %s %s END %d]\n", gui_pipe_token, id, result);
++    fflush(stdout);
++    pthread_mutex_unlock(&g_print_lock);
++}
++
++static bool gui_pipe_set_cwd(const char *path) {
++#ifdef _WIN32
++    wchar_t wide[GUI_PIPE_MAX_FIELD + 1];
++    if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, ARRAYLEN(wide)) == 0) return false;
++    return SetCurrentDirectoryW(wide) != 0;
++#else
++    return chdir(path) == 0;
++#endif
++}
++
++static void gui_pipe_loop(void) {
++    char *line = calloc(GUI_PIPE_MAX_LINE + 1, 1);
++    if (line == NULL) { mainret = PM3_EMALLOC; return; }
++    // preferences_load initializes these to the startup cwd even in incognito.
++    // Empty paths let relative ASCII artifact names follow each request's real
++    // cwd, including a Unicode Windows directory set through the wide API.
++    if (!setDefaultPath(spDefault, "") || !setDefaultPath(spDump, "") || !setDefaultPath(spTrace, "")) {
++        free(line);
++        mainret = PM3_EMALLOC;
++        return;
++    }
++    gui_pipe_marker(NULL, "READY", 0);
++    while (1) {
++        size_t used = 0;
++        bool invalid = false;
++        int input;
++        while ((input = fgetc(stdin)) != EOF && input != '\n') {
++            if (input <= 0 || input > 127 || input == '\r') invalid = true;
++            if (used < GUI_PIPE_MAX_LINE) line[used++] = (char)input;
++            else invalid = true;
++        }
++        if (input == EOF && used == 0) break;
++        line[used] = '\0';
++        // An END/cancel race must never turn a late control into an invalid
++        // request ID or cancel the next request. Controls are not commands.
++        if (used >= 8 && !memcmp(line, "!CANCEL ", 8)) {
++            if (input == EOF) break;
++            continue;
++        }
++        char id[33] = {0};
++        if (used < 33 || line[32] != ' ') {
++            PrintAndLogEx(ERR, "GUI pipe protocol error: missing request ID");
++            mainret = PM3_EINVARG;
++            break;
++        }
++        memcpy(id, line, 32);
++        if (!gui_pipe_id_valid(id)) {
++            PrintAndLogEx(ERR, "GUI pipe protocol error: invalid request ID");
++            mainret = PM3_EINVARG;
++            break;
++        }
++        gui_pipe_frame_begin(id);
++        gui_pipe_marker(id, "BEGIN", 0);
++        char cwd[GUI_PIPE_MAX_FIELD + 1] = {0};
++        char command[GUI_PIPE_MAX_FIELD + 1] = {0};
++        char *cwd_hex = line + 33;
++        char *command_hex = strchr(cwd_hex, ' ');
++        int result = PM3_EINVARG;
++        if (command_hex != NULL && !invalid && input != EOF) {
++            *command_hex++ = '\0';
++            if (gui_pipe_decode(cwd_hex, cwd) && gui_pipe_decode(command_hex, command)) {
++                if (!gui_pipe_set_cwd(cwd)) {
++                    PrintAndLogEx(ERR, "GUI pipe: cannot change working directory");
++                    result = PM3_EFILE;
++                } else {
++                    // Deliberately one dispatch: no legacy semicolon splitting.
++                    result = CommandReceived(command);
++                }
++            }
++        }
++        if (result == PM3_EINVARG) PrintAndLogEx(ERR, "GUI pipe: invalid request or command arguments");
++        gui_pipe_marker(id, "END", result);
++        gui_pipe_frame_end();
++        mainret = result;
++        if (result == PM3_SQUIT) { mainret = PM3_SUCCESS; break; }
++        if (result == PM3_EFATAL || input == EOF) break;
++    }
++    free(line);
++}
++
+ #ifndef LIBPM3
+ #define BANNERMSG1 ""
+ #define BANNERMSG2 
+@@ -515,8 +735,11 @@ main_loop(const char *script_cmds_file, char *script_cmd, bool stayInCommandLoop
+         }
+     }
+ 
++    // The GUI bridge shares initialization and the normal quit-session cleanup.
++    if (gui_pipe_token[0]) gui_pipe_loop();
++
+     // loops every time enter is pressed...
+-    while (1) {
++    while (!gui_pipe_token[0]) {
+ 
+         bool printprompt = false;
+ 
+@@ -840,6 +1063,10 @@ static void show_help(bool showFullHelp, char *exec_name) {
+         PrintAndLogEx(NORMAL, "      -m/--markdown                       dump all interactive command list at once in markdown syntax");
+         PrintAndLogEx(NORMAL, "      -b/--baud                           serial port speed (only needed for physical UART, not for USB-CDC or BT)");
+         PrintAndLogEx(NORMAL, "      --incognito                         do not use history, prefs file nor log files");
++        PrintAndLogEx(NORMAL, "      --gui-pipe <32lowerhex>              typed GUI stdio bridge with cwd and return-code frames");
++#ifdef _WIN32
++        PrintAndLogEx(NORMAL, "      --gui-pipe-cancel                    scoped !CANCEL controls in GUI command waits (optional)");
++#endif
+         PrintAndLogEx(NORMAL, "      --ncpu <num_cores>                  override number of CPU cores");
+         PrintAndLogEx(NORMAL, "      -c/--command \"<command>\"          execute one Proxmark3 command (or several separated by ';').");
+         PrintAndLogEx(NORMAL, "      -l/--lua <lua_script_file>          execute Lua script.");
+@@ -1369,6 +1596,36 @@ int main(int argc, char *argv[]) {
+             continue;
+         }
+ 
++        if (strcmp(argv[i], "--gui-pipe") == 0) {
++            if (i + 1 == argc || !gui_pipe_id_valid(argv[i + 1])) {
++                PrintAndLogEx(ERR, "ERROR: --gui-pipe requires exactly 32 lowercase hex characters");
++                return 1;
++            }
++            strcpy(gui_pipe_token, argv[++i]);
++            g_session.incognito = true;
++            SetFlushAfterWrite(true);
++            // PeekNamedPipe must see later control records rather than bytes
++            // hidden in stdio's read-ahead buffer.
++            if (setvbuf(stdin, NULL, _IONBF, 0) != 0) {
++                PrintAndLogEx(ERR, "ERROR: cannot configure GUI pipe input");
++                return 1;
++            }
++#ifdef _WIN32
++            _setmode(_fileno(stdin), _O_BINARY);
++            _setmode(_fileno(stdout), _O_BINARY);
++            _setmode(_fileno(stderr), _O_BINARY);
++#endif
++            continue;
++        }
++
++#ifdef _WIN32
++        if (strcmp(argv[i], "--gui-pipe-cancel") == 0) {
++            // Capability/launch flag. Controls are enabled by --gui-pipe;
++            // accepting this flag also supports explicit host negotiation.
++            continue;
++        }
++#endif
++
+         // go to dump mode
+         if (strcmp(argv[i], "--dumpmem") == 0) {
+             dumpmem_mode = true;
+@@ -1469,6 +1726,11 @@ int main(int argc, char *argv[]) {
+         return 1;
+     }
+ 
++    if (gui_pipe_token[0] && (script_cmd || script_cmds_file || addScriptExec || flash_mode || dumpmem_mode || reboot_bootloader_mode)) {
++        PrintAndLogEx(ERR, "ERROR: --gui-pipe cannot be combined with startup scripts, commands, or flashing");
++        return 1;
++    }
++
+     // Load Settings and assign
+     // This will allow the command line to override the settings.json values
+     preferences_load();
+diff --git a/client/src/proxmark3.h b/client/src/proxmark3.h
+index 25c7c80..b8d6c56 100644
+--- a/client/src/proxmark3.h
++++ b/client/src/proxmark3.h
+@@ -65,6 +65,11 @@ const char *get_my_executable_directory(void);
+ const char *get_my_user_directory(void);
+ void pm3_init(void);
+ void main_loop(const char *script_cmds_file, char *script_cmd, bool stayInCommandLoop);
++// Scoped Windows GUI bridge cancellation. These are inert outside an active
++// framed request; no other stdin command is consumed by the polling path.
++bool pm3_gui_pipe_cancel_poll(void);
++bool pm3_gui_pipe_cancel_take_break(void);
++uint64_t pm3_gui_pipe_cancel_started_at(void);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/client/src/uart/uart_win32.c b/client/src/uart/uart_win32.c
+index 5ad3045..b2162c8 100644
+--- a/client/src/uart/uart_win32.c
++++ b/client/src/uart/uart_win32.c
+@@ -357,6 +357,10 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
+     // FILE_FLAG_OVERLAPPED is required for overlapped WaitCommEvent/ReadFile/WriteFile.
+     sp->hPort = CreateFileA(acPortName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+     if (sp->hPort == INVALID_HANDLE_VALUE) {
++        DWORD open_error = GetLastError();
++        if (slient == false) {
++            PrintAndLogEx(ERR, "UART CreateFile failed for %s (Win32 error %lu)", acPortName, (unsigned long)open_error);
++        }
+         uart_close(sp);
+         return INVALID_SERIAL_PORT;
+     }
+diff --git a/client/src/util.c b/client/src/util.c
+index e8fb7c5..784e3a3 100644
+--- a/client/src/util.c
++++ b/client/src/util.c
+@@ -34,6 +34,7 @@
+ 
+ #include "ui.h"     // PrintAndLog
+ #include "comms.h"  // SendCommandNG / WaitForResponseTimeout (set_rgb)
++#include "proxmark3.h" // scoped GUI stdin cancellation
+ #include "pm3_cmd.h" // CMD_PM5_RGB_SET
+ 
+ #define UTIL_BUFFER_SIZE_SPRINT 16384
+@@ -90,6 +91,7 @@ int kbd_enter_pressed(void) {
+ 
+ #include <conio.h>
+ int kbd_enter_pressed(void) {
++    if (pm3_gui_pipe_cancel_poll()) return 1;
+     int ret = 0;
+     while (kbhit()) {
+         ret |= getch() == '\r';
+diff --git a/common/default_version_pm3.c b/common/default_version_pm3.c
+index 2a3e7aa..d0344ba 100644
+--- a/common/default_version_pm3.c
++++ b/common/default_version_pm3.c
+@@ -10,8 +10,8 @@ const struct version_information_t SECTVERSINFO g_version_information = {
+     VERSION_INFORMATION_MAGIC,
+     1,
+     1,
+-    2,
+-    "Iceman/master/v4.23346",
+-    "2026-09-18 00:22:18",
+-    "9ce8a4b6c"
++    0,
++    "Iceman/codex/GUI-BlueShark/v4.23346-dirty",
++    "2026-11-08 23:51:06",
++    "4bc161944"
+ };

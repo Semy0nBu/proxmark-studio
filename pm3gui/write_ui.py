@@ -1,0 +1,111 @@
+"""HF write review using the existing asynchronous runner and cancellation."""
+from .i18n import tr
+from .writing import HFWritePlan
+from .card_band import card_band
+from .write_dialog import WriteDialog
+
+
+class HFWriteControllerMixin:
+    def open_write_dialog(self):
+        if self.runner.busy or self.read_job is not None or self.antenna_job is not None or self.firmware_busy:
+            self.error(tr('Завершите текущую операцию.'))
+            return
+        try:
+            dump=self._working_dump() if self.loaded_dump is not None else None
+            if dump is not None and card_band({'protocol':self.protocol.text()},dump.metadata)=='lf':dump=None
+            self.write_dialog=WriteDialog(self,dump)
+            self.write_dialog.show()
+        except (ValueError,OSError) as exc:
+            self.error(exc)
+
+    def prepare_card_write(self,dialog):
+        if self.runner.busy or self.read_job is not None or self.antenna_job is not None or self.firmware_busy:
+            return
+        try:
+            directory=self._new_session()
+            self.current_session=directory
+            plan=HFWritePlan(dialog.dump,dialog.options(),directory,self.key_library.list_card_keys)
+            dialog.plan=plan
+            self.read_job={'job_kind':'write','stage':'write_transaction','session':directory,'write_plan':plan,'write_dialog':dialog}
+            dialog.set_active(True)
+            dialog.write_button.setEnabled(False)
+            self._next_write_step()
+        except (ValueError,OSError) as exc:
+            self._card_job_failed(exc)
+
+    def approve_card_write(self,dialog):
+        job=self.read_job
+        if self.runner.busy or not job or job.get('write_dialog') is not dialog:
+            return
+        try:
+            dialog.plan.approve()
+            dialog.set_active(True)
+            self._next_write_step()
+        except (ValueError,OSError) as exc:
+            self._card_job_failed(exc)
+
+    def _advance_write(self,output,code):
+        job=self.read_job
+        if job.get('write_cancelled'):
+            self._end_write(False,tr('Запись остановлена. Уже отправленные записи не отменяются; смотрите отчёт и резервную копию.'))
+            return
+        plan=job['write_plan']
+        plan.consume(output,code)
+        self._persist_write_keys(job)
+        self._next_write_step()
+
+    def _persist_write_keys(self,job):
+        plan=job['write_plan'];count=job.get('persisted_write_keys',0)
+        if len(plan.expected_keys)>count:
+            self.key_library.record_verified_keys(plan.target.uid,plan.expected_keys[count:],source=tr('Proxmark3: автозапись A/B и проверка на карте'))
+            job['persisted_write_keys']=len(plan.expected_keys);self.refresh_keys()
+
+    def _next_write_step(self):
+        job=self.read_job
+        plan,dialog=job['write_plan'],job['write_dialog']
+        if plan.done:
+            self._persist_write_keys(job)
+            self._end_write(True,tr('Запись проверена чтением: {0} блоков/страниц. UID {1}.', f'{len(plan.verified)}', f'{plan.target.uid}'))
+            return
+        operation=plan.next_operation()
+        if operation is None:
+            dialog.show_review(plan)
+            dialog.status.setText(tr('Проверьте изменения и нажмите «Начать автозапись».'))
+            dialog.set_active(True,review=True)
+            self._busy_changed(False)
+            self.operation_progress.hide()
+            self.device_info.setText(tr('План записи подготовлен. Ожидается подтверждение в диалоге.'))
+            self.operation_badge.setText(tr('Ожидание подтверждения'))
+            return
+        self._start_step(operation,30000 if not isinstance(operation,str) else 90000)
+        self._busy_changed(self.runner.busy)
+        description=(tr('Проверка и резервная копия…') if not plan.approved else
+                     tr('Запись и проверка: {0} / {1}', f'{len(plan.verified)}', f'{len(plan.entries)}'))
+        dialog.status.setText(description)
+        self.device_info.setText(description)
+        if plan.approved:
+            dialog.update_progress(plan)
+            self.operation_progress.setRange(0,max(1,len(plan.entries)))
+            self.operation_progress.setValue(len(plan.verified))
+
+    def _end_write(self,success,message):
+        job=self.read_job
+        self.read_job=None
+        self._busy_changed(self.runner.busy)
+        dialog=job['write_dialog']
+        dialog.set_active(False)
+        dialog.write_button.setEnabled(False)
+        dialog.show_review(job['write_plan'])
+        dialog.steps.setText(tr('Автозапись завершена') if success else tr('Автозапись остановлена'))
+        dialog.status.setText(message)
+        self.device_info.setText(message)
+
+    def _write_failed(self,message):
+        job=self.read_job
+        try:
+            job['write_plan'].fail(message)
+        except OSError:
+            pass
+        path=job['write_plan'].directory/'write-report.json'
+        suffix=(tr('Доступный отчёт и резервные данные: ')+str(path)) if path.is_file() else tr('Не удалось сохранить отчёт; запись остановлена.')
+        self._end_write(False,tr('Запись не завершена: ')+str(message)+tr('\nАвтоматического повтора нет. ')+suffix)

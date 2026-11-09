@@ -1,0 +1,1424 @@
+{
+  "version": "RRG v4.23346",
+  "source": "https://github.com/RfidResearchGroup/proxmark3/tree/v4.23346",
+  "license": "GPL-3.0-or-later",
+  "client_sha256": "fd5c4f5af239b15b598a02c79de0b22e55bd0a7d5bc5d87a2194ce43ccdb0b2c",
+  "commands": [
+    {
+      "command": "prefs help",
+      "offline": true,
+      "help": "help             This help\nget              { Get a preference }\nset              { Set a preference }\nshow             Show all preferences",
+      "description": "help             This help"
+    },
+    {
+      "command": "prefs show",
+      "offline": true,
+      "help": "Show all persistent preferences\n\nusage:\n    prefs show [-hj]\n\noptions:\n    -h, --help                     This help\n    -j, --json                     Dump prefs as JSON\n\nexamples/notes:\n    prefs show",
+      "description": "Show all persistent preferences"
+    },
+    {
+      "command": "prefs get barmode",
+      "offline": true,
+      "help": "Get preference of HF/LF tune command styled output in the client\n\nusage:\n    prefs get barmode [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get barmode",
+      "description": "Get preference of HF/LF tune command styled output in the client"
+    },
+    {
+      "command": "prefs get client.debug",
+      "offline": true,
+      "help": "Get preference of using clientside debug level\n\nusage:\n    prefs get client.debug [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get client.debug",
+      "description": "Get preference of using clientside debug level"
+    },
+    {
+      "command": "prefs get client.delay",
+      "offline": true,
+      "help": "Get preference of delay time before execution of a command in the client\n\nusage:\n    prefs get client.delay [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get client.delay",
+      "description": "Get preference of delay time before execution of a command in the client"
+    },
+    {
+      "command": "prefs get client.timeout",
+      "offline": true,
+      "help": "Get preference of delay time before execution of a command in the client\n\nusage:\n    prefs get client.timeout [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get client.timeout",
+      "description": "Get preference of delay time before execution of a command in the client"
+    },
+    {
+      "command": "prefs get hf.field.timeout_sec",
+      "offline": true,
+      "help": "Get preference of PM3 HF field inactivity timeout\n\nusage:\n    prefs get hf.field.timeout_sec [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get hf.field.timeout_sec",
+      "description": "Get preference of PM3 HF field inactivity timeout"
+    },
+    {
+      "command": "prefs get color",
+      "offline": true,
+      "help": "Get preference of using colors in the client\n\nusage:\n    prefs get color [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get color",
+      "description": "Get preference of using colors in the client"
+    },
+    {
+      "command": "prefs get savepaths",
+      "offline": true,
+      "help": "Get preference of file paths in the client\n\nusage:\n    prefs get savepaths [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get savepaths",
+      "description": "Get preference of file paths in the client"
+    },
+    {
+      "command": "prefs get emoji",
+      "offline": true,
+      "help": "Get preference of using emojis in the client\n\nusage:\n    prefs get emoji [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get emoji",
+      "description": "Get preference of using emojis in the client"
+    },
+    {
+      "command": "prefs get hints",
+      "offline": true,
+      "help": "Get preference of showing hint messages in the client\n\nusage:\n    prefs get hints [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get hints",
+      "description": "Get preference of showing hint messages in the client"
+    },
+    {
+      "command": "prefs get output",
+      "offline": true,
+      "help": "Get preference of dump output style\n\nusage:\n    prefs get output [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get output",
+      "description": "Get preference of dump output style"
+    },
+    {
+      "command": "prefs get plotsliders",
+      "offline": true,
+      "help": "Get preference of showing the plotslider control in the client\n\nusage:\n    prefs get plotsliders [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get plotsliders",
+      "description": "Get preference of showing the plotslider control in the client"
+    },
+    {
+      "command": "prefs get mqtt",
+      "offline": true,
+      "help": "Get preference of MQTT settings in the client\n\nusage:\n    prefs get mqtt [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    prefs get mqtt",
+      "description": "Get preference of MQTT settings in the client"
+    },
+    {
+      "command": "prefs set help",
+      "offline": true,
+      "help": "help                 This help\nbarmode              Set bar mode\nclient.debug         Set client debug level\nclient.delay         Set client execution delay\nclient.timeout       Set client communication timeout\nhf.field.timeout_sec Set PM3 HF field inactivity timeout\ncolor                Set color support\nemoji                Set emoji display\nhints                Set hint display\nsavepaths            ... to be adjusted next ... \noutput               Set dump output style\nplotsliders          Set plot slider display\nmqtt                 Set MQTT default values",
+      "description": "help                 This help"
+    },
+    {
+      "command": "prefs set barmode",
+      "offline": true,
+      "help": "Set persistent preference of HF/LF tune command styled output in the client\n\nusage:\n    prefs set barmode [-h] [--bar] [--mix] [--val]\n\noptions:\n    -h, --help                     This help\n    --bar                          measured values as bar only\n    --mix                          measured values as numbers and bar\n    --val                          measured values only\n\nexamples/notes:\n    prefs set barmode --mix",
+      "description": "Set persistent preference of HF/LF tune command styled output in the client"
+    },
+    {
+      "command": "prefs set client.debug",
+      "offline": true,
+      "help": "Set persistent preference of using clientside debug level\n\nusage:\n    prefs set client.debug  [-h] [--off] [--simple] [--full]\n\noptions:\n    -h, --help                     This help\n    --off                          no debug messages\n    --simple                       simple debug messages\n    --full                         full debug messages\n\nexamples/notes:\n    prefs set client.debug --simple",
+      "description": "Set persistent preference of using clientside debug level"
+    },
+    {
+      "command": "prefs set client.delay",
+      "offline": true,
+      "help": "Set persistent preference of delay before executing a command in the client\n\nusage:\n    prefs set client.delay [-h] [--ms <ms>]\n\noptions:\n    -h, --help                     This help\n    --ms <ms>                      delay in micro seconds\n\nexamples/notes:\n    prefs set client.delay --ms 0           -> unsets any delay\n    prefs set client.delay --ms 1000        -> sets 1000ms delay",
+      "description": "Set persistent preference of delay before executing a command in the client"
+    },
+    {
+      "command": "prefs set client.timeout",
+      "offline": true,
+      "help": "Set persistent preference of client communication timeout\n\nusage:\n    prefs set client.timeout [-h] [-m <ms>]\n\noptions:\n    -h, --help                     This help\n    -m, --ms <ms>                  timeout in micro seconds\n\nexamples/notes:\n    prefs set client.timeout --ms 0           -> unsets any timeout\n    prefs set client.timeout -m 20            -> Set the timeout to 20ms\n    prefs set client.timeout --ms 500         -> Set the timeout to 500ms",
+      "description": "Set persistent preference of client communication timeout"
+    },
+    {
+      "command": "prefs set hf.field.timeout_sec",
+      "offline": true,
+      "help": "Set persistent preference of PM3 HF field inactivity timeout\n\nusage:\n    prefs set hf.field.timeout_sec [-h] [-s <sec>]\n\noptions:\n    -h, --help                     This help\n    -s, --sec <sec>                HF field inactivity timeout in seconds\n\nexamples/notes:\n    prefs set hf.field.timeout_sec --sec 0          -> disable HF field auto timeout\n    prefs set hf.field.timeout_sec --sec 5          -> turn HF field off after 5 seconds of inactivity\n    prefs set hf.field.timeout_sec --sec 300        -> turn HF field off after 5 minutes of inactivity\n    prefs set hf.field.timeout_sec --sec 900        -> turn HF field off after 15 minutes of inactivity",
+      "description": "Set persistent preference of PM3 HF field inactivity timeout"
+    },
+    {
+      "command": "prefs set color",
+      "offline": true,
+      "help": "Set persistent preference of using colors in the client\n\nusage:\n    prefs set color  [-h] [--ansi] [--off]\n\noptions:\n    -h, --help                     This help\n    --ansi                         use ANSI colors\n    --off                          don't use colors\n\nexamples/notes:\n    prefs set color --ansi",
+      "description": "Set persistent preference of using colors in the client"
+    },
+    {
+      "command": "prefs set emoji",
+      "offline": true,
+      "help": "Set persistent preference of using emojis in the client\n\nusage:\n    prefs set emoji  [-h] [--alias] [--emoji] [--alttext] [--none]\n\noptions:\n    -h, --help                     This help\n    --alias                        show alias for emoji\n    --emoji                        show emoji\n    --alttext                      show alt text for emoji\n    --none                         don't show emoji or text\n\nexamples/notes:\n    prefs set emoji --alias",
+      "description": "Set persistent preference of using emojis in the client"
+    },
+    {
+      "command": "prefs set hints",
+      "offline": true,
+      "help": "Set persistent preference of showing hint messages in the client\n\nusage:\n    prefs set hints [-h] [--off] [--on]\n\noptions:\n    -h, --help                     This help\n    --off                          hide hints\n    --on                           show hints\n\nexamples/notes:\n    prefs set hints --on",
+      "description": "Set persistent preference of showing hint messages in the client"
+    },
+    {
+      "command": "prefs set savepaths",
+      "offline": true,
+      "help": "Set persistent preference of file paths in the client\n\nusage:\n    prefs set savepaths [-hc] [--def <path>] [--dump <path>] [--trace <path>]\n\noptions:\n    -h, --help                     This help\n    -c, --create                   create directory if it does not exist\n    --def <path>                   default path\n    --dump <path>                  dump file path\n    --trace <path>                 trace path\n\nexamples/notes:\n    prefs set savepaths --dump /home/mydumpfolder           -> all dump files will be saved into this folder\n    prefs set savepaths --def /home/myfolder -c         -> create if needed, all files will be saved into this folder",
+      "description": "Set persistent preference of file paths in the client"
+    },
+    {
+      "command": "prefs set output",
+      "offline": true,
+      "help": "Set dump output style to condense consecutive repeated data\n\nusage:\n    prefs set output [-h] [--normal] [--dense]\n\noptions:\n    -h, --help                     This help\n    --normal                       normal output\n    --dense                        dense output\n\nexamples/notes:\n    prefs set output --normal      -> sets the output style to normal\n    prefs set output --dense       -> sets the output style to dense",
+      "description": "Set dump output style to condense consecutive repeated data"
+    },
+    {
+      "command": "prefs set plotsliders",
+      "offline": true,
+      "help": "Set persistent preference of showing the plotslider control in the client\n\nusage:\n    prefs set plotsliders [-h] [--off] [--on]\n\noptions:\n    -h, --help                     This help\n    --off                          hide plot slider controls\n    --on                           show plot slider controls\n\nexamples/notes:\n    prefs set plotsliders --on",
+      "description": "Set persistent preference of showing the plotslider control in the client"
+    },
+    {
+      "command": "prefs set mqtt",
+      "offline": true,
+      "help": "Set persistent preference MQTT Server in the client\n\nusage:\n    prefs set mqtt [-h] [-s <path>] [-p <path>] [-t <path>]\n\noptions:\n    -h, --help                     This help\n    -s, --srv <path>               default MQTT Server\n    -p, --port <path>              default MQTT Port\n    -t, --topic <path>             default MQTT Topic\n\nexamples/notes:\n    prefs set mqtt -s test.mosquito.com\n    prefs set mqtt -s test.mosquito.com -p 1883 -t proxdump",
+      "description": "Set persistent preference MQTT Server in the client"
+    },
+    {
+      "command": "analyse help",
+      "offline": true,
+      "help": "help             This help\nlrc              Generate final byte for XOR LRC\ncrc              Stub method for CRC evaluations\nchksum           Checksum with adding, masking and one's complement\ndates            Look for datestamps in a given array of bytes\nlfsr             LFSR tests\na                num bits test\nnuid             create NUID from 7byte UID\ndemodbuff        Load binary string to DemodBuffer\nfreq             Calc wave lengths\nfoo              muxer\nregex            Regex utility (subset: ^ $ . * with \\\\ escape)\nunits            convert ETU <> US <> SSP_CLK (3.39MHz)",
+      "description": "help             This help"
+    },
+    {
+      "command": "analyse lrc",
+      "offline": true,
+      "help": "Specifying the bytes of a UID with a known LRC will find the last byte value\nneeded to generate that LRC with a rolling XOR. All bytes should be specified in HEX.\n\nusage:\n    analyse lrc [-h] -d <hex>\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               bytes to calc missing XOR in a LRC\n\nexamples/notes:\n    analyse lrc -d 04008064BA          ->  Target (BA) requires final LRC XOR byte value: 5A",
+      "description": "Specifying the bytes of a UID with a known LRC will find the last byte value"
+    },
+    {
+      "command": "analyse crc",
+      "offline": true,
+      "help": "A stub method to test different crc implementations inside the PM3 sourcecode.\nJust because you figured out the poly, doesn't mean you get the desired output\n\nusage:\n    analyse crc [-h] -d <hex>\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               bytes to calc crc\n\nexamples/notes:\n    analyse crc -d 137AF00A0A0D",
+      "description": "A stub method to test different crc implementations inside the PM3 sourcecode."
+    },
+    {
+      "command": "analyse chksum",
+      "offline": true,
+      "help": "The bytes will be added with eachother and than limited with the applied mask\nFinally compute ones' complement of the least significant bytes.\n\nusage:\n    analyse chksum [-hv] -d <hex> [-m <hex>]\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               bytes to calc checksum\n    -m, --mask <hex>               bit mask to limit the output (4 hex bytes max)\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    analyse chksum -d 137AF00A0A0D          ->  expected output: 0x61\n    analyse chksum -d 137AF00A0A0D -m FF",
+      "description": "The bytes will be added with eachother and than limited with the applied mask"
+    },
+    {
+      "command": "analyse dates",
+      "offline": true,
+      "help": "Tool to look for date/time stamps in a given array of bytes\n\nusage:\n    analyse dates [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    analyse dates",
+      "description": "Tool to look for date/time stamps in a given array of bytes"
+    },
+    {
+      "command": "analyse lfsr",
+      "offline": true,
+      "help": "looks at LEGIC Prime's lfsr,  iterates the first 48 values\n\nusage:\n    analyse lfsr [-h] --iv <hex> [--find <hex>]\n\noptions:\n    -h, --help                     This help\n    --iv <hex>                     init vector data (1 hex byte)\n    --find <hex>                   lfsr data to find (1 hex byte)\n\nexamples/notes:\n    analyse lfsr --iv 55",
+      "description": "looks at LEGIC Prime's lfsr,  iterates the first 48 values"
+    },
+    {
+      "command": "analyse a",
+      "offline": true,
+      "help": "Iceman's personal garbage test command\n\nusage:\n    analyse a [-h] -d <hex>\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               bytes to manipulate\n\nexamples/notes:\n    analyse a -d 137AF00A0A0D",
+      "description": "Iceman's personal garbage test command"
+    },
+    {
+      "command": "analyse nuid",
+      "offline": true,
+      "help": "Generate 4byte NUID from 7byte UID\n\nusage:\n    analyse nuid [-ht] [-d <hex>]\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               bytes to send\n    -t, --test                     self test\n\nexamples/notes:\n    analyse nuid -d 11223344556677",
+      "description": "Generate 4byte NUID from 7byte UID"
+    },
+    {
+      "command": "analyse demodbuff",
+      "offline": true,
+      "help": "loads a binary string into DemodBuffer\n\nusage:\n    analyse demodbuff [-h] -d <bin>\n\noptions:\n    -h, --help                     This help\n    -d, --data <bin>               binary string to load\n\nexamples/notes:\n    analyse demodbuff -d 0011101001001011",
+      "description": "loads a binary string into DemodBuffer"
+    },
+    {
+      "command": "analyse freq",
+      "offline": true,
+      "help": "calc wave lengths\n\nusage:\n    analyse freq [-h] [-F <int>] [-L <int>] [-C <int>]\n\noptions:\n    -h, --help                     This help\n    -F, --freq <int>               resonating frequency F in hertz (Hz)\n    -L, --cap <int>                capacitance C in micro farads (F)\n    -C, --ind <int>                inductance in micro henries (H)\n\nexamples/notes:\n    analyse freq",
+      "description": "calc wave lengths"
+    },
+    {
+      "command": "analyse foo",
+      "offline": true,
+      "help": "experiments of cliparse\n\nusage:\n    analyse foo [-h] -r <hex>\n\noptions:\n    -h, --help                     This help\n    -r, --raw <hex>                raw bytes\n\nexamples/notes:\n    analyse foo -r a0000000a0002021",
+      "description": "experiments of cliparse"
+    },
+    {
+      "command": "analyse regex",
+      "offline": true,
+      "help": "Regex utility (subset: ^ $ . * with \\\\ escape)\n\nusage:\n    analyse regex [-hit] [-p <str>] [-d <str>]\n\noptions:\n    -h, --help                     This help\n    -p, --pattern <str>            regex pattern\n    -d, --text <str>               text to match\n    -i, --insensitive              case-insensitive match\n    -t, --test                     run self tests\n\nexamples/notes:\n    analyse regex --pattern '^A000' --text A000000476D0000111\n    analyse regex --pattern '.*500A416E64726F6964506179.*9000$' --text 6F8150500A416E64726F69645061799000 --insensitive\n    analyse regex --test",
+      "description": "Regex utility (subset: ^ $ . * with \\\\ escape)"
+    },
+    {
+      "command": "analyse units",
+      "offline": true,
+      "help": "experiments of unit conversions found in HF. ETU (1/13.56mhz), US or SSP_CLK (1/3.39MHz)\n\nusage:\n    analyse units [-ht] [--etu <dec>] [--us <dec>]\n\noptions:\n    -h, --help                     This help\n    --etu <dec>                    number in ETU\n    --us <dec>                     number in micro seconds (us)\n    -t, --selftest                 self tests\n\nexamples/notes:\n    analyse uints --etu 10        \n    analyse uints --us 100",
+      "description": "experiments of unit conversions found in HF. ETU (1/13.56mhz), US or SSP_CLK (1/3.39MHz)"
+    },
+    {
+      "command": "data help",
+      "offline": true,
+      "help": "help             This help\n-----------      ------------------------------ General -------------------------------\nclear            Clears various buffers used by the graph window\nhide             Hide the graph window\nload             Load contents of file into graph window\nnum              Converts dec/hex/bin\nplot             Show the graph window\nprint            Print the data in the DemodBuffer\nsave             Save signal trace data\nsetdebugmode     Set Debugging Level on client side\nxor              Xor a input string\n-----------      ----------------------------- Modulation -----------------------------\nbiphaserawdecode Biphase decode bin stream in DemodBuffer\ndetectclock      Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer\nfsktonrz         Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)\nmanrawdecode     Manchester decode binary stream in DemodBuffer\nmodulation       Identify LF signal for clock and modulation\nrawdemod         Demodulate the data in the GraphBuffer and output binary\n-----------      -------------------------- Frequency domain --------------------------\nautodemod        Detect modulation, encoding and clock, then demodulate\nfft              Fourier transform of the GraphBuffer\nfitscore         Rank matched filter hypotheses for modulation, encoding and clock\nspectrum         Spectral peaks, symbol rate and modulation family hint\n-----------      ------------------------------- Graph --------------------------------\naskedgedetect    Adjust Graph for manual ASK demod\nautocorr         Autocorrelation over window\nconvertbitstream Convert GraphBuffer's 0/1 values to 127 / -127\ncthreshold       Average out all values between\ndirthreshold     Max rising higher up-thres/ Min falling lower down-thres\ndecimate         Decimate samples\nenvelope         Generate square envelope of samples\ngrid             overlay grid on graph window\ngetbitstream     Convert GraphBuffer's >=1 values to 1 and <1 to 0\nhpf              Remove DC offset from trace\niir              Apply IIR buttersworth filter on plot data\nltrim            Trim samples from left of trace\nmtrim            Trim out samples from the specified start to the specified stop\nnorm             Normalize max/min to +/-128\nrtrim            Trim samples from right of trace\nsetgraphmarkers  Set the markers in the graph window\nshiftgraphzero   Shift 0 for Graphed wave + or - shift value\ntimescale        Set cursor display timescale\nundecimate       Un-decimate samples\nzerocrossings    Count time between zero-crossings\n-----------      ---------------------------- Operations ------------------------------\nasn1             ASN1 decoder\natr              ATR lookup\nbmap             Convert hex value according a binary template\ncrypto           Encrypt and decrypt data\ndiff             Diff of input files\nqrcode           Create a QR code",
+      "description": "help             This help"
+    },
+    {
+      "command": "data clear",
+      "offline": true,
+      "help": "This function clears the BigBuf on device side\nand graph window ( graphbuffer )\n\nusage:\n    data clear [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data clear",
+      "description": "This function clears the BigBuf on device side"
+    },
+    {
+      "command": "data hide",
+      "offline": true,
+      "help": "Show graph window\n\nusage:\n    data hide [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data hide",
+      "description": "Show graph window"
+    },
+    {
+      "command": "data load",
+      "offline": true,
+      "help": "This command loads the contents of a pm3 file into graph window\n\n\nusage:\n    data load [-hbn] -f <fn>\n\noptions:\n    -h, --help                     This help\n    -f, --file <fn>                file to load\n    -b, --bin                      binary file\n    -n, --no-fix                   Load data from file without any transformations\n\nexamples/notes:\n    data load -f myfilename",
+      "description": "This command loads the contents of a pm3 file into graph window"
+    },
+    {
+      "command": "data num",
+      "offline": true,
+      "help": "Function takes a decimal or hexdecimal number and print it in decimal/hex/binary\nWill print message if number is a prime number\n\n\nusage:\n    data num [-hir] [--dec <dec>] [--hex <hex>] [--bin <bin>]\n\noptions:\n    -h, --help                     This help\n    --dec <dec>                    decimal value\n    --hex <hex>                    hexadecimal value\n    --bin <bin>                    binary value\n    -i                             print inverted value\n    -r                             print reversed value\n\nexamples/notes:\n    data num --dec 2023           \n    data num --hex 2A",
+      "description": "Function takes a decimal or hexdecimal number and print it in decimal/hex/binary"
+    },
+    {
+      "command": "data plot",
+      "offline": true,
+      "help": "Show graph window \nhit 'h' in window for detail keystroke help available\n\nusage:\n    data plot [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data plot",
+      "description": "Show graph window "
+    },
+    {
+      "command": "data print",
+      "offline": true,
+      "help": "Print the data in the DemodBuffer as hex or binary.\nDefaults to binary output\n\nusage:\n    data print [-hisx] [-o <dec>]\n\noptions:\n    -h, --help                     This help\n    -i, --inv                      invert DemodBuffer before printing\n    -o, --offset <dec>             offset in # of bits\n    -s, --strip                    strip leading zeroes, i.e. set offset to first bit equal to one\n    -x, --hex                      output in hex (omit for binary output)\n\nexamples/notes:\n    data print",
+      "description": "Print the data in the DemodBuffer as hex or binary."
+    },
+    {
+      "command": "data save",
+      "offline": true,
+      "help": "Save signal trace from graph window , i.e. the GraphBuffer\nThis is a text file with number -127 to 127.  With the option `w` you can save it as wave file\nFilename should be without file extension\n\nusage:\n    data save [-hw] -f <fn w/o ext>\n\noptions:\n    -h, --help                     This help\n    -w, --wave                     save as wave format (.wav)\n    -f, --file <fn w/o ext>        save file name\n\nexamples/notes:\n    data save -f myfilename              -> save graph buffer to file\n    data save --wave -f myfilename       -> save graph buffer to wave file",
+      "description": "Save signal trace from graph window , i.e. the GraphBuffer"
+    },
+    {
+      "command": "data setdebugmode",
+      "offline": true,
+      "help": "Set debugging level on client side\n\nusage:\n    data setdebugmode [-h012]\n\noptions:\n    -h, --help                     This help\n    -0                             no debug messages\n    -1                             debug\n    -2                             verbose debugging\n\nexamples/notes:\n    data setdebugmode",
+      "description": "Set debugging level on client side"
+    },
+    {
+      "command": "data xor",
+      "offline": true,
+      "help": "takes input string and xor string. Perform xor on it.\nIf no xor string, try the most reoccuring value to xor against\n\nusage:\n    data xor [-h] -d <hex> [-x <str>]\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               input hex string\n    -x, --xor <str>                input xor string\n\nexamples/notes:\n    data xor -d 99aabbcc8888888888\n    data xor -d 99aabbcc --xor 88888888",
+      "description": "takes input string and xor string. Perform xor on it."
+    },
+    {
+      "command": "data biphaserawdecode",
+      "offline": true,
+      "help": "Biphase decode binary stream in DemodBuffer\nConverts 10 or 01 -> 1 and 11 or 00 -> 0\n - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before)\n - invert for Conditional Dephase Encoding (CDP) AKA Differential Manchester\n\nusage:\n    data biphaserawdecode [-hoi] [--err <dec>]\n\noptions:\n    -h, --help                     This help\n    -o, --offset                   set to adjust decode start position\n    -i, --inv                      invert output\n    --err <dec>                    set max errors tolerated (def 20)\n\nexamples/notes:\n    data biphaserawdecode          -> decode biphase bitstream from the DemodBuffer\n    data biphaserawdecode -oi      -> decode biphase bitstream from the DemodBuffer, adjust offset, and invert output",
+      "description": "Biphase decode binary stream in DemodBuffer"
+    },
+    {
+      "command": "data detectclock",
+      "offline": true,
+      "help": "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer\n\nusage:\n    data detectclock [-h] [--ask] [--fsk] [--nzr] [--psk]\n\noptions:\n    -h, --help                     This help\n    --ask                          specify ASK modulation clock detection\n    --fsk                          specify FSK modulation clock detection\n    --nzr                          specify NZR/DIRECT modulation clock detection\n    --psk                          specify PSK modulation clock detection\n\nexamples/notes:\n    data detectclock --ask        \n    data detectclock --nzr         -> detect clock of an nrz/direct wave in GraphBuffer",
+      "description": "Detect ASK, FSK, NRZ, PSK clock rate of wave in GraphBuffer"
+    },
+    {
+      "command": "data fsktonrz",
+      "offline": true,
+      "help": "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)\nOmitted values are autodetect instead\n\nusage:\n    data fsktonrz [-h] [-c <dec>] [--low <dec>] [--hi <dec>]\n\noptions:\n    -h, --help                     This help\n    -c, --clk <dec>                clock\n    --low <dec>                    low field clock\n    --hi <dec>                     high field clock\n\nexamples/notes:\n    data fsktonrz                 \n    data fsktonrz -c 32 --low 8 --hi 10",
+      "description": "Convert fsk2 to nrz wave for alternate fsk demodulating (for weak fsk)"
+    },
+    {
+      "command": "data manrawdecode",
+      "offline": true,
+      "help": "Manchester decode binary stream in DemodBuffer\nConverts 10 and 01 and converts to 0 and 1 respectively\n - must have binary sequence in DemodBuffer (run `data rawdemod --ar` before)\n\nusage:\n    data manrawdecode [-hi] [--err <dec>]\n\noptions:\n    -h, --help                     This help\n    -i, --inv                      invert output\n    --err <dec>                    set max errors tolerated (def 20)\n\nexamples/notes:\n    data manrawdecode",
+      "description": "Manchester decode binary stream in DemodBuffer"
+    },
+    {
+      "command": "data modulation",
+      "offline": true,
+      "help": "search LF signal after clock and modulation\n\n\nusage:\n    data modulation [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data modulation",
+      "description": "search LF signal after clock and modulation"
+    },
+    {
+      "command": "data rawdemod",
+      "offline": true,
+      "help": "Demodulate the data in the GraphBuffer and output binary\n\nusage:\n    data rawdemod [-h] [--ab] [--am] [--ar] [--fs] [--nr] [--p1] [--p2] [<params>]...\n\noptions:\n    -h, --help                     This help\n    --ab                           ASK/Biphase demodulation\n    --am                           ASK/Manchester demodulation\n    --ar                           ASK/Raw demodulation\n    --fs                           FSK demodulation\n    --nr                           NRZ/Direct demodulation\n    --p1                           PSK 1 demodulation\n    --p2                           PSK 2 demodulation\n    <params>                       params for sub command\n\nexamples/notes:\n    data rawdemod --fs             -> demod FSK - autodetect\n    data rawdemod --ab             -> demod ASK/BIPHASE - autodetect\n    data rawdemod --am             -> demod ASK/MANCHESTER - autodetect\n    data rawdemod --ar             -> demod ASK/RAW - autodetect\n    data rawdemod --nr             -> demod NRZ/DIRECT - autodetect\n    data rawdemod --p1             -> demod PSK1 - autodetect\n    data rawdemod --p2             -> demod PSK2 - autodetect",
+      "description": "Demodulate the data in the GraphBuffer and output binary"
+    },
+    {
+      "command": "data autodemod",
+      "offline": true,
+      "help": "Tries to work out the modulation, encoding and clock of the wave in the GraphBuffer then run the matching demodulator\nAdds no signal processing of its own, the analysis is `data spectrum` and `data fitscore`\nA fractional clock is resampled onto an integer grid first\n\nusage:\n    data autodemod [-haiv] [--start <int>] [--size <int>] [--thres <dB>] [--dry-run]\n\noptions:\n    -h, --help                     This help\n    --start <int>                  first sample of the GraphBuffer to use (def 0)\n    --size <int>                   samples to analyse (def 16384)\n    --thres <dB>                   margin below which rank 1 is called ambiguous (def 3.0)\n    --dry-run                      analyse and decide, but do not demodulate\n    -a, --amp                      amplify the signal before ASK demodulation\n    -i, --invert                   invert the demodulated output\n    -v, --verbose                  show the demodulator's own output\n\nexamples/notes:\n    data autodemod                           -> analyse and demodulate\n    data autodemod --dry-run                 -> decide and print, demodulate nothing\n    data autodemod --thres 6                 -> insist on a 6 dB margin before trusting rank 1\n    data autodemod --invert --amp            -> pass invert and amplify through to the demod",
+      "description": "Tries to work out the modulation, encoding and clock of the wave in the GraphBuffer then run the matching demodulator"
+    },
+    {
+      "command": "data fft",
+      "offline": true,
+      "help": "Fourier transform of the samples in the GraphBuffer.\nReports the magnitude spectrum of the first N/2+1 bins, the input being real.\nThe DC component is removed and the window is normalised to unit variance\nbefore the transform, so magnitudes are comparable between captures.\n\nusage:\n    data fft [-h] [--start <int>] [--size <int>] [--win <hann|hamming|blackman|rect>] [--db]\n                    [--graph] [--fs <int>] [--bins <int>]\n\noptions:\n    -h, --help                     This help\n    --start <int>                  first sample of the GraphBuffer to use (def 0)\n    --size <int>                   transform length, rounded up to a power of two (def largest that fits)\n    --win <hann|hamming|blackman|rect> window function (def hann)\n    --db                           report magnitude in dB relative to the peak bin instead of linear\n    --graph                        write the magnitude spectrum into the GraphBuffer and repaint\n    --fs <int>                     sample rate in Hz, adds a frequency column in Hz\n    --bins <int>                   how many bins to print (def 32, 0 for all)\n\nexamples/notes:\n    data fft                                          -> transform the whole buffer\n    data fft --size 4096 --win blackman               -> 4096 point transform, blackman window\n    data fft --start 1000 --size 8192 --db            -> magnitudes in dB relative to the peak\n    data fft --size 4096 --graph                      -> put the spectrum in the graph window",
+      "description": "Fourier transform of the samples in the GraphBuffer."
+    },
+    {
+      "command": "data fitscore",
+      "offline": true,
+      "help": "Rank matched filter hypotheses against the GraphBuffer.\nA hypothesis is a modulation, a symbol shape and a clock. Each one is scored by\ncorrelating the trace against a single symbol template and measuring how tightly\nthe correlator output clusters at the decision instants. Phase is not searched:\nthe correlation is done with an FFT, which yields every phase offset at once.\nTemplates are shaped by an assumed antenna Q, because correlating a bandlimited\nsignal against square edges biases the ranking toward short clocks.\n\nusage:\n    data fitscore [-hv] [--start <int>] [--size <int>] [--mod <ask|fsk|psk|nrz>] [--clk <int>] [--top <int>]\n                    [--all]\n\noptions:\n    -h, --help                     This help\n    --start <int>                  first sample of the GraphBuffer to use (def 0)\n    --size <int>                   samples to analyse, rounded up to a power of two (def 16384)\n    --mod <ask|fsk|psk|nrz>        restrict to one modulation (def all)\n    --clk <int>                    restrict to one clock (def all candidates)\n    --top <int>                    rows to print (def 10)\n    --all                          print every scored hypothesis\n    -v, --verbose                  write the rank 1 correlator output into the GraphBuffer\n\nexamples/notes:\n    data fitscore                              -> rank the whole bank\n    data fitscore --mod ask --top 5            -> ASK hypotheses only\n    data fitscore --clk 64 --all               -> everything at clock 64\n    data fitscore --verbose                    -> also put the rank 1 correlator output in the graph",
+      "description": "Rank matched filter hypotheses against the GraphBuffer."
+    },
+    {
+      "command": "data spectrum",
+      "offline": true,
+      "help": "Spectral analysis of the GraphBuffer.\nReports the strongest spectral peaks with a sub bin estimate of the symbol clock,\nthe squaring and delay-and-multiply spectra which expose rates the plain spectrum\nnulls out, and a modulation family hint derived from spectral shape alone.\nRun this on a trace that will not decode.\n\nusage:\n    data spectrum [-h] [--start <int>] [--size <int>] [--win <hann|hamming|blackman|rect>] [--top <int>]\n                    [--sq] [--stft] [--hop <int>] [--fs <int>]\n\noptions:\n    -h, --help                     This help\n    --start <int>                  first sample of the GraphBuffer to use (def 0)\n    --size <int>                   transform length, rounded up to a power of two (def largest that fits)\n    --win <hann|hamming|blackman|rect> window function (def hann)\n    --top <int>                    number of peaks to report (def 5)\n    --sq                           also show the squaring and delay-and-multiply spectra\n    --stft                         sliding window spectrogram, ridge tracking and drift\n    --hop <int>                    STFT hop in samples (def size/4)\n    --fs <int>                     sample rate in Hz, adds a frequency column in Hz\n\nexamples/notes:\n    data spectrum                                     -> peak table and family hint\n    data spectrum --top 8 --sq                        -> more peaks, plus the squaring spectrum\n    data spectrum --stft --size 2048                  -> spectrogram over the whole capture\n    data spectrum --stft --size 2048 --hop 256        -> finer time resolution",
+      "description": "Spectral analysis of the GraphBuffer."
+    },
+    {
+      "command": "data askedgedetect",
+      "offline": true,
+      "help": "Adjust Graph for manual ASK demod using the length of sample differences\nto detect the edge of a wave\n\nusage:\n    data askedgedetect [-h] [-t <dec>]\n\noptions:\n    -h, --help                     This help\n    -t, --thres <dec>              threshold, use 20 - 45 (def 25)\n\nexamples/notes:\n    data askedgedetect -t 20",
+      "description": "Adjust Graph for manual ASK demod using the length of sample differences"
+    },
+    {
+      "command": "data autocorr",
+      "offline": true,
+      "help": "Autocorrelate over window is used to detect repeating sequences.\nWe use it as detection of how long in bits a message inside the signal is\n\nusage:\n    data autocorr [-hg] [-w <dec>]\n\noptions:\n    -h, --help                     This help\n    -g                             save back to GraphBuffer (overwrite)\n    -w, --win <dec>                window length for correlation. def 4000\n\nexamples/notes:\n    data autocorr -w 4000         \n    data autocorr -w 4000 -g",
+      "description": "Autocorrelate over window is used to detect repeating sequences."
+    },
+    {
+      "command": "data convertbitstream",
+      "offline": true,
+      "help": "Convert GraphBuffer's 0|1 values to 127|-127\n\nusage:\n    data convertbitstream [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data convertbitstream",
+      "description": "Convert GraphBuffer's 0|1 values to 127|-127"
+    },
+    {
+      "command": "data cthreshold",
+      "offline": true,
+      "help": "Inverse of dirty threshold command,  all values between up and down will be average out\n\nusage:\n    data cthreshold [-h] -d <dec> -u <dec>\n\noptions:\n    -h, --help                     This help\n    -d, --down <dec>               threshold down\n    -u, --up <dec>                 threshold up\n\nexamples/notes:\n    data cthreshold -u 10 -d -10",
+      "description": "Inverse of dirty threshold command,  all values between up and down will be average out"
+    },
+    {
+      "command": "data dirthreshold",
+      "offline": true,
+      "help": "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev.\n\nusage:\n    data dirthreshold [-h] -d <dec> -u <dec>\n\noptions:\n    -h, --help                     This help\n    -d, --down <dec>               threshold down\n    -u, --up <dec>                 threshold up\n\nexamples/notes:\n    data dirthreshold -u 10 -d -10",
+      "description": "Max rising higher up-thres/ Min falling lower down-thres, keep rest as prev."
+    },
+    {
+      "command": "data decimate",
+      "offline": true,
+      "help": "Performs decimation, by reducing samples N times in the grapbuf. Good for PSK\n\n\nusage:\n    data decimate [-h] [-n <dec>]\n\noptions:\n    -h, --help                     This help\n    -n <dec>                       factor to reduce sample set (default 2)\n\nexamples/notes:\n    data decimate                 \n    data decimate -n 4",
+      "description": "Performs decimation, by reducing samples N times in the grapbuf. Good for PSK"
+    },
+    {
+      "command": "data envelope",
+      "offline": true,
+      "help": "Create an square envelope of the samples\n\nusage:\n    data envelope [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data envelope",
+      "description": "Create an square envelope of the samples"
+    },
+    {
+      "command": "data grid",
+      "offline": true,
+      "help": "This function overlay grid on graph plot window.\nuse zero value to turn off either\n\nusage:\n    data grid [-h] [-x <dec>] [-y <dec>]\n\noptions:\n    -h, --help                     This help\n    -x <dec>                       plot grid X coord\n    -y <dec>                       plot grid Y coord\n\nexamples/notes:\n    data grid                      -> turn off\n    data grid -x 64 -y 50",
+      "description": "This function overlay grid on graph plot window."
+    },
+    {
+      "command": "data getbitstream",
+      "offline": true,
+      "help": "Convert GraphBuffer's value accordingly\n   - larger or equal to ONE becomes ONE\n   - less than ONE becomes ZERO\n\nusage:\n    data getbitstream [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data getbitstream",
+      "description": "Convert GraphBuffer's value accordingly"
+    },
+    {
+      "command": "data hpf",
+      "offline": true,
+      "help": "Remove DC offset from trace. It should centralize around 0\n\nusage:\n    data hpf [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data hpf",
+      "description": "Remove DC offset from trace. It should centralize around 0"
+    },
+    {
+      "command": "data iir",
+      "offline": true,
+      "help": "Apply IIR buttersworth filter on plot data\n\nusage:\n    data iir [-h] -n <dec>\n\noptions:\n    -h, --help                     This help\n    -n <dec>                       factor n\n\nexamples/notes:\n    data iir -n 2",
+      "description": "Apply IIR buttersworth filter on plot data"
+    },
+    {
+      "command": "data ltrim",
+      "offline": true,
+      "help": "Trim samples from left of trace\n\nusage:\n    data ltrim [-h] -i <dec>\n\noptions:\n    -h, --help                     This help\n    -i, --idx <dec>                index in graph buffer\n\nexamples/notes:\n    data ltrim -i 300              -> remove from start 0 to index 300",
+      "description": "Trim samples from left of trace"
+    },
+    {
+      "command": "data mtrim",
+      "offline": true,
+      "help": "Trim out samples from\n  start 0 to `-s index`\nAND\n  from `-e index` to end of graph buffer\n\nusage:\n    data mtrim [-h] -s <dec> -e <dec>\n\noptions:\n    -h, --help                     This help\n    -s, --start <dec>              start point\n    -e, --end <dec>                end point\n\nexamples/notes:\n    data mtrim -s 1000 -e 2000     ->  keep all between index 1000 and 2000",
+      "description": "Trim out samples from"
+    },
+    {
+      "command": "data norm",
+      "offline": true,
+      "help": "Normalize max/min to +/-128\n\nusage:\n    data norm [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data norm",
+      "description": "Normalize max/min to +/-128"
+    },
+    {
+      "command": "data rtrim",
+      "offline": true,
+      "help": "Trim samples from right of trace\n\nusage:\n    data rtrim [-h] -i <dec>\n\noptions:\n    -h, --help                     This help\n    -i, --idx <dec>                index in graph buffer\n\nexamples/notes:\n    data rtrim -i 4000             -> remove from index 4000 to end of graph buffer",
+      "description": "Trim samples from right of trace"
+    },
+    {
+      "command": "data setgraphmarkers",
+      "offline": true,
+      "help": "Set the locations of the markers in the graph window\n\nusage:\n    data setgraphmarkers [-h] [--keep] [-a <dec>] [-b <dec>] [-c <dec>] [-d <dec>]\n\noptions:\n    -h, --help                     This help\n    --keep                         keep the current values of the markers\n    -a <dec>                       yellow marker\n    -b <dec>                       purple marker\n    -c <dec>                       orange marker\n    -d <dec>                       blue marker\n\nexamples/notes:\n    data setgraphmarkers                     -> reset the markers\n    data setgraphmarkers -a 64               -> set A, reset the rest\n    data setgraphmarkers -d --keep           -> set D, keep the rest",
+      "description": "Set the locations of the markers in the graph window"
+    },
+    {
+      "command": "data shiftgraphzero",
+      "offline": true,
+      "help": "Shift 0 for Graphed wave + or - shift value\n\nusage:\n    data shiftgraphzero [-h] -n <dec>\n\noptions:\n    -h, --help                     This help\n    -n <dec>                       shift + or -\n\nexamples/notes:\n    data shiftgraphzero -n 10      -> shift 10 points\n    data shiftgraphzero -n -22     -> shift negative 22 points",
+      "description": "Shift 0 for Graphed wave + or - shift value"
+    },
+    {
+      "command": "data timescale",
+      "offline": true,
+      "help": "Set cursor display timescale.\nSetting the timescale makes the differential `dt` reading between the yellow and purple markers meaningful.\nonce the timescale is set, the differential reading between brackets can become a time duration.\n\nusage:\n    data timescale [-h] --sr <float> [-u <str>]\n\noptions:\n    -h, --help                     This help\n    --sr <float>                   sets timescale factor according to sampling rate\n    -u, --unit <str>               time unit to display (max 10 chars)\n\nexamples/notes:\n    data timescale --sr 125   -u ms       -> for LF sampled at 125 kHz. Reading will be in milliseconds\n    data timescale --sr 1.695 -u us       -> for HF sampled at 16 * fc/128. Reading will be in microseconds\n    data timescale --sr 16    -u ETU      -> for HF with 16 samples per ETU (fc/128). Reading will be in ETUs",
+      "description": "Set cursor display timescale."
+    },
+    {
+      "command": "data undecimate",
+      "offline": true,
+      "help": "Performs un-decimation, by repeating each sample N times in the graphbuf\n\nusage:\n    data undecimate [-h] [-n <dec>]\n\noptions:\n    -h, --help                     This help\n    -n <dec>                       factor to repeat each sample (default 2)\n\nexamples/notes:\n    data undecimate               \n    data undecimate -n 4",
+      "description": "Performs un-decimation, by repeating each sample N times in the graphbuf"
+    },
+    {
+      "command": "data zerocrossings",
+      "offline": true,
+      "help": "Count time between zero-crossings\n\nusage:\n    data zerocrossings [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data zerocrossings",
+      "description": "Count time between zero-crossings"
+    },
+    {
+      "command": "data asn1",
+      "offline": true,
+      "help": "Decode ASN1 bytearray\n\n\nusage:\n    data asn1 [-h] [-d <hex>] [--test]\n\noptions:\n    -h, --help                     This help\n    -d <hex>                       ASN1 encoded byte array\n    --test                         perform self tests\n\nexamples/notes:\n    data asn1 -d 303381050186922305a5020500a6088101010403030008a7188516eeee4facacf4fbde5e5c49d95e55bfbca74267b02407a9020500",
+      "description": "Decode ASN1 bytearray"
+    },
+    {
+      "command": "data atr",
+      "offline": true,
+      "help": "look up ATR record from bytearray\n\n\nusage:\n    data atr [-h] [-d <hex>]\n\noptions:\n    -h, --help                     This help\n    -d <hex>                       ASN1 encoded byte array\n\nexamples/notes:\n    data atr -d 3B6B00000031C064BE1B0100079000",
+      "description": "look up ATR record from bytearray"
+    },
+    {
+      "command": "data bitsamples",
+      "offline": false,
+      "help": "Get raw samples from device as bitstring\n\nusage:\n    data bitsamples [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data bitsamples",
+      "description": "Get raw samples from device as bitstring"
+    },
+    {
+      "command": "data bmap",
+      "offline": true,
+      "help": "Breaks down a hex value to binary according a template\n   data bmap -d 16 -m 4,4\nThis will give two rows each with four bits\n\nusage:\n    data bmap [-h] [-d <hex>] [-m <str>]\n\noptions:\n    -h, --help                     This help\n    -d <hex>                       hex string\n    -m <str>                       binary template\n\nexamples/notes:\n    data bmap -d 3B               \n    data bmap -d 3B -m 2,5,1",
+      "description": "Breaks down a hex value to binary according a template"
+    },
+    {
+      "command": "data crypto",
+      "offline": true,
+      "help": "This command lets you encrypt or decrypt data using DES/3DES/AES.\nSupply data, key, IV (needed for des MAC or aes), and cryptography action.\n\n\nusage:\n    data crypto [-hr] -d <hex> -k <hex> [--des] [--mac] [--iv <hex>]\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               Data to process\n    -k, --key <hex>                Key to use\n    -r, --rev                      Decrypt, not encrypt\n    --des                          Cipher with DES, not AES\n    --mac                          Calculate AES CMAC/FeliCa Lite MAC\n    --iv <hex>                     IV value if needed\n\nexamples/notes:\n    To calculate a MAC for FMCOS, supply challenge as IV, data as data, and session/line protection key as key.\n    To calculate a MAC for FeliCa, supply first RC as IV, BLE+data as data and session key as key.\n    data crypto -d 04D6850E06AABB80 -k FFFFFFFFFFFFFFFF --iv 9EA0401A00000000 --des       -> Calculate a MAC for FMCOS chip. The result should be ED3A0133",
+      "description": "This command lets you encrypt or decrypt data using DES/3DES/AES."
+    },
+    {
+      "command": "data diff",
+      "offline": true,
+      "help": "Diff takes a multitude of input data and makes a binary compare.\nIt accepts filenames (filesystem or RDV4 flashmem SPIFFS), emulator memory, magic gen1\n\nusage:\n    data diff [-h] [-a <fn>] [-b <fn>] [--eb] [--fa <fn>] [--fb <fn>] [-w <4|8|16>]\n\noptions:\n    -h, --help                     This help\n    -a <fn>                        input file name A\n    -b <fn>                        input file name B\n    --eb                           emulator memory <hf mf esave>\n    --fa <fn>                      input spiffs file A\n    --fb <fn>                      input spiffs file B\n    -w <4|8|16>                    Width of data output\n\nexamples/notes:\n    data diff -w 4 -a hf-mfu-01020304.bin -b hf-mfu-04030201.bin\n    data diff -a fileA -b fileB   \n    data diff -a fileA --eb       \n    data diff --fa fileA -b fileB \n    data diff --fa fileA --fb fileB",
+      "description": "Diff takes a multitude of input data and makes a binary compare."
+    },
+    {
+      "command": "data hexsamples",
+      "offline": false,
+      "help": "Dump big buffer as hex bytes\n\nusage:\n    data hexsamples [-h] [-b <dec>] [-n <dec>] [-o <hex>]\n\noptions:\n    -h, --help                     This help\n    -b, --breaks <dec>             row break, def 16\n    -n <dec>                       num of bytes to download\n    -o, --offset <hex>             offset in big buffer\n\nexamples/notes:\n    data hexsamples -n 128         ->  dumps 128 bytes from offset 0",
+      "description": "Dump big buffer as hex bytes"
+    },
+    {
+      "command": "data samples",
+      "offline": false,
+      "help": "Get raw samples for graph window (GraphBuffer) from device.\nIf 0, then get whole big buffer from device.\n\nusage:\n    data samples [-hv] [-n <dec>]\n\noptions:\n    -h, --help                     This help\n    -n <dec>                       num of samples (512 - 40000)\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    data samples                  \n    data samples -n 10000",
+      "description": "Get raw samples for graph window (GraphBuffer) from device."
+    },
+    {
+      "command": "data qrcode",
+      "offline": true,
+      "help": "Generate a QR code with the input data\n\nusage:\n    data qrcode [-ha] [-f <fn>] [-d <hex>]\n\noptions:\n    -h, --help                     This help\n    -a, --ascii                    Render with ASCII-safe characters\n    -f, --file <fn>                Specify a filename\n    -d, --data <hex>               message as a single hex byte string\n\nexamples/notes:\n    data qrcode -f <filename>     \n    data qrcode -d 0123456789     \n    data qrcode -d AABBCCDD --ascii",
+      "description": "Generate a QR code with the input data"
+    },
+    {
+      "command": "data gensignal",
+      "offline": false,
+      "help": "Developer tool. Fill the GraphBuffer with a synthetic LF waveform.\nUsed with `data fitscore` and `data autodemod`\n\nusage:\n    data gensignal [-h] [--mod <ask|fsk|psk|nrz>] [--enc <raw|manchester|biphase>] [--clk <dbl>]\n                    [--len <int>] [--noise <dbl>] [--drift <dbl>] [--env <dbl>] [--jitter <dbl>]\n                    [--clip <dbl>] [--fc <int>] [--fchigh <int>] [--fclow <int>] [--q <int>] [--repeat <int>]\n                    [--seed <int>]\n\noptions:\n    -h, --help                     This help\n    --mod <ask|fsk|psk|nrz>        modulation (def ask)\n    --enc <raw|manchester|biphase> encoding (def raw)\n    --clk <dbl>                    clock in samples/symbol, may be fractional (def 64)\n    --len <int>                    samples to generate (def 16384)\n    --noise <dbl>                  gaussian noise standard deviation (def 0)\n    --drift <dbl>                  linear DC ramp across the capture (def 0)\n    --env <dbl>                    amplitude envelope swing (def 0)\n    --jitter <dbl>                 per symbol edge jitter, samples (def 0)\n    --clip <dbl>                   hard clip level, 0 for none (def 0)\n    --fc <int>                     PSK subcarrier period (def 4)\n    --fchigh <int>                 FSK long field clock (def 10)\n    --fclow <int>                  FSK short field clock (def 8)\n    --q <int>                      antenna Q to shape the waveform with (def 8)\n    --repeat <int>                 loop a message of this many bits, like a real tag (def 0, random)\n    --seed <int>                   RNG seed, for reproducible runs (def 1)\n\nexamples/notes:\n    data gensignal --mod ask --enc manchester --clk 64\n    data gensignal --mod ask --enc manchester --clk 64.25 --noise 0.4 --len 20000",
+      "description": "Developer tool. Fill the GraphBuffer with a synthetic LF waveform."
+    },
+    {
+      "command": "data test_ss8",
+      "offline": false,
+      "help": "Tests the implementation of Buffer Save States (8-bit buffer)\n\nusage:\n    data test_ss8 [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data test_ss8",
+      "description": "Tests the implementation of Buffer Save States (8-bit buffer)"
+    },
+    {
+      "command": "data test_ss32",
+      "offline": false,
+      "help": "Tests the implementation of Buffer Save States (32-bit buffer)\n\nusage:\n    data test_ss32 [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data test_ss32",
+      "description": "Tests the implementation of Buffer Save States (32-bit buffer)"
+    },
+    {
+      "command": "data test_ss32s",
+      "offline": false,
+      "help": "Tests the implementation of Buffer Save States (32-bit signed buffer)\n\nusage:\n    data test_ss32s [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    data test_ss32s",
+      "description": "Tests the implementation of Buffer Save States (32-bit signed buffer)"
+    },
+    {
+      "command": "emv help",
+      "offline": true,
+      "help": "-----------      ----------------------- General -----------------------\nhelp             This help\nlist             List ISO7816 history\ntest             Perform crypto logic self tests",
+      "description": "-----------      ----------------------- General -----------------------"
+    },
+    {
+      "command": "emv list",
+      "offline": true,
+      "help": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer\nYou can load a trace from file (see `trace load -h`) or it be downloaded from device by default\nIt accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol\n\nusage:\n    emv list [-h1crux] [--frame] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    -1, --buffer                   use data from trace buffer\n    --frame                        show frame delay times\n    -c                             mark CRC bytes\n    -r                             show frame delay times relative to the previous transfer\n    -u                             display times in microseconds instead of clock cycles\n    -x                             show hexdump to convert to pcap(ng)\n                                   or to import into Wireshark using encapsulation type \"ISO 14443\"\n    -f, --file <fn>                filename of dictionary\n\nexamples/notes:\n    emv list --frame               -> show frame delay times\n    emv list -1                    -> use trace buffer",
+      "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer"
+    },
+    {
+      "command": "emv test",
+      "offline": true,
+      "help": "Executes tests\n\n\nusage:\n    emv test [-hil]\n\noptions:\n    -h, --help                     This help\n    -i, --ignore                   Ignore timing tests for VM\n    -l, --long                     Run long tests too\n\nexamples/notes:\n    emv test -i                   \n    emv test --long",
+      "description": "Executes tests"
+    },
+    {
+      "command": "emv challenge",
+      "offline": false,
+      "help": "Executes Generate Challenge command. It returns 4 or 8-byte random number from card.\nNeeds a EMV applet to be selected and GPO to be executed.\n\nusage:\n    emv challenge [-hkaw] [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -k, --keep                     Keep field ON for next command\n    -a, --apdu                     Show APDU requests and responses\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv challenge                  -> get challenge\n    emv challenge -k               -> get challenge, keep filled ON",
+      "description": "Executes Generate Challenge command. It returns 4 or 8-byte random number from card."
+    },
+    {
+      "command": "emv exec",
+      "offline": false,
+      "help": "Executes EMV contactless transaction\n\nusage:\n    emv exec [-hsatjcxgw] [--force] By default: [--qvsdc] [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -s, --select                   Activate field and select card\n    -a, --apdu                     Show APDU requests and responses\n    -t, --tlv                      TLV decode results\n    -j, --jload                    Load transaction parameters from `emv_defparams.json` file\n    --force                        Force search AID. Search AID instead of execute PPSE\n    By default:                    Transaction type - MSD\n    --qvsdc                        Transaction type - qVSDC or M/Chip\n    -c, --qvsdccda                 Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)\n    -x, --vsdc                     Transaction type - VSDC. For test only. Not a standard behavior\n    -g, --acgpo                    VISA. generate AC from GPO\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv exec -sat                  -> select card, execute MSD transaction, show APDU and TLV\n    emv exec -satc                 -> select card, execute CDA transaction, show APDU and TLV",
+      "description": "Executes EMV contactless transaction"
+    },
+    {
+      "command": "emv genac",
+      "offline": false,
+      "help": "Generate Application Cryptogram command. It returns data in TLV format.\nNeeds a EMV applet to be selected and GPO to be executed.\n\nusage:\n    emv genac [-hkcpmatw] [-d <aac|tc|arqc>] <hex> [<hex>]... [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -k, --keep                     Keep field ON for next command\n    -c, --cda                      Executes CDA transaction. Needs to get SDAD in results.\n    -d, --decision <aac|tc|arqc>   Terminal decision. aac - declined, tc - approved, arqc - online authorisation requested\n    -p, --params                   Load parameters from `emv_defparams.json` file for CDOLdata making from CDOL and parameters\n    -m, --make                     Make CDOLdata from CDOL (tag 8C and 8D) and parameters (def: use default parameters)\n    -a, --apdu                     Show APDU requests and responses\n    -t, --tlv                      TLV decode results of selected applets\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    <hex>                          CDOLdata/CDOL\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv genac -k 0102              -> generate AC with 2-byte CDOLdata and keep field ON after command\n    emv genac -t 01020304          -> generate AC with 4-byte CDOL data, show result in TLV\n    emv genac -Daac 01020304       -> generate AC with 4-byte CDOL data and terminal decision 'declined'\n    emv genac -pmt 9F 37 04        -> load params from file, make CDOL data from CDOL, generate AC with CDOL, show result in TLV",
+      "description": "Generate Application Cryptogram command. It returns data in TLV format."
+    },
+    {
+      "command": "emv gpo",
+      "offline": false,
+      "help": "Executes Get Processing Options command. It returns data in TLV format (0x77 - format2)\nor plain format (0x80 - format1). Needs a EMV applet to be selected.\n\nusage:\n    emv gpo [-hkpmatw] [<hex>]... [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -k, --keep                     Keep field ON for next command\n    -p, --params                   Load parameters from `emv_defparams.json` file for PDOLdata making from PDOL and parameters\n    -m, --make                     Make PDOLdata from PDOL (tag 9F38) and parameters (def: uses default parameters)\n    -a, --apdu                     Show APDU requests and responses\n    -t, --tlv                      TLV decode results of selected applets\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    <hex>                          PDOLdata/PDOL\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv gpo -k                     -> execute GPO\n    emv gpo -t 01020304            -> execute GPO with 4-byte PDOL data, show result in TLV\n    emv gpo -pmt 9F 37 04          -> load params from file, make PDOL data from PDOL, execute GPO with PDOL, show result in TLV",
+      "description": "Executes Get Processing Options command. It returns data in TLV format (0x77 - format2)"
+    },
+    {
+      "command": "emv intauth",
+      "offline": false,
+      "help": "Generate Internal Authenticate command. Usually needs 4-byte random number. It returns data in TLV format .\nNeeds a EMV applet to be selected and GPO to be executed.\n\nusage:\n    emv intauth [-hkpmatw] <hex> [<hex>]... [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -k, --keep                     Keep field ON for next command\n    -p, --params                   Load parameters from `emv_defparams.json` file for DDOLdata making from DDOL and parameters\n    -m, --make                     Make DDOLdata from DDOL (tag 9F49) and parameters (def: use default parameters)\n    -a, --apdu                     Show APDU requests and responses\n    -t, --tlv                      TLV decode results of selected applets\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    <hex>                          DDOLdata/DDOL\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv intauth -k 01020304        -> execute Internal Authenticate with 4-byte DDOLdata and keep field ON after command\n    emv intauth -t 01020304        -> execute Internal Authenticate with 4-byte DDOL data, show result in TLV\n    emv intauth -pmt 9F 37 04      -> load params from file, make DDOL data from DDOL, Internal Authenticate with DDOL, show result in TLV",
+      "description": "Generate Internal Authenticate command. Usually needs 4-byte random number. It returns data in TLV format ."
+    },
+    {
+      "command": "emv pse",
+      "offline": false,
+      "help": "Executes PSE/PPSE select command. It returns list of applet on the card:\n\n\nusage:\n    emv pse [-hsk12atw] [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -s, --select                   Activate field and select card\n    -k, --keep                     Keep field ON for next command\n    -1, --pse                      PSE (1PAY.SYS.DDF01) mode\n    -2, --ppse                     PPSE (2PAY.SYS.DDF01) mode (def)\n    -a, --apdu                     Show APDU requests and responses\n    -t, --tlv                      TLV decode results of selected applets\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv pse -s1                    -> select, get pse\n    emv pse -st2                   -> select, get ppse, show result in TLV",
+      "description": "Executes PSE/PPSE select command. It returns list of applet on the card:"
+    },
+    {
+      "command": "emv reader",
+      "offline": false,
+      "help": "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed\nIn `verbose` mode it will also try to extract and decode the transaction logs stored on card in either channel.\n\n\nusage:\n    emv reader [-hwv@] [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    -v, --verbose                  Verbose output\n    -@                             continuous reader mode\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv reader                    \n    emv reader -v                 \n    emv reader -w                  -> contact interface\n    emv reader -w --t1             -> contact interface, protocol T=1\n    emv reader -@                  -> Continuous mode",
+      "description": "Act as a EMV reader to identify tag. Look for EMV tags until Enter or the pm3 button is pressed"
+    },
+    {
+      "command": "emv readrec",
+      "offline": false,
+      "help": "Executes Read Record command. It returns data in TLV format.\nNeeds a bank applet to be selected and sometimes needs GPO to be executed.\n\nusage:\n    emv readrec [-hkatw] <hex> [<hex>]... [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -k, --keep                     Keep field ON for next command\n    -a, --apdu                     Show APDU requests and responses\n    -t, --tlv                      TLV decode results of selected applets\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    <hex>                          <SFI 1 byte><SFIrecord 1 byte\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv readrec -k 0101            -> read file SFI=01, SFIrec=01\n    emv readrec -kt 0201           -> read file 0201 and show result in TLV",
+      "description": "Executes Read Record command. It returns data in TLV format."
+    },
+    {
+      "command": "emv roca",
+      "offline": false,
+      "help": "Tries to extract public keys and run the ROCA test against them.\n\n\nusage:\n    emv roca [-haw] [--test] [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    --test                         Perform self tests\n    -a, --apdu                     Show APDU requests and responses\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv roca -w                    -> select --CONTACT-- card and run test\n    emv roca                       -> select --CONTACTLESS-- card and run test",
+      "description": "Tries to extract public keys and run the ROCA test against them."
+    },
+    {
+      "command": "emv scan",
+      "offline": false,
+      "help": "Scan EMV card and save it contents to a file.\nIt executes EMV contactless transaction and saves result to a file which can be used for emulation\n\n\nusage:\n    emv scan [-hatejcxgmw] By default: [--qvsdc] <fn> [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -a, --apdu                     Show APDU requests and responses\n    -t, --tlv                      TLV decode results\n    -e, --extract                  Extract TLV elements and fill Application Data\n    -j, --jload                    Load transaction parameters from `emv_defparams.json` file\n    By default:                    Transaction type - MSD\n    --qvsdc                        Transaction type - qVSDC or M/Chip\n    -c, --qvsdccda                 Transaction type - qVSDC or M/Chip plus CDA (SDAD generation)\n    -x, --vsdc                     Transaction type - VSDC. For test only. Not a standard behavior\n    -g, --acgpo                    VISA. generate AC from GPO\n    -m, --merge                    Merge output file with card's data. (warning: the file may be corrupted!)\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    <fn>                           JSON output file name\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv scan -at                   -> scan MSD transaction mode and show APDU and TLV\n    emv scan -c                    -> scan CDA transaction mode",
+      "description": "Scan EMV card and save it contents to a file."
+    },
+    {
+      "command": "emv search",
+      "offline": false,
+      "help": "Tries to select all applets from applet list\n\n\nusage:\n    emv search [-hskatw] [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -s, --select                   Activate field and select card\n    -k, --keep                     Keep field ON for next command\n    -a, --apdu                     Show APDU requests and responses\n    -t, --tlv                      TLV decode results of selected applets\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv search -s                  -> select card and search\n    emv search -st                 -> select card, search and show result in TLV",
+      "description": "Tries to select all applets from applet list"
+    },
+    {
+      "command": "emv select",
+      "offline": false,
+      "help": "Executes select applet command\n\nusage:\n    emv select [-hskatw] <hex> [--t0] [--t1]\n\noptions:\n    -h, --help                     This help\n    -s, --select                   Activate field and select card\n    -k, --keep                     Keep field for next command\n    -a, --apdu                     Show APDU requests and responses\n    -t, --tlv                      TLV decode results\n    -w, --wired                    Send data via contact (iso7816) interface. (def: Contactless interface)\n    <hex>                          Applet AID\n    --t0                           use protocol T=0 on the contact interface (default)\n    --t1                           use protocol T=1 on the contact interface\n\nexamples/notes:\n    emv select -s a00000000101         -> select card, select applet\n    emv select -st a00000000101        -> select card, select applet, show result in TLV",
+      "description": "Executes select applet command"
+    },
+    {
+      "command": "emv smart2nfc",
+      "offline": false,
+      "help": "Executes ISO14443a payment, TX using ISO7816 interface for authentication\n\nusage:\n    emv smart2nfc [-ht] [-u <hex>]\n\noptions:\n    -h, --help                     This help\n    -t, --test                     test that the attached card is working (must be VISA)\n    -u, --uid <hex>                optional 7 hex bytes UID\n\nexamples/notes:\n    emv smart2nfc -t               -> test that the attached card is working (must be VISA)",
+      "description": "Executes ISO14443a payment, TX using ISO7816 interface for authentication"
+    },
+    {
+      "command": "hw help",
+      "offline": true,
+      "help": "help             This help\n-------------    ----------------------- Operation -----------------------\ntimeout          Set the communication timeout on the client side\nversion          Show version information about the client and Proxmark3\n-------------    ----------------------- Hardware -----------------------\nconnect          Connect to the device via serial port",
+      "description": "help             This help"
+    },
+    {
+      "command": "hw detectreader",
+      "offline": false,
+      "help": "Start to detect presences of reader field\n\nusage:\n    hw detectreader [-hLH]\n\noptions:\n    -h, --help                     This help\n    -L, --LF                       only detect low frequency 125/134 kHz\n    -H, --HF                       only detect high frequency 13.56 MHZ\n\nexamples/notes:\n    hw detectreader               \n    hw detectreader -L",
+      "description": "Start to detect presences of reader field"
+    },
+    {
+      "command": "hw status",
+      "offline": false,
+      "help": "Show runtime status information about the connected Proxmark3\n\nusage:\n    hw status [-h] [-m <ms>]\n\noptions:\n    -h, --help                     This help\n    -m, --ms <ms>                  speed test timeout in micro seconds\n\nexamples/notes:\n    hw status                     \n    hw status --ms 1000            -> Test connection speed with 1000ms timeout",
+      "description": "Show runtime status information about the connected Proxmark3"
+    },
+    {
+      "command": "hw tearoff",
+      "offline": false,
+      "help": "Configure a tear-off hook for the next write command supporting tear-off\nAfter having been triggered by a write command, the tear-off hook is deactivated\nDelay (in us) must be between 1 and 65535 (65ms). Precision is about 1/3us.\n\nusage:\n    hw tearoff [-hs] [--delay <dec>] [--on] [--off] [--skip <dec>] [--list]\n\noptions:\n    -h, --help                     This help\n    --delay <dec>                  Delay in us before triggering tear-off, must be between 1 and 65535\n    --on                           Activate tear-off hook\n    --off                          Deactivate tear-off hook\n    --skip <dec>                   Skip N triggers before activating the hook\n    -s, --silent                   less verbose output\n    --list                         List commands implementing tear-off hooks\n\nexamples/notes:\n    hw tearoff --delay 1200        -> define delay of 1200us\n    hw tearoff --on                -> (re)activate a previously defined delay\n    hw tearoff --off               -> deactivate a previously activated but not yet triggered hook\n    hw tearoff --list              -> list commands implementing tear-off hooks",
+      "description": "Configure a tear-off hook for the next write command supporting tear-off"
+    },
+    {
+      "command": "hw timeout",
+      "offline": true,
+      "help": "Set the communication timeout on the client side\n\nusage:\n    hw timeout [-h] [-m <ms>]\n\noptions:\n    -h, --help                     This help\n    -m, --ms <ms>                  timeout in micro seconds\n\nexamples/notes:\n    hw timeout                     -> Show current timeout\n    hw timeout -m 20               -> Set the timeout to 20ms\n    hw timeout --ms 500            -> Set the timeout to 500ms",
+      "description": "Set the communication timeout on the client side"
+    },
+    {
+      "command": "hw version",
+      "offline": true,
+      "help": "Show version information about the client and the connected Proxmark3\n\nusage:\n    hw version [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw version",
+      "description": "Show version information about the client and the connected Proxmark3"
+    },
+    {
+      "command": "hw break",
+      "offline": false,
+      "help": "send break loop package\n\nusage:\n    hw break [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw break",
+      "description": "send break loop package"
+    },
+    {
+      "command": "hw bootloader",
+      "offline": false,
+      "help": "Reboot Proxmark3 into bootloader mode\n\nusage:\n    hw bootloader [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw bootloader",
+      "description": "Reboot Proxmark3 into bootloader mode"
+    },
+    {
+      "command": "hw connect",
+      "offline": true,
+      "help": "Connects to a Proxmark3 device via specified serial port.\nBaudrate here is only for physical UART or UART-BT, NOT for USB-CDC or blue shark add-on\n\nusage:\n    hw connect [-h] [-p <str>] [-b <dec>]\n\noptions:\n    -h, --help                     This help\n    -p, --port <str>               Serial port to connect to, else retry the last used one\n    -b, --baud <dec>               Baudrate\n\nexamples/notes:\n    hw connect -p com3            \n    hw connect -p com3 -b 115200",
+      "description": "Connects to a Proxmark3 device via specified serial port."
+    },
+    {
+      "command": "hw dbg",
+      "offline": false,
+      "help": "Set device side debug level output.\nNote: option `-4`, this option may cause malfunction itself by\nintroducing delays in time critical functions like simulation or sniffing\n\nusage:\n    hw dbg [-h01234]\n\noptions:\n    -h, --help                     This help\n    -0                             no debug messages\n    -1                             error messages\n    -2                             plus information messages\n    -3                             plus debug messages\n    -4                             print even debug messages in timing critical functions\n\nexamples/notes:\n    hw dbg                         -> get current log level\n    hw dbg -1                      -> set log level to _error_",
+      "description": "Set device side debug level output."
+    },
+    {
+      "command": "hw fpga",
+      "offline": false,
+      "help": "help             This help\n-------------    ----------------------- Operation -----------------------",
+      "description": "help             This help"
+    },
+    {
+      "command": "hw fpgaoff",
+      "offline": false,
+      "help": "Turn of fpga and antenna field\n\nusage:\n    hw fpgaoff [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw fpgaoff",
+      "description": "Turn of fpga and antenna field"
+    },
+    {
+      "command": "hw ant_pm5",
+      "offline": false,
+      "help": "Control the antennal of pm5\n\nusage:\n    hw ant_pm5 [-hm] [-s <u8_data>]\n\noptions:\n    -h, --help                     This help\n    -m, --map                      Write the IO map register\n    -s, --set <u8_data>            Set PM5 antenna\n\nexamples/notes:\n    hw ant_pm5 --set <u8_data>              -> Write the data of IO data register\n    hw ant_pm5 -m --set <u8_data>           -> Write the data of IO map register",
+      "description": "Control the antennal of pm5"
+    },
+    {
+      "command": "hw qc_pm5",
+      "offline": false,
+      "help": "QC Test for the PM5\n\nusage:\n    hw qc_pm5 [-h] [-t <s>] [--iolow <index>] [--iohigh <index>] [--ioreset <index>] [--pwd <hex>]\n                   \n\noptions:\n    -h, --help                     This help\n    -t, --timeout <s>              test sequence timeout in seconds (default 20)\n    --iolow <index>                drive PM5 test IO <index> low\n    --iohigh <index>               drive PM5 test IO <index> high\n    --ioreset <index>              reset PM5 test IO <index> to default\n    --pwd <hex>                    QC test password in hex (required for IO tests)\n\nexamples/notes:\n    hw qc_pm5                      -> run hardware QC test with default 20 second timeout\n    hw qc_pm5 -t 3                 -> run hardware QC test with a 3 second timeout\n    hw qc_pm5 --iolow <index> --pwd <hex>        -> drive PM5 test IO <index> low\n    hw qc_pm5 --iohigh <index> --pwd <hex>       -> drive PM5 test IO <index> high\n    hw qc_pm5 --ioreset <index> --pwd <hex>      -> reset PM5 test IO <index> to default",
+      "description": "QC Test for the PM5"
+    },
+    {
+      "command": "hw factorydata",
+      "offline": false,
+      "help": "Get/Set the factory data for Device\n\nusage:\n    hw factorydata [-h] [--load <fn>]\n\noptions:\n    -h, --help                     This help\n    --load <fn>                    Load factory data from file to device\n\nexamples/notes:\n    hw factorydata --load <file>                -> Write the factory data to device from file\n    hw factorydata                              -> Read and parse the factory data from device",
+      "description": "Get/Set the factory data for Device"
+    },
+    {
+      "command": "hw lcd",
+      "offline": false,
+      "help": "Send command/data to LCD\n\nusage:\n    hw lcd [-h] -r <hex> -c <dec>\n\noptions:\n    -h, --help                     This help\n    -r, --raw <hex>                data \n    -c, --cnt <dec>                number of times to send\n\nexamples/notes:\n    hw lcd -r AA -c 03             -> sends 0xAA three times",
+      "description": "Send command/data to LCD"
+    },
+    {
+      "command": "hw lcdreset",
+      "offline": false,
+      "help": "Hardware reset LCD\n\nusage:\n    hw lcdreset [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw lcdreset",
+      "description": "Hardware reset LCD"
+    },
+    {
+      "command": "hw ping",
+      "offline": false,
+      "help": "Test if the Proxmark3 is responsive\n\nusage:\n    hw ping [-h] [-l <dec>]\n\noptions:\n    -h, --help                     This help\n    -l, --len <dec>                length of payload to send\n\nexamples/notes:\n    hw ping                       \n    hw ping --len 32",
+      "description": "Test if the Proxmark3 is responsive"
+    },
+    {
+      "command": "hw readmem",
+      "offline": false,
+      "help": "Reads processor flash memory into a file or views on console\n\nusage:\n    hw readmem [-hr] [-a <dec>] [-l <dec>] [-f <fn>] [-c <dec>]\n\noptions:\n    -h, --help                     This help\n    -a, --adr <dec>                flash address to start reading from\n    -l, --len <dec>                length (default 32 or 512KB)\n    -f, --file <fn>                save to file\n    -c, --cols <dec>               column breaks\n    -r, --raw                      use raw address mode: read from anywhere, not just flash\n\nexamples/notes:\n    hw readmem -f myfile                         -> save 512KB processor flash memory to file\n    hw readmem -a 8192 -l 512                    -> display 512 bytes from offset 8192",
+      "description": "Reads processor flash memory into a file or views on console"
+    },
+    {
+      "command": "hw reset",
+      "offline": false,
+      "help": "Reset the Proxmark3 device.\n\nusage:\n    hw reset [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw reset",
+      "description": "Reset the Proxmark3 device."
+    },
+    {
+      "command": "hw setlfdivisor",
+      "offline": false,
+      "help": "Drive LF antenna at 12 MHz / (divisor + 1).\n\nusage:\n    hw setlfdivisor [-h] -d <dec>\n\noptions:\n    -h, --help                     This help\n    -d, --div <dec>                19 - 255 divisor value (def 95)\n\nexamples/notes:\n    hw setlfdivisor -d 88",
+      "description": "Drive LF antenna at 12 MHz / (divisor + 1)."
+    },
+    {
+      "command": "hw sethfthresh",
+      "offline": false,
+      "help": "Set thresholds in HF/14a and Legic mode.\n\nusage:\n    hw sethfthresh [-h] [-t <dec>] [-i <dec>] [-l <dec>]\n\noptions:\n    -h, --help                     This help\n    -t, --thresh <dec>             threshold, used in 14a reader mode (def 7)\n    -i, --high <dec>               high threshold, used in 14a sniff mode (def 20)\n    -l, --legic <dec>              threshold used in Legic mode (def 8)\n\nexamples/notes:\n    hw sethfthresh -t 7 -i 20 -l 8",
+      "description": "Set thresholds in HF/14a and Legic mode."
+    },
+    {
+      "command": "hw setmux",
+      "offline": false,
+      "help": "Set the ADC mux to a specific value\n\nusage:\n    hw setmux [-h] [--lopkd] [--loraw] [--hipkd] [--hiraw]\n\noptions:\n    -h, --help                     This help\n    --lopkd                        low peak\n    --loraw                        low raw\n    --hipkd                        high peak\n    --hiraw                        high raw\n\nexamples/notes:\n    hw setmux --hipkd              -> set HIGH PEAK",
+      "description": "Set the ADC mux to a specific value"
+    },
+    {
+      "command": "hw standalone",
+      "offline": false,
+      "help": "Start standalone mode\n\nusage:\n    hw standalone [-h] [-a <dec>] [-b <str>]\n\noptions:\n    -h, --help                     This help\n    -a, --arg <dec>                argument byte\n    -b <str>                       UniSniff arg: 14a, 14b, 15, iclass\n\nexamples/notes:\n    hw standalone                  -> start \n    hw standalone -a 1             -> start and send arg 1",
+      "description": "Start standalone mode"
+    },
+    {
+      "command": "hw tia",
+      "offline": false,
+      "help": "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider\n\nusage:\n    hw tia [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw tia",
+      "description": "Trigger a Timing Interval Acquisition to re-adjust the RealTimeCounter divider"
+    },
+    {
+      "command": "hw tune",
+      "offline": false,
+      "help": "Measure tuning of device antenna. Results shown in graph window.\nThis command doesn't actively tune your antennas, \nit's only informative by measuring voltage that the antennas will generate\n\nusage:\n    hw tune [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw tune",
+      "description": "Measure tuning of device antenna. Results shown in graph window."
+    },
+    {
+      "command": "hw decay",
+      "offline": false,
+      "help": "Measure HF antenna decay after field-off.\nCaptures how quickly the peak-detect capacitor voltage drops\nafter the 13.56 MHz field is turned off. Different antenna loading\n(unloaded, booster board, damaged) produces different decay profiles.\n\nusage:\n    hw decay [-h] [--ms <dec>] [--us <dec>]\n\noptions:\n    -h, --help                     This help\n    --ms <dec>                     Field stabilization time in ms (default: 50)\n    --us <dec>                     Measurement window in us (default: 2000)\n\nexamples/notes:\n    hw decay                      \n    hw decay --ms 100              -> stabilize for 100ms before measurement\n    hw decay --us 5000             -> measure 5ms decay window",
+      "description": "Measure HF antenna decay after field-off."
+    },
+    {
+      "command": "hw bwm help",
+      "offline": true,
+      "help": "help             This help",
+      "description": "help             This help"
+    },
+    {
+      "command": "hw bwm autooff",
+      "offline": false,
+      "help": "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only).\nDefault is on. When on, the board powers itself down ~10s after\nUSB is removed, so a BWM-equipped PM5 doesn't silently drain the battery.\nButton power-on is unaffected. Disable for standalone/BLE use on battery.\nRuntime only: resets to on at each boot.\n\nusage:\n    hw bwm autooff [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw bwm autooff off             -> disable auto power-off\n    hw bwm autooff on              -> re-enable auto power-off",
+      "description": "Toggle automatic power-off when the PM5 is unplugged from USB (BWM only)."
+    },
+    {
+      "command": "hw bwm charge",
+      "offline": false,
+      "help": "Enable or disable BWM battery charging by clearing/setting the\nAW32001E charge-enable bit (CEB, REG01[3]). PM5 only.\nOne-shot: the charger watchdog reverts this after ~160 s unless\nserviced, so charging may stop on its own. Use to nudge a top-up.\n\nusage:\n    hw bwm charge [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hw bwm charge off              -> disable charging\n    hw bwm charge on               -> enable charging",
+      "description": "Enable or disable BWM battery charging by clearing/setting the"
+    },
+    {
+      "command": "hw bwm name",
+      "offline": false,
+      "help": "Get or set the BWM BLE advertising name (stored on the BWM, in NVS).\nWith no --set, prints the current name. Setting a name stores it and reboots\nthe BWM to apply it - this briefly drops a BLE/WiFi connection; reconnect after\na few seconds. Over USB the reboot is not noticeable.\n\nusage:\n    hw bwm name [-h] [--set <name>]\n\noptions:\n    -h, --help                     This help\n    --set <name>                   new BLE name (1-31 chars); omit to read current name\n\nexamples/notes:\n    hw bwm name                    -> show current BLE name\n    hw bwm name --set MyPM5            -> set BLE name to 'MyPM5'",
+      "description": "Get or set the BWM BLE advertising name (stored on the BWM, in NVS)."
+    },
+    {
+      "command": "hw bwm setcap",
+      "offline": false,
+      "help": "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell.\nRun ONCE after fitting or replacing the battery. This triggers a gauge\nconfig-update; do not run it repeatedly, as that disrupts the Impedance\nTrack learning cycle. PM5 only.\n\nusage:\n    hw bwm setcap [-h] [--cap <mAh>]\n\noptions:\n    -h, --help                     This help\n    --cap <mAh>                    design capacity in mAh (default 500)\n\nexamples/notes:\n    hw bwm setcap                  -> set design capacity to default 500 mAh\n    hw bwm setcap --cap 500        -> set design capacity to 500 mAh",
+      "description": "Program the BWM fuel gauge (BQ27427) Design Capacity for the fitted cell."
+    },
+    {
+      "command": "hw bwm upgrade",
+      "offline": false,
+      "help": "Reflash the BWM (ESP32) firmware over the BWM link - no header, no soldering.\nRequires a BWM that still responds; this updates a wrong-version ESP, it cannot\nrecover a fully bricked one (that still needs the 5-pin header + esptool).\n\nusage:\n    hw bwm upgrade [-h] -f <fn> [--delay <ms>]\n\noptions:\n    -h, --help                     This help\n    -f, --file <fn>                ESP32 firmware image (.bin)\n    --delay <ms>                   per-chunk delay to pace the slow AT32<->ESP UART (default 20)\n\nexamples/notes:\n    hw bwm upgrade -f bwm_esp32.bin",
+      "description": "Reflash the BWM (ESP32) firmware over the BWM link - no header, no soldering."
+    },
+    {
+      "command": "hw bwm vchg",
+      "offline": false,
+      "help": "Set the BWM charger (AW32001E) charge-voltage regulation target.\nLowering it below 4.2 V reduces top-of-charge stress and extends cell\nlife. Snaps to the nearest 15 mV step; clamped to 3600..4200 mV. This is\na runtime register write (reverts on the charger watchdog / POR); the\nfirmware re-applies the 4100 mV default at every boot. PM5 only.\n\nusage:\n    hw bwm vchg [-h] [--mv <mV>]\n\noptions:\n    -h, --help                     This help\n    --mv <mV>                      charge voltage in mV (default 4100, clamped 3600..4200)\n\nexamples/notes:\n    hw bwm vchg                    -> set charge voltage to default 4100 mV (->4.095 V)\n    hw bwm vchg --mv 4200          -> set charge voltage to 4200 mV",
+      "description": "Set the BWM charger (AW32001E) charge-voltage regulation target."
+    },
+    {
+      "command": "hw bwm wifi",
+      "offline": false,
+      "help": "Bring up the BWM in STA + TCP-server mode: join a WiFi network and\nstart a TCP server so the client can connect over WiFi. PM5 only.\nSub-actions (no dashes): 'status' shows state, 'stop' tears WiFi down.\n\nusage:\n    hw bwm wifi [-h] [--ssid <ssid>] [--pwd <pwd>] [--port <dec>] [--hostname <name>]\n\noptions:\n    -h, --help                     This help\n    --ssid <ssid>                  WiFi SSID to join\n    --pwd <pwd>                    WiFi password (omit for open network)\n    --port <dec>                   TCP server listen port (default 7777)\n    --hostname <name>              DHCP hostname (default Proxmark5)\n\nexamples/notes:\n    hw bwm wifi status                                    -> show connection state + IP\n    hw bwm wifi stop                                      -> tear down WiFi, back to BLE-only\n    hw bwm wifi --ssid Home --pwd secret                  -> bring up, port 7777\n    hw bwm wifi --ssid Home --pwd secret --port 9000",
+      "description": "Bring up the BWM in STA + TCP-server mode: join a WiFi network and"
+    },
+    {
+      "command": "mad help",
+      "offline": true,
+      "help": "--------         ------------- General ---------------\nhelp             This help\n--------         --------------- MAD -----------------\n--------         ------------- Operations ---------------\ndecode           Decode MAD byte array\nencode           Encode MAD byte array from AID mappings\ntest             Perform MAD regression self-tests",
+      "description": "--------         ------------- General ---------------"
+    },
+    {
+      "command": "mad read",
+      "offline": false,
+      "help": "Read application data from sectors matching a MAD AID\n\nusage:\n    mad read [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    --aid <hex>                    application ID (2 hex bytes)\n    -k, --key <hex>                key for data sectors\n    -b, --keyb                     use key B\n    --madkey <hex>                 key for MAD sectors\n    --be                           big-endian AID byte swap\n    --override                     override failed CRC check\n    -f, --file <fn>                save raw data to file\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    mad read --aid e103                                           -> read NDEF data\n    mad read --aid e103 -k ffffffffffff -b                        -> Classic, key B\n    mad read --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7       -> Plus\n    mad read --aid e103 -v -f mydata.bin",
+      "description": "Read application data from sectors matching a MAD AID"
+    },
+    {
+      "command": "mad write",
+      "offline": false,
+      "help": "Write application data to sectors matching a MAD AID\n\nusage:\n    mad write [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-d <hex>] [-f <fn>]\n                   \n\noptions:\n    -h, --help                     This help\n    --aid <hex>                    application ID (2 hex bytes)\n    -k, --key <hex>                key for data sectors\n    -b, --keyb                     use key B (def: key A)\n    --madkey <hex>                 key for MAD sectors\n    --be                           big-endian AID byte swap\n    --override                     override failed CRC check\n    -d, --data <hex>               data to write\n    -f, --file <fn>                load data from file\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    mad write --aid e103 -d 0102030405060708      -> write data\n    mad write --aid e103 -f mydata.bin      -> write from file\n    mad write --aid e103 -k ffffffffffff -d 0102030405      -> Classic, custom key",
+      "description": "Write application data to sectors matching a MAD AID"
+    },
+    {
+      "command": "mad verify",
+      "offline": false,
+      "help": "Read back and verify application data against expected content\n\nusage:\n    mad verify [-hbv] --aid <hex> [-k <hex>] [--madkey <hex>] [--be] [--override] [-d <hex>] [-f <fn>]\n                   \n\noptions:\n    -h, --help                     This help\n    --aid <hex>                    application ID (2 hex bytes)\n    -k, --key <hex>                key for data sectors\n    -b, --keyb                     use key B (def: key A)\n    --madkey <hex>                 key for MAD sectors\n    --be                           big-endian AID byte swap\n    --override                     override failed CRC check\n    -d, --data <hex>               expected data\n    -f, --file <fn>                load expected data from file\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    mad verify --aid e103 -d 0102030405060708\n    mad verify --aid e103 -f mydata.bin",
+      "description": "Read back and verify application data against expected content"
+    },
+    {
+      "command": "mad decode",
+      "offline": true,
+      "help": "Decode a MAD byte array and print the directory. \nUse Sector  0 == MAD 1\n    Sector 16 == MAD 2\n\n\nusage:\n    mad decode [-hv] -1 <hex> [-2 <hex>] [--be]\n\noptions:\n    -h, --help                     This help\n    -v, --verbose                  verbose output\n    -1, --mad1 <hex>               MAD 1 Sector 0 data (64 bytes)\n    -2, --mad2 <hex>               MAD 2 Sector 16 data (64 bytes)\n    --be                           big-endian AID byte swap\n\nexamples/notes:\n    mad decode --mad1 <hex>",
+      "description": "Decode a MAD byte array and print the directory. "
+    },
+    {
+      "command": "mad encode",
+      "offline": true,
+      "help": "Encode a MAD byte array from AID-to-sector mappings\n\nusage:\n    mad encode [-hq] --aid <hex:sectors> [--aid <hex:sectors>]... [--be]\n\noptions:\n    -h, --help                     This help\n    --aid <hex:sectors>            AID and sector ranges (e.g. E103:1-3,5)\n    -q, --quiet                    quiet output, hex bytes only\n    --be                           big-endian AID byte swap\n\nexamples/notes:\n    mad encode --aid E103:1-3 --aid 484D:4               -> MAD1 with NDEF + HID\n    mad encode --aid E103:1-3,5                          -> non-contiguous sectors\n    mad encode --aid E103:1-3,17-18 --aid 484D:4         -> MAD1 + MAD2 + HID\n    mad encode --aid E103:1-3 -q                         -> quiet, hex only",
+      "description": "Encode a MAD byte array from AID-to-sector mappings"
+    },
+    {
+      "command": "mad test",
+      "offline": true,
+      "help": "Run MAD regression tests. Runs offline with no card needed\n\nusage:\n    mad test [-hv]\n\noptions:\n    -h, --help                     This help\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    mad test",
+      "description": "Run MAD regression tests. Runs offline with no card needed"
+    },
+    {
+      "command": "mem help",
+      "offline": true,
+      "help": "help             This help",
+      "description": "help             This help"
+    },
+    {
+      "command": "mem baudrate",
+      "offline": false,
+      "help": "Set the baudrate for the SPI flash memory communications.\nReading Flash ID will virtually always fail under 48MHz setting.\nUnless you know what you are doing, please stay at 24MHz.\nIf >= 24MHz, FASTREADS instead of READS instruction will be used.\n\nusage:\n    mem baudrate [-h] --mhz <24|48>\n\noptions:\n    -h, --help                     This help\n    --mhz <24|48>                  SPI baudrate in MHz\n\nexamples/notes:\n    mem baudrate --mhz 48",
+      "description": "Set the baudrate for the SPI flash memory communications."
+    },
+    {
+      "command": "mem dump",
+      "offline": false,
+      "help": "Dumps flash memory on device into a file or view in console\n\nusage:\n    mem dump [-hv] [-o <dec>] [-l <dec>] [-f <fn>] [-c <dec>]\n\noptions:\n    -h, --help                     This help\n    -o, --offset <dec>             offset in memory\n    -l, --len <dec>                length\n    -v, --view                     view dump\n    -f, --file <fn>                save filename\n    -c, --cols <dec>               column breaks (def 32)\n\nexamples/notes:\n    mem dump -f myfile                                -> download all flashmem to file\n    mem dump --view -o 262015 --len 128               -> display 128 bytes from offset 262015 (RSA sig)\n    mem dump --view -f myfile -o 241664 --len 58      -> display 58 bytes from offset 241664 and save to file",
+      "description": "Dumps flash memory on device into a file or view in console"
+    },
+    {
+      "command": "mem info",
+      "offline": false,
+      "help": "Collect signature and verify it from flash memory\n\nusage:\n    mem info [-hsvw] [-d <hex>] [-p <fn>]\n\noptions:\n    -h, --help                     This help\n    -s, --sign                     create a signature\n    -d <hex>                       flash memory id, 8 hex bytes\n    -p, --pem <fn>                 key in PEM format\n    -v, --verbose                  verbose output\n    -w, --write                    write signature to flash memory\n\nexamples/notes:\n    mem info                      \n    mem info -v                    -> print public keys\n    mem info -s -p pm3_generic_private_key.pem           -> generate a RSA 1024 signature for your SPI ID\n    mem info -s -p pm3_generic_private_key.pem -w        -> generate and write a RSA 1024 signature for your SPI ID",
+      "description": "Collect signature and verify it from flash memory"
+    },
+    {
+      "command": "mem load",
+      "offline": false,
+      "help": "Loads binary file into flash memory on device\nWarning! - mem area to be written must have been wiped first\n\nOBS! - dictionaries are serviced as files in spiffs so no wipe is needed\n\nusage:\n    mem load [-hmit] [-o <dec>] [--ulc] [--aes] -f <fn>\n\noptions:\n    -h, --help                     This help\n    -o, --offset <dec>             offset in memory\n    -m, --mfc                      upload 6 bytes keys (MIFARE Classic dictionary)\n    -i, --iclass                   upload 8 bytes keys (iClass dictionary)\n    -t, --t55xx                    upload 4 bytes keys (T55xx dictionary)\n    --ulc                          upload 16 bytes keys (MIFARE UL-C dictionary)\n    --aes                          upload 16 bytes keys (MIFARE UL-AES dictionary)\n    -f, --file <fn>                file name\n\nexamples/notes:\n    mem load -f myfile                         -> upload file myfile values at default offset 0\n    mem load -f myfile -o 1024                 -> upload file myfile values at offset 1024\n    mem load -f mfc_default_keys -m            -> upload MIFARE Classic keys\n    mem load -f t55xx_default_pwds -t          -> upload T55XX passwords\n    mem load -f iclass_default_keys -i         -> upload iCLASS keys\n    mem load -f mfulc_default_keys --ulc       -> upload MIFARE UL-C keys",
+      "description": "Loads binary file into flash memory on device"
+    },
+    {
+      "command": "mem wipe",
+      "offline": false,
+      "help": "Wipe flash memory on device, which fills it with 0xFF\n[ !!! OBS ] use with caution\n\nusage:\n    mem wipe [-h] [-p <dec>]\n\noptions:\n    -h, --help                     This help\n    -p <dec>                       page memory\n\nexamples/notes:\n    mem wipe -p 0                  -> wipes first page",
+      "description": "Wipe flash memory on device, which fills it with 0xFF"
+    },
+    {
+      "command": "mem spiffs help",
+      "offline": true,
+      "help": "help             This help",
+      "description": "help             This help"
+    },
+    {
+      "command": "mem spiffs test",
+      "offline": false,
+      "help": "Test SPIFFS Operations, require wiping pages 0 and 1\n\nusage:\n    mem spiffs test [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    mem spiffs test",
+      "description": "Test SPIFFS Operations, require wiping pages 0 and 1"
+    },
+    {
+      "command": "mem spiffs copy",
+      "offline": false,
+      "help": "Copy a file to another (destructively) in SPIFFS file system\n\nusage:\n    mem spiffs copy [-h] -s <fn> -d <fn>\n\noptions:\n    -h, --help                     This help\n    -s, --src <fn>                 source file name\n    -d, --dest <fn>                destination file name\n\nexamples/notes:\n    mem spiffs copy -s aaa.bin -d aaa_cpy.bin",
+      "description": "Copy a file to another (destructively) in SPIFFS file system"
+    },
+    {
+      "command": "mem spiffs check",
+      "offline": false,
+      "help": "Check/try to defrag faulty/fragmented SPIFFS file system\n\nusage:\n    mem spiffs check [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    mem spiffs check",
+      "description": "Check/try to defrag faulty/fragmented SPIFFS file system"
+    },
+    {
+      "command": "mem spiffs dump",
+      "offline": false,
+      "help": "Dumps device SPIFFS file to a local file\nSize is handled by first sending a STAT command against file to verify existence\n\nusage:\n    mem spiffs dump [-ht] -s <fn> [-d <fn>]\n\noptions:\n    -h, --help                     This help\n    -s, --src <fn>                 SPIFFS file to save\n    -d, --dest <fn>                file name to save to <w/o .bin>\n    -t, --trace                    download into trace buffer\n\nexamples/notes:\n    mem spiffs dump -s tag.bin                 -> download binary file from device, saved as `tag.bin`\n    mem spiffs dump -s tag.bin -d a001         -> download tag.bin, save as `a001.bin`\n    mem spiffs dump -s tag.bin -t              -> download tag.bin into trace buffer",
+      "description": "Dumps device SPIFFS file to a local file"
+    },
+    {
+      "command": "mem spiffs info",
+      "offline": false,
+      "help": "Print file system info and usage statistics\n\nusage:\n    mem spiffs info [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    mem spiffs info",
+      "description": "Print file system info and usage statistics"
+    },
+    {
+      "command": "mem spiffs mount",
+      "offline": false,
+      "help": "Mount the SPIFFS file system if not already mounted\n\nusage:\n    mem spiffs mount [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    mem spiffs mount",
+      "description": "Mount the SPIFFS file system if not already mounted"
+    },
+    {
+      "command": "mem spiffs remove",
+      "offline": false,
+      "help": "Remove a file from SPIFFS filesystem\n\nusage:\n    mem spiffs remove [-h] -f <fn>\n\noptions:\n    -h, --help                     This help\n    -f, --file <fn>                file to remove\n\nexamples/notes:\n    mem spiffs remove -f lasttag.bin",
+      "description": "Remove a file from SPIFFS filesystem"
+    },
+    {
+      "command": "mem spiffs rename",
+      "offline": false,
+      "help": "Rename/move a file from SPIFFS filesystem.\n\nusage:\n    mem spiffs rename [-h] -s <fn> -d <fn>\n\noptions:\n    -h, --help                     This help\n    -s, --src <fn>                 source file name\n    -d, --dest <fn>                destination file name\n\nexamples/notes:\n    mem spiffs rename -s aaa.bin -d bbb.bin",
+      "description": "Rename/move a file from SPIFFS filesystem."
+    },
+    {
+      "command": "mem spiffs tree",
+      "offline": false,
+      "help": "Print the Flash memory file system tree\n\nusage:\n    mem spiffs tree [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    mem spiffs tree",
+      "description": "Print the Flash memory file system tree"
+    },
+    {
+      "command": "mem spiffs unmount",
+      "offline": false,
+      "help": "Un-mount the SPIFFS file system\n\nusage:\n    mem spiffs unmount [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    mem spiffs unmount",
+      "description": "Un-mount the SPIFFS file system"
+    },
+    {
+      "command": "mem spiffs upload",
+      "offline": false,
+      "help": "Uploads binary-wise file into device file system\nWarning: mem area to be written must have been wiped first.\nThis is already taken care when loading dictionaries.\nFile names can only be 32 bytes long on device SPIFFS\n\nusage:\n    mem spiffs upload [-h] -s <fn> -d <fn>\n\noptions:\n    -h, --help                     This help\n    -s, --src <fn>                 source file name\n    -d, --dest <fn>                destination file name\n\nexamples/notes:\n    mem spiffs upload -s local.bin -d dest.bin",
+      "description": "Uploads binary-wise file into device file system"
+    },
+    {
+      "command": "mem spiffs view",
+      "offline": false,
+      "help": "View a file on flash memory on device in console\n\nusage:\n    mem spiffs view [-h] -f <fn> [-c <dec>]\n\noptions:\n    -h, --help                     This help\n    -f, --file <fn>                SPIFFS file to view\n    -c, --cols <dec>               column breaks (def 16)\n\nexamples/notes:\n    mem spiffs view -f tag.bin",
+      "description": "View a file on flash memory on device in console"
+    },
+    {
+      "command": "mem spiffs wipe",
+      "offline": false,
+      "help": "* * *  Warning  * * * \nThis command wipes all files on the device SPIFFS file system\n\nusage:\n    mem spiffs wipe [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    mem spiffs wipe",
+      "description": "* * *  Warning  * * * "
+    },
+    {
+      "command": "mqtt help",
+      "offline": true,
+      "help": "help             This help\nsend             Send messages or json file over MQTT\nreceive          Receive message or json file over MQTT",
+      "description": "help             This help"
+    },
+    {
+      "command": "mqtt send",
+      "offline": true,
+      "help": "This command send MQTT messages.  You can send JSON file\nDefault server:  mqtt.proxdump.com:1883  topic: proxdump\n\n\nusage:\n    mqtt send [-h] [--addr <str>] [-p <str>] [--topic <str>] [--msg <str>] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    --addr <str>                   MQTT server address\n    -p, --port <str>               MQTT server port\n    --topic <str>                  MQTT topic\n    --msg <str>                    Message to send over MQTT\n    -f, --file <fn>                file to send\n\nexamples/notes:\n    mqtt send --msg \"Hello from Pm3\"           -> sending msg to default server/port/topic\n    mqtt send -f myfile.json                     -> sending file to default server/port/topic\n    mqtt send --addr test.mosquitto.org -p 1883 --topic pm3 --msg \"custom mqtt server \"",
+      "description": "This command send MQTT messages.  You can send JSON file"
+    },
+    {
+      "command": "mqtt receive",
+      "offline": true,
+      "help": "This command receives MQTT messages.  JSON text will be saved to file if detected\nDefault server:  proxdump.com:1883  topic: proxdump\n\n\nusage:\n    mqtt receive [-h] [--addr <str>] [-p <str>] [--topic <str>] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    --addr <str>                   MQTT server address\n    -p, --port <str>               MQTT server port\n    --topic <str>                  MQTT topic\n    -f, --file <fn>                file name to use for received files\n\nexamples/notes:\n    mqtt receive                   -> listening to default server/port/topic\n    mqtt receive --addr test.mosquitto.org -p 1883 --topic pm3",
+      "description": "This command receives MQTT messages.  JSON text will be saved to file if detected"
+    },
+    {
+      "command": "nfc help",
+      "offline": true,
+      "help": "--------         --------------------- NFC Tags --------------------\ntype1            { NFC Forum Tag Type 1...             }\ntype2            { NFC Forum Tag Type 2...             }\ntype4a           { NFC Forum Tag Type 4 ISO14443A...   }\ntype4b           { NFC Forum Tag Type 4 ISO14443B...   }\nmf               { NFC Type MIFARE Classic/Plus Tag... }\nbarcode          { NFC Barcode Tag...                  }\n--------         --------------------- General ---------------------\nhelp             This help\ndecode           Decode NDEF records\nencode           Encode NDEF records",
+      "description": "--------         --------------------- NFC Tags --------------------"
+    },
+    {
+      "command": "nfc decode",
+      "offline": true,
+      "help": "Decode and print NFC Data Exchange Format (NDEF)\nYou must provide either data in hex or a filename, but not both\n\nusage:\n    nfc decode [-hv] [-d <hex>] [-f <fn>] [--override]\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               NDEF data to decode\n    -f, --file <fn>                file to load\n    --override                     override failed crc check\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    nfc decode -d 9101085402656e48656c6c6f5101085402656e576f726c64\n    nfc decode -d 0103d020240203e02c040300fe\n    nfc decode -f myfilename",
+      "description": "Decode and print NFC Data Exchange Format (NDEF)"
+    },
+    {
+      "command": "nfc encode",
+      "offline": true,
+      "help": "Encode NFC Data Exchange Format (NDEF) records.\nCombine several options to build a multi record message,\nrecords are added in the order listed below.\n\nBy default a bare NDEF message is emitted. Use `--tlv` to wrap it in a\nNFC Forum Type 2 tag container ( 03 <len> ... FE ), which is what the\n`-d` parameter of `hf mf ndefwrite` and `hf 14a ndefwrite` expects.\n`hf mfu ndefwrite` adds the container itself, so it does not need `--tlv`\n\nusage:\n    nfc encode [-hv] [--uri <str>] [--text <str>] [--lang <str>] [--aar <str>] [--tlv] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    --uri <str>                    URI record. URL, tel:, mailto:, ...\n    --text <str>                   Text record\n    --lang <str>                   language code for the text record (default: en)\n    --aar <str>                    Android Application Record, ie an app package name\n    --tlv                          wrap message in a NFC Forum Type 2 tag TLV container\n    -f, --file <fn>                save raw bytes to file\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    nfc encode --uri https://proxmark.com\n    nfc encode --uri tel:+123456789\n    nfc encode --text \"hello world\"\n    nfc encode --aar com.example.app\n    nfc encode --uri https://proxmark.com --aar com.example.app\n    nfc encode --uri https://proxmark.com --tlv -f myfilename",
+      "description": "Encode NFC Data Exchange Format (NDEF) records."
+    },
+    {
+      "command": "nfc type1 read",
+      "offline": false,
+      "help": "Get info from Topaz tags\n\nusage:\n    hf topaz info [-hv] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    -f, --file <fn>                save raw NDEF to file\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    hf topaz info                 \n    hf topaz info -f myfilename    -> save raw NDEF to file",
+      "description": "Get info from Topaz tags"
+    },
+    {
+      "command": "nfc type1 help",
+      "offline": true,
+      "help": "--------         -------------- NFC Forum Tag Type 1 ---------------\n--------         --------------------- General ---------------------\nhelp             This help",
+      "description": "--------         -------------- NFC Forum Tag Type 1 ---------------"
+    },
+    {
+      "command": "nfc type2 format",
+      "offline": false,
+      "help": "Format a MIFARE Ultralight / NTAG tag for NDEF by writing the Capability\nContainer to block 3, followed by an empty NDEF message.\n\nWrites NXP factory delivery content for the detected tag type. Block 3 is\nOne Time Programmable; unknown types and unreachable CCs are refused.\n\nNote: the tag is re-selected and re-authenticated for each block written.\n\nusage:\n    hf mfu ndefformat [-hlv] [-k <hex>] [-d <hex>] [--erase] [--force] [--schann]\n\noptions:\n    -h, --help                     This help\n    -k, --key <hex>                Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)\n    -l                             Swap entered key endianness\n    -d, --data <hex>               Capability Container to write, 4 bytes. Overrides the detected type\n    --erase                        Also zero the rest of the NDEF data area\n    --force                        Continue on an unknown tag type, or with an oversized -d value\n    -v, --verbose                  Verbose output\n    --schann                       use secure channel. Must have key\n\nexamples/notes:\n    hf mfu ndefformat             \n    hf mfu ndefformat -v          \n    hf mfu ndefformat --erase     \n    hf mfu ndefformat -k FFFFFFFF \n    hf mfu ndefformat -k 49454D4B41455242214E4143554F5946\n    hf mfu ndefformat -d E1101200 --force",
+      "description": "Format a MIFARE Ultralight / NTAG tag for NDEF by writing the Capability"
+    },
+    {
+      "command": "nfc type2 read",
+      "offline": false,
+      "help": "Prints NFC Data Exchange Format (NDEF)\n\nusage:\n    hf mfu ndefread [-hlv] [-k Replace default key for NDEF] [-f <fn>] [--schann]\n\noptions:\n    -h, --help                     This help\n    -l                             Swap entered key's endianness\n    -f, --file <fn>                Save raw NDEF to file\n    -v, --verbose                  Verbose output\n    --schann                       use secure channel. Must have key\n\nexamples/notes:\n    hf mfu ndefread                -> shows NDEF data\n    hf mfu ndefread -k ffffffff    -> shows NDEF data with key\n    hf mfu ndefread -f myfilename      -> save raw NDEF to file",
+      "description": "Prints NFC Data Exchange Format (NDEF)"
+    },
+    {
+      "command": "nfc type2 write",
+      "offline": false,
+      "help": "Write NFC Data Exchange Format (NDEF) records to a MIFARE Ultralight / NTAG tag.\nThe tag must already be NDEF formatted, ie carry a Capability Container in block 3.\n\nCombine several of --uri, --text and --aar to build a multi record message,\nrecords are added in that order.  Alternatively supply raw NDEF bytes with -d\nor -f, those get wrapped in a TLV container automatically when they are not\nalready.  Use `nfc encode` to build such raw bytes offline.\n\nNote: the tag is re-selected and re-authenticated for every block written,\nso a large message takes a while.\n\nusage:\n    hf mfu ndefwrite [-hlv] [-k <hex>] [--uri <str>] [--text <str>] [--lang <str>] [--aar <str>] [-d <hex>]\n                    [-f <fn>] [--schann]\n\noptions:\n    -h, --help                     This help\n    -k, --key <hex>                Authentication key (UL-C/UL-AES 16 bytes, EV1/NTAG 4 bytes)\n    -l                             Swap entered key endianness\n    --uri <str>                    URI record. URL, tel:, mailto:, ...\n    --text <str>                   Text record\n    --lang <str>                   language code for the text record (default: en)\n    --aar <str>                    Android Application Record, ie an app package name\n    -d, --data <hex>               Raw NDEF bytes to write\n    -f, --file <fn>                Raw NDEF file to write\n    -v, --verbose                  Verbose output\n    --schann                       use secure channel. Must have key\n\nexamples/notes:\n    hf mfu ndefwrite --uri https://proxmark.com\n    hf mfu ndefwrite --uri tel:+123456789\n    hf mfu ndefwrite --text \"hello world\"\n    hf mfu ndefwrite --aar com.example.app\n    hf mfu ndefwrite --uri https://proxmark.com --aar com.example.app\n    hf mfu ndefwrite --uri https://proxmark.com -k ffffffff\n    hf mfu ndefwrite -d 0311D1010D550270726F786D61726B2E636F6DFE\n    hf mfu ndefwrite -f myfilename",
+      "description": "Write NFC Data Exchange Format (NDEF) records to a MIFARE Ultralight / NTAG tag."
+    },
+    {
+      "command": "nfc type2 help",
+      "offline": true,
+      "help": "--------         -------------- NFC Forum Tag Type 2 ---------------\n--------         --------------------- General ---------------------\nhelp             This help",
+      "description": "--------         -------------- NFC Forum Tag Type 2 ---------------"
+    },
+    {
+      "command": "nfc type4a format",
+      "offline": false,
+      "help": "Format ISO14443-a Tag as a NFC tag with Data Exchange Format (NDEF)\n\nusage:\n    hf 14a ndefformat [-hv]\n\noptions:\n    -h, --help                     This help\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    hf 14a ndefformat",
+      "description": "Format ISO14443-a Tag as a NFC tag with Data Exchange Format (NDEF)"
+    },
+    {
+      "command": "nfc type4a read",
+      "offline": false,
+      "help": "Read NFC Data Exchange Format (NDEF) file on Type 4 NDEF tag\n\nusage:\n    hf 14a ndefread [-hv] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    -f, --file <fn>                save raw NDEF to file\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    hf 14a ndefread               \n    hf 14a ndefread -f myfilename      -> save raw NDEF to file",
+      "description": "Read NFC Data Exchange Format (NDEF) file on Type 4 NDEF tag"
+    },
+    {
+      "command": "nfc type4a write",
+      "offline": false,
+      "help": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.\n\n\nusage:\n    hf 14a ndefwrite [-hpv] [-d <hex>] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    -d <hex>                       raw NDEF hex bytes\n    -f, --file <fn>                write raw NDEF file to tag\n    -p                             fix NDEF record headers / terminator block if missing\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    hf 14a ndefwrite -d 0000             -> write empty record to tag\n    hf 14a ndefwrite -f myfilename      \n    hf 14a ndefwrite -d 003fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031",
+      "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted."
+    },
+    {
+      "command": "nfc type4a st25taread",
+      "offline": false,
+      "help": "Read NFC Data Exchange Format (NDEF) file on ST25TA\n\nusage:\n    hf st25ta ndefread [-hv] [-p <hex>] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    -p, --pwd <hex>                16 byte read password\n    -f, --file <fn>                save raw NDEF to file\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    hf st25ta ndefread -p 82E80053D4CA5C0B656D852CC696C8A1\n    hf st25ta ndefread -f myfilename      -> save raw NDEF to file",
+      "description": "Read NFC Data Exchange Format (NDEF) file on ST25TA"
+    },
+    {
+      "command": "nfc type4a help",
+      "offline": true,
+      "help": "--------         --------- NFC Forum Tag Type 4 ISO14443A ----------\n--------         --------------------- General ---------------------\nhelp             This help",
+      "description": "--------         --------- NFC Forum Tag Type 4 ISO14443A ----------"
+    },
+    {
+      "command": "nfc type4b read",
+      "offline": false,
+      "help": "Print NFC Data Exchange Format (NDEF)\n\nusage:\n    hf 14b ndefread [-hv] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    -f, --file <fn>                Save raw NDEF to file\n    -v, --verbose                  Verbose output\n\nexamples/notes:\n    hf 14b ndefread               \n    hf 14b ndefread -f myfilename        -> save raw NDEF to file",
+      "description": "Print NFC Data Exchange Format (NDEF)"
+    },
+    {
+      "command": "nfc type4b help",
+      "offline": true,
+      "help": "--------         --------- NFC Forum Tag Type 4 ISO14443B -------------\n--------         --------------------- General ---------------------\nhelp             This help",
+      "description": "--------         --------- NFC Forum Tag Type 4 ISO14443B -------------"
+    },
+    {
+      "command": "nfc mf cformat",
+      "offline": false,
+      "help": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF)\nIf no <name> given, UID will be used as filename. \nIt will try default keys and MAD keys to detect if tag is already formatted in order to write.\n\nIf not, it will try finding a key file based on your UID.  ie, if you ran autopwn before\n\nusage:\n    hf mf ndefformat [-h] [-k <fn>] [--mini] [--1k] [--2k] [--4k]\n\noptions:\n    -h, --help                     This help\n    -k, --keys <fn>                filename of keys\n    --mini                         MIFARE Classic Mini / S20\n    --1k                           MIFARE Classic 1k / S50 (def)\n    --2k                           MIFARE Classic/Plus 2k\n    --4k                           MIFARE Classic 4k / S70\n\nexamples/notes:\n    hf mf ndefformat              \n    hf mf ndefformat --1k                                -> MIFARE Classic 1k\n    hf mf ndefformat --keys hf-mf-01020304-key.bin       -> MIFARE 1k with keys from specified file",
+      "description": "format MIFARE Classic Tag as a NFC tag with Data Exchange Format (NDEF)"
+    },
+    {
+      "command": "nfc mf cread",
+      "offline": false,
+      "help": "Prints NFC Data Exchange Format (NDEF)\n\nusage:\n    hf mf ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>] [--override]\n\noptions:\n    -h, --help                     This help\n    -v, --verbose                  Verbose output\n    --aid <aid>                    replace default aid for NDEF\n    -k, --key <key>                replace default key for NDEF\n    -b, --keyb                     use key B for access sectors (by default: key A)\n    -f, --file <fn>                save raw NDEF to file\n    --override                     override failed crc check\n\nexamples/notes:\n    hf mf ndefread                 -> shows NDEF parsed data\n    hf mf ndefread -vv             -> shows NDEF parsed and raw data\n    hf mf ndefread -f myfilename                        -> save raw NDEF to file\n    hf mf ndefread --aid e103 -k ffffffffffff -b      -> shows NDEF data with custom AID, key and with key B",
+      "description": "Prints NFC Data Exchange Format (NDEF)"
+    },
+    {
+      "command": "nfc mf cwrite",
+      "offline": false,
+      "help": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted.\n\n\nusage:\n    hf mf ndefwrite [-hpv] [-d <hex>] [-f <fn>] [--mini] [--1k] [--2k] [--4k]\n\noptions:\n    -h, --help                     This help\n    -d <hex>                       raw NDEF hex bytes\n    -f, --file <fn>                write raw NDEF file to tag\n    -p                             fix NDEF record headers / terminator block if missing\n    --mini                         MIFARE Classic Mini / S20\n    --1k                           MIFARE Classic 1k / S50 (def)\n    --2k                           MIFARE Classic/Plus 2k\n    --4k                           MIFARE Classic 4k / S70\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    hf mf ndefwrite -d 0300FE           -> write empty record to tag\n    hf mf ndefwrite -f myfilename      \n    hf mf ndefwrite -d 033fd1023a53709101195405656e2d55534963656d616e2054776974746572206c696e6b5101195502747769747465722e636f6d2f686572726d616e6e31303031",
+      "description": "Write raw NDEF hex bytes to tag. This commands assumes tag already been NFC/NDEF formatted."
+    },
+    {
+      "command": "nfc mf pread",
+      "offline": false,
+      "help": "Prints NFC Data Exchange Format (NDEF)\n\nusage:\n    hf mfp ndefread [-hvb] [--aid <aid>] [-k <key>] [-f <fn>] [--override]\n\noptions:\n    -h, --help                     This help\n    -v, --verbose                  verbose output\n    --aid <aid>                    replace default aid for NDEF\n    -k, --key <key>                replace default key for NDEF\n    -b, --keyb                     use key B for access sectors (by default: key A)\n    -f, --file <fn>                save raw NDEF to file\n    --override                     override failed crc check\n\nexamples/notes:\n    hf mfp ndefread               \n    hf mfp ndefread -vv                                                 -> shows NDEF parsed and raw data\n    hf mfp ndefread -f myfilename                                       -> save raw NDEF to file\n    hf mfp ndefread --aid e103 -k d3f7d3f7d3f7d3f7d3f7d3f7d3f7d3f7      -> shows NDEF data with custom AID and key",
+      "description": "Prints NFC Data Exchange Format (NDEF)"
+    },
+    {
+      "command": "nfc mf help",
+      "offline": true,
+      "help": "--------         --------- NFC Type MIFARE Classic/Plus Tag --------\n--------         --------------------- General ---------------------\nhelp             This help",
+      "description": "--------         --------- NFC Type MIFARE Classic/Plus Tag --------"
+    },
+    {
+      "command": "nfc barcode read",
+      "offline": false,
+      "help": "Get info from Thinfilm tags\n\nusage:\n    hf thinfilm info [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    hf thinfilm info",
+      "description": "Get info from Thinfilm tags"
+    },
+    {
+      "command": "nfc barcode sim",
+      "offline": false,
+      "help": "Simulate Thinfilm tag\n\nusage:\n    hf thinfilm sim [-h] -d <hex> [--raw]\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               bytes to send\n    --raw                          raw, provided bytes should include CRC\n\nexamples/notes:\n    hf thinfilm sim -d B70470726f786d61726b2e636f6d",
+      "description": "Simulate Thinfilm tag"
+    },
+    {
+      "command": "nfc barcode help",
+      "offline": true,
+      "help": "--------         ------------------ NFC Barcode --------------------\n--------         --------------------- General ---------------------\nhelp             This help",
+      "description": "--------         ------------------ NFC Barcode --------------------"
+    },
+    {
+      "command": "piv help",
+      "offline": true,
+      "help": "help             This help\nlist             List ISO7816 history",
+      "description": "help             This help"
+    },
+    {
+      "command": "piv select",
+      "offline": false,
+      "help": "Executes select applet command\n\nusage:\n    piv select [-hskatw] [--aid <hex>]\n\noptions:\n    -h, --help                     This help\n    -s, -S, --select               Activate field and select applet\n    -k, -K, --keep                 Keep field for next command\n    -a, -A, --apdu                 Show APDU requests and responses\n    -t, -T, --tlv                  TLV decode results\n    -w, -W, --wired                Send data via contact (iso7816) interface. (def: Contactless interface)\n    --aid <hex>                    Applet ID to select. By default A0000003080000100 will be used\n\nexamples/notes:\n    piv select -s                  -> select card, select applet\n    piv select -st --aid a00000030800001000        -> select card, select applet a00000030800001000, show result in TLV",
+      "description": "Executes select applet command"
+    },
+    {
+      "command": "piv getdata",
+      "offline": false,
+      "help": "Get a data container of a given tag\n\nusage:\n    piv getdata [-hskatw] [--aid <hex>] <hex>\n\noptions:\n    -h, --help                     This help\n    -s, -S, --select               Activate field and select applet\n    -k, -K, --keep                 Keep field for next command\n    -a, -A, --apdu                 Show APDU requests and responses\n    -t, -T, --tlv                  TLV decode results\n    -w, -W, --wired                Send data via contact (iso7816) interface. (def: Contactless interface)\n    --aid <hex>                    Applet ID to select. By default A0000003080000100 will be used\n    <hex>                          Tag ID to read, between 1 and 3 bytes.\n\nexamples/notes:\n    piv getdata -s 5fc102          -> select card, select applet, get card holder unique identifer\n    piv getdata -st 5fc102         -> select card, select applet, get card holder unique identifer, show result in TLV",
+      "description": "Get a data container of a given tag"
+    },
+    {
+      "command": "piv authsign",
+      "offline": false,
+      "help": "Send a nonce and ask the PIV card to sign it\n\nusage:\n    piv sign [-hskatw] [--aid <hex>] --nonce <hex> [--slot <dec id>] [--alg <dec>]\n\noptions:\n    -h, --help                     This help\n    -s, -S, --select               Activate field and select applet\n    -k, -K, --keep                 Keep field for next command\n    -a, -A, --apdu                 Show APDU requests and responses\n    -t, -T, --tlv                  TLV decode results\n    -w, -W, --wired                Send data via contact (iso7816) interface. (def: Contactless interface)\n    --aid <hex>                    Applet ID to select. By default A0000003080000100 will be used\n    --nonce <hex>                  Nonce to sign.\n    --slot <dec id>                Slot number. Default will be 0x9E (card auth cert).\n    --alg <dec>                    Algorithm to use to sign. Example values: 06=RSA-1024, 07=RSA-2048, 17=ECC-P256 (default), 20=ECC-P384\n\nexamples/notes:\n    piv sign -sk                   -> select card, select applet, sign a NULL nonce",
+      "description": "Send a nonce and ask the PIV card to sign it"
+    },
+    {
+      "command": "piv scan",
+      "offline": false,
+      "help": "Scan a PIV card for known containers\n\nusage:\n    piv scan [-hskatw] [--aid <hex>]\n\noptions:\n    -h, --help                     This help\n    -s, -S, --select               Activate field and select applet\n    -k, -K, --keep                 Keep field for next command\n    -a, -A, --apdu                 Show APDU requests and responses\n    -t, -T, --tlv                  TLV decode results\n    -w, -W, --wired                Send data via contact (iso7816) interface. (def: Contactless interface)\n    --aid <hex>                    Applet ID to select. By default A0000003080000100 will be used\n\nexamples/notes:\n    piv scan -s                    -> select card, select applet and run scan\n    piv scan -st --aid a00000030800001000        -> select card, select applet a00000030800001000, show result of the scan in TLV",
+      "description": "Scan a PIV card for known containers"
+    },
+    {
+      "command": "piv list",
+      "offline": true,
+      "help": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer\nYou can load a trace from file (see `trace load -h`) or it be downloaded from device by default\nIt accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol\n\nusage:\n    piv list [-h1crux] [--frame] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    -1, --buffer                   use data from trace buffer\n    --frame                        show frame delay times\n    -c                             mark CRC bytes\n    -r                             show frame delay times relative to the previous transfer\n    -u                             display times in microseconds instead of clock cycles\n    -x                             show hexdump to convert to pcap(ng)\n                                   or to import into Wireshark using encapsulation type \"ISO 14443\"\n    -f, --file <fn>                filename of dictionary\n\nexamples/notes:\n    piv list --frame               -> show frame delay times\n    piv list -1                    -> use trace buffer",
+      "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer"
+    },
+    {
+      "command": "smart help",
+      "offline": true,
+      "help": "help             This help\nlist             List ISO 7816 history\npcsc             Turn pm3 into pcsc reader and relay to host OS via vpcd\nupgrade          Upgrade sim module firmware",
+      "description": "help             This help"
+    },
+    {
+      "command": "smart list",
+      "offline": true,
+      "help": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer\nYou can load a trace from file (see `trace load -h`) or it be downloaded from device by default\nIt accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol\n\nusage:\n    smart list [-h1crux] [--frame] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    -1, --buffer                   use data from trace buffer\n    --frame                        show frame delay times\n    -c                             mark CRC bytes\n    -r                             show frame delay times relative to the previous transfer\n    -u                             display times in microseconds instead of clock cycles\n    -x                             show hexdump to convert to pcap(ng)\n                                   or to import into Wireshark using encapsulation type \"ISO 14443\"\n    -f, --file <fn>                filename of dictionary\n\nexamples/notes:\n    smart list --frame             -> show frame delay times\n    smart list -1                  -> use trace buffer",
+      "description": "Alias of `trace list -t 7816` with selected protocol data to annotate trace buffer"
+    },
+    {
+      "command": "smart brute",
+      "offline": false,
+      "help": "Tries to bruteforce SFI, using a known list of AID's\n\nusage:\n    smart brute [-ht]\n\noptions:\n    -h, --help                     This help\n    -t, --tlv                      executes TLV decoder if it possible\n\nexamples/notes:\n    smart brute -t",
+      "description": "Tries to bruteforce SFI, using a known list of AID's"
+    },
+    {
+      "command": "smart info",
+      "offline": false,
+      "help": "Extract more detailed information from smart card.\n\nusage:\n    smart info [-hv]\n\noptions:\n    -h, --help                     This help\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    smart info -v",
+      "description": "Extract more detailed information from smart card."
+    },
+    {
+      "command": "smart pcsc",
+      "offline": true,
+      "help": "Make pm3 available to host OS smartcard driver via vpcd to enable use with other software such as GlobalPlatform Pro\n\nusage:\n    smart pcsc [-hvabc] [--host <str>] [-p <int>]\n\noptions:\n    -h, --help                     This help\n    --host <str>                   vpcd socket host (default: localhost)\n    -p, --port <int>               vpcd socket port (default: 35963)\n    -v, --verbose                  display APDU transactions between OS and card\n    -a                             use ISO 14443A contactless interface\n    -b                             use ISO 14443B contactless interface\n    -c                             use ISO 7816 contact interface\n\nexamples/notes:\n    Requires the virtual smartcard daemon to be installed and running\n      see https://frankmorgner.github.io/vsmartcard/virtualsmartcard/README.html\n    note:                         \n      `-v` shows APDU transactions between OS and card",
+      "description": "Make pm3 available to host OS smartcard driver via vpcd to enable use with other software such as GlobalPlatform Pro"
+    },
+    {
+      "command": "smart pps",
+      "offline": false,
+      "help": "Run an ISO 7816-3 protocol and parameter selection exchange.\n\nWith neither --t0 nor --t1 the card keeps the protocol its ATR\nsays it runs, so --ta1 on its own changes the rate and nothing else.\nThe card is reset and its ATR read first, because PPS is only\nlegal in the window straight after the ATR.\n\nNote `smart raw --t1` already switches a card to T=1 by itself when\nthe ATR offers it; this is for negotiating Fi/Di explicitly.\nNeeds SIM module firmware v4.51 or newer.\n\nA negotiated rate is remembered against this card's ATR and put\nback after every later ATR, so it survives resets and reconnects.\nA different card drops it, and `--ta1 11` forgets it.\n\nA protocol change is not remembered: it applies until the next\nreset only, so it cannot silently break commands that build for\nthe other protocol.\n\nusage:\n    smart pps [-h] [--t0] [--t1] [--ta1 <hex>]\n\noptions:\n    -h, --help                     This help\n    --t0                           select protocol T=0\n    --t1                           select protocol T=1\n    --ta1 <hex>                    also negotiate this TA1 (FI << 4 | DI)\n\nexamples/notes:\n    smart pps --ta1 93             -> rate only, framing left alone\n    smart pps --ta1 11             -> back to the default rate\n    smart pps --t1                 -> select T=1\n    smart pps --t0                 -> select T=0\n    smart pps --t1 --ta1 96        -> select T=1 and F=512 / D=32",
+      "description": "Run an ISO 7816-3 protocol and parameter selection exchange."
+    },
+    {
+      "command": "smart reader",
+      "offline": false,
+      "help": "Act as a smart card reader.\n\nusage:\n    smart reader [-hv]\n\noptions:\n    -h, --help                     This help\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    smart reader",
+      "description": "Act as a smart card reader."
+    },
+    {
+      "command": "smart raw",
+      "offline": false,
+      "help": "Sends raw bytes to card\n\nusage:\n    smart raw [-hrast] [--t0] [--t1] [--timeout <ms>] -d <hex>\n\noptions:\n    -h, --help                     This help\n    -r                             do not read response\n    -a                             active smartcard without select (reset sc module)\n    -s                             active smartcard with select (get ATR)\n    -t, --tlv                      executes TLV decoder if it possible\n    --t0                           use protocol T=0\n    --t1                           use protocol T=1 (needs SIM module fw v4.51+)\n    --timeout <ms>                 Timeout in MS waiting for SIM to respond. (def 337ms)\n    -d, --data <hex>               bytes to send\n\nexamples/notes:\n    smart raw --t0 -s -d 00a404000e315041592e5359532e4444463031        -> `1PAY.SYS.DDF01` PPSE directory with get ATR\n    smart raw --t0 -d 00a404000e325041592e5359532e4444463031           -> `2PAY.SYS.DDF01` PPSE directory\n    smart raw --t0 -t -d 00a4040007a0000000041010                      -> Mastercard\n    smart raw --t0 -t -d 00a4040007a0000000031010                      -> Visa\n    smart raw --t1 -s -d 00a404000e325041592e5359532e444446303100      -> PPSE over T=1\n                                                                          (T=1 carries the whole APDU, so case 4 needs its Le)",
+      "description": "Sends raw bytes to card"
+    },
+    {
+      "command": "smart upgrade",
+      "offline": true,
+      "help": "[=] --------------------------------------------------------------------\n[!] WARNING - sim module firmware upgrade\n[!] A dangerous command, do wrong and you could brick the sim module\n[=] --------------------------------------------------------------------\n\n\nUpgrade RDV4 sim module firmware\n\nusage:\n    smart upgrade [-h] -f <fn>\n\noptions:\n    -h, --help                     This help\n    -f, --file <fn>                Specify firmware file name\n\nexamples/notes:\n    smart upgrade -f sim024.bin",
+      "description": "[=] --------------------------------------------------------------------"
+    },
+    {
+      "command": "smart setclock",
+      "offline": false,
+      "help": "Set clock speed for smart card interface.\n\nusage:\n    smart setclock [-h] [--16mhz] [--8mhz] [--4mhz]\n\noptions:\n    -h, --help                     This help\n    --16mhz                        16 MHz clock speed\n    --8mhz                         8 MHz clock speed\n    --4mhz                         4 MHz clock speed\n\nexamples/notes:\n    smart setclock --4mhz         \n    smart setclock --16mhz",
+      "description": "Set clock speed for smart card interface."
+    },
+    {
+      "command": "script help",
+      "offline": true,
+      "help": "This is a feature to run Lua/Cmd/Python scripts. You can place scripts within the luascripts/cmdscripts/pyscripts folders.",
+      "description": "This is a feature to run Lua/Cmd/Python scripts. You can place scripts within the luascripts/cmdscripts/pyscripts folders."
+    },
+    {
+      "command": "script list",
+      "offline": true,
+      "help": "List available Lua, Cmd and Python scripts\n\nusage:\n    script list [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    script list",
+      "description": "List available Lua, Cmd and Python scripts"
+    },
+    {
+      "command": "script run",
+      "offline": true,
+      "help": "Run a Lua, Cmd or Python script. If no extension it will search for lua/cmd/py extensions\nUse `script list` to see available scripts\n\nusage:\n    script run [-h] <filename> [<params>]...\n\noptions:\n    -h, --help                     This help\n    <filename>                     name of script to run\n    <params>                       script parameters\n\nexamples/notes:\n    script run my_script -h",
+      "description": "Run a Lua, Cmd or Python script. If no extension it will search for lua/cmd/py extensions"
+    },
+    {
+      "command": "trace help",
+      "offline": true,
+      "help": "help             This help\nclear            Clear the client side trace buffer\nextract          Extract authentication challenges found in trace\nlist             List protocol data in trace buffer\nload             Load trace from file\nsave             Save trace buffer to file",
+      "description": "help             This help"
+    },
+    {
+      "command": "trace clear",
+      "offline": true,
+      "help": "Clear the client side trace buffer.\nThat is the buffer `trace load` fills and the `-1` param reads from.\nIt is not the device side trace, see `data clear` for that one\n\nusage:\n    trace clear [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    trace clear",
+      "description": "Clear the client side trace buffer."
+    },
+    {
+      "command": "trace extract",
+      "offline": true,
+      "help": "Extracts protocol authentication challenges from trace buffer\n\n\nusage:\n    trace extract [-h1]\n\noptions:\n    -h, --help                     This help\n    -1, --buffer                   use data from trace buffer\n\nexamples/notes:\n    trace extract                 \n    trace extract -1",
+      "description": "Extracts protocol authentication challenges from trace buffer"
+    },
+    {
+      "command": "trace list",
+      "offline": true,
+      "help": "Annotate trace buffer with selected protocol data\nYou can load a trace from file (see `trace load -h`) or it be downloaded from device by default\n\n\nusage:\n    trace list [-h1crux] [--frame] [-t <str>] [-f <fn>]\n\noptions:\n    -h, --help                     This help\n    -1, --buffer                   use data from trace buffer\n    --frame                        show frame delay times\n    -c                             mark CRC bytes\n    -r                             show frame delay times relative to the previous transfer\n    -u                             display times in microseconds instead of clock cycles\n    -x                             show hexdump to convert to pcap(ng)\n                                   or to import into Wireshark using encapsulation type \"ISO 14443\"\n    -t, --type <str>               protocol to annotate the trace\n    -f, --file <fn>                filename of dictionary\n\nexamples/notes:\n    trace list -t raw              -> just show raw data without annotations\n                                  \n    trace list -t 14a              -> interpret as ISO14443-A\n    trace list -t 14b              -> interpret as ISO14443-B\n    trace list -t 15               -> interpret as ISO15693\n    trace list -t 7816             -> interpret as ISO7816-4\n    trace list -t calypso          -> interpret as Calypso\n    trace list -t cryptorf         -> interpret as CryptoRF\n    trace list -t des              -> interpret as MIFARE DESFire\n    trace list -t felica           -> interpret as ISO18092 / FeliCa\n    trace list -t ht1              -> interpret as Hitag 1\n    trace list -t ht2              -> interpret as Hitag 2\n    trace list -t hts              -> interpret as Hitag S\n    trace list -t htu              -> interpret as Hitag �\n    trace list -t iclass           -> interpret as iCLASS\n    trace list -t legic            -> interpret as LEGIC\n    trace list -t lto              -> interpret as LTO-CM\n    trace list -t mf               -> interpret as MIFARE Classic and decrypt crypto1 stream\n    trace list -t seos             -> interpret as SEOS\n    trace list -t thinfilm         -> interpret as Thinfilm\n    trace list -t topaz            -> interpret as Topaz\n    trace list -t mfp              -> interpret as MIFARE Plus\n    trace list -t fmcos20          -> interpret as FMCOS 2.0\n                                  \n    trace list -t mf -f mfc_default_keys.dic          -> use default dictionary file\n    trace list -t 14a --frame                         -> show frame delay times\n    trace list -t 14a -1                              -> use trace buffer",
+      "description": "Annotate trace buffer with selected protocol data"
+    },
+    {
+      "command": "trace load",
+      "offline": true,
+      "help": "Load protocol data from binary file to trace buffer\nFile extension is <.trace>\n\nusage:\n    trace load [-h] -f <fn>\n\noptions:\n    -h, --help                     This help\n    -f, --file <fn>                Specify trace file to load\n\nexamples/notes:\n    trace load -f mytracefile      -> w/o file extension",
+      "description": "Load protocol data from binary file to trace buffer"
+    },
+    {
+      "command": "trace save",
+      "offline": true,
+      "help": "Save protocol data to binary file\nBy default the trace is downloaded from device.\nUse `-1` to save the client side trace buffer instead, ie a trace\nloaded with `trace load` or downloaded by an earlier `trace list`\nFile extension is <.trace>\n\nusage:\n    trace save [-h1] -f <fn>\n\noptions:\n    -h, --help                     This help\n    -1, --buffer                   use data from trace buffer\n    -f, --file <fn>                Specify trace file to save\n\nexamples/notes:\n    trace save -f mytracefile            -> download from device, w/o file extension\n    trace save -1 -f mytracefile         -> use trace buffer",
+      "description": "Save protocol data to binary file"
+    },
+    {
+      "command": "usart help",
+      "offline": true,
+      "help": "help             This help",
+      "description": "help             This help"
+    },
+    {
+      "command": "usart btpin",
+      "offline": false,
+      "help": "Change BT add-on PIN.\nWARNING: this requires\n    1) BTpower to be turned ON\n    2) BT add-on to NOT be connected\n      => the add-on blue LED must blink\n\nusage:\n    usart btpin [-h] -p <dec>\n\noptions:\n    -h, --help                     This help\n    -p, --pin <dec>                Desired PIN number (4 digits)\n\nexamples/notes:\n    usart btpin -p 1234",
+      "description": "Change BT add-on PIN."
+    },
+    {
+      "command": "usart btfactory",
+      "offline": false,
+      "help": "Reset BT add-on to factory settings\nThis requires\n    1) BTpower to be turned ON\n    2) BT add-on to NOT be connected\n      => the add-on blue LED must blink\n\nWARNING: process only if strictly needed!\n\nusage:\n    usart btfactory [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    usart btfactory",
+      "description": "Reset BT add-on to factory settings"
+    },
+    {
+      "command": "usart tx",
+      "offline": false,
+      "help": "Send string over USART.\nWARNING:  it will have side-effects if used in USART HOST mode!\n\nusage:\n    usart tx [-h] -d <str>\n\noptions:\n    -h, --help                     This help\n    -d, --data <str>               string to send\n\nexamples/notes:\n    usart tx -d \"AT+VERSION\"      \n    usart tx -d \"AT+VERSION\\r\\n\"",
+      "description": "Send string over USART."
+    },
+    {
+      "command": "usart rx",
+      "offline": false,
+      "help": "Receive string over USART.\nWARNING: it will have side-effects if used in USART HOST mode!\n\n\nusage:\n    usart rx [-h] [-t <dec>]\n\noptions:\n    -h, --help                     This help\n    -t, --timeout <dec>            timeout in ms, default is 0ms\n\nexamples/notes:\n    usart rx -t 2000               ->  2 second timeout",
+      "description": "Receive string over USART."
+    },
+    {
+      "command": "usart txrx",
+      "offline": false,
+      "help": "Send string over USART and wait for response.\nWARNING: if used in USART HOST mode, you can only send AT commands\nto add-on when BT connection is not established (LED needs to be blinking)\nAny other usage in USART HOST mode will have side-effects!\n\nusage:\n    usart txrx [-h] [-t <dec>] -d <str>\n\noptions:\n    -h, --help                     This help\n    -t, --timeout <dec>            timeout in ms, default is 1000 ms\n    -d, --data <str>               string to send\n\nexamples/notes:\n    usart txrx -d \"AT+VERSION\"                    -> Talking to BT add-on (when no connection)\n    usart txrx -t 2000 -d \"AT+SOMESTUFF\\r\\n\"      -> Talking to a target requiring longer time and end-of-line chars",
+      "description": "Send string over USART and wait for response."
+    },
+    {
+      "command": "usart txhex",
+      "offline": false,
+      "help": "Send bytes over USART.\nWARNING:  it will have side-effects if used in USART HOST mode!\n\nusage:\n    usart txhex [-h] -d <hex>\n\noptions:\n    -h, --help                     This help\n    -d, --data <hex>               bytes to send\n\nexamples/notes:\n    usart txhex -d 504d33620a80000000010100f09f988ef09fa5b36233",
+      "description": "Send bytes over USART."
+    },
+    {
+      "command": "usart rxhex",
+      "offline": false,
+      "help": "Receive bytes over USART.\nWARNING: it will have side-effects if used in USART HOST mode!\n\n\nusage:\n    usart rxhex [-h] [-t <dec>]\n\noptions:\n    -h, --help                     This help\n    -t, --timeout <dec>            timeout in ms, default is 0ms\n\nexamples/notes:\n    usart rxhex -t 2000            -> 2 second timeout",
+      "description": "Receive bytes over USART."
+    },
+    {
+      "command": "usart config",
+      "offline": false,
+      "help": "Configure USART.\nWARNING: it will have side-effects if used in USART HOST mode!\nThe changes are not permanent, restart Proxmark3 to get default settings back.\n\nusage:\n    usart config [-hNEO] [-b <dec>]\n\noptions:\n    -h, --help                     This help\n    -b, --baud <dec>               baudrate\n    -N, --none                     mone parity\n    -E, --even                     even parity\n    -O, --odd                      odd parity\n\nexamples/notes:\n    usart config -b 9600          \n    usart config -b 9600 --none   \n    usart config -E",
+      "description": "Configure USART."
+    },
+    {
+      "command": "wiegand help",
+      "offline": true,
+      "help": "help             This help\nlist             List available wiegand formats\nencode           Encode to wiegand raw hex (currently for HID Prox)\ndecode           Convert raw hex to decoded wiegand format (currently for HID Prox)",
+      "description": "help             This help"
+    },
+    {
+      "command": "wiegand list",
+      "offline": true,
+      "help": "List available wiegand formats\n\nusage:\n    wiegand info [-h]\n\noptions:\n    -h, --help                     This help\n\nexamples/notes:\n    wiegand list",
+      "description": "List available wiegand formats"
+    },
+    {
+      "command": "wiegand encode",
+      "offline": true,
+      "help": "Encode wiegand formatted number to raw hex\n\nusage:\n    wiegand encode [-hnv] [-b <bin>] [--fc <dec>] [--cn <dec>] [--issue <dec>] [--oem <dec>] [-w <format>]\n                    [--pre]\n\noptions:\n    -h, --help                     This help\n    -b, --bin <bin>                binary string to be encoded\n    --fc <dec>                     facility number\n    --cn <dec>                     card number\n    --issue <dec>                  issue level\n    --oem <dec>                    OEM code\n    -w, --wiegand <format>         see `wiegand list` for available formats\n    -n, --new                      encode to new ASN.1 encoded format\n    --pre                          add HID ProxII preamble to wiegand output\n    -v, --verbose                  verbose output\n\nexamples/notes:\n    wiegand encode --fc 101 --cn 1337                    ->  show all formats\n    wiegand encode -w H10301 --fc 101 --cn 1337          ->  H10301 format\n    wiegand encode --bin 1                               ->  raw wiegand hex with sentinel\n    wiegand encode -w H10301 --fc 123 --cn 4567 --new      -> new ASN.1 encoded format",
+      "description": "Encode wiegand formatted number to raw hex"
+    },
+    {
+      "command": "wiegand decode",
+      "offline": true,
+      "help": "Decode raw hex or binary to wiegand format\n\nusage:\n    wiegand decode [-hf] [-r <hex>] [-b <bin>] [-n <hex>]\n\noptions:\n    -h, --help                     This help\n    -r, --raw <hex>                raw hex to be decoded\n    -b, --bin <bin>                binary string to be decoded\n    -n, --new <hex>                new ASN.1 encoded data as raw hex to be decoded\n    -f, --force                    skip preabmle checking, brute force all possible lengths for raw hex input\n\nexamples/notes:\n    wiegand decode --raw 2006F623AE\n    wiegand decode --new 06BD88EB80        -> 4..13 bytes, new ASN.1 encoded format \n\n\n\nFull help dump done.",
+      "description": "Decode raw hex or binary to wiegand format"
+    }
+  ]
+}

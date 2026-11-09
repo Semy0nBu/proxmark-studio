@@ -1,0 +1,419 @@
+--- a/client/src/comms.c
++++ b/client/src/comms.c
+@@ -24,6 +24,8 @@
+ #include <stdlib.h>
+ 
+ #include "uart/uart.h"
++#include "uart/frame_reader.h"
++#include "uart/tx_lifecycle.h"
+ #include "ui.h"
+ #include "crc16.h"
+ #include "util.h" // g_pendingPrompt
+@@ -146,14 +148,9 @@
+         return;
+     }
+ 
+-    pthread_mutex_lock(&txBufferMutex);
+-    /**
+-    This causes hangups at times, when the pm3 unit is unresponsive or disconnected. The main console thread is alive,
+-    but comm thread just spins here. Not good.../holiman
+-    **/
+-    while (txBuffer_pending) {
+-        // wait for communication thread to complete sending a previous command
+-        pthread_cond_wait(&txBufferSig, &txBufferMutex);
++    if (!pm3_tx_lock_ready(&txBufferMutex, &txBufferSig, &txBuffer_pending, &comm_thread_dead)) {
++        PrintAndLogEx(WARNING, "Sending bytes to Proxmark3 failed ( " _RED_("offline") " )");
++        return;
+     }
+ 
+     txBuffer = c;
+@@ -188,14 +185,9 @@
+ 
+     PacketCommandNGPostamble *tx_post = (PacketCommandNGPostamble *)((uint8_t *)&txBufferNG + sizeof(PacketCommandNGPreamble) + len);
+ 
+-    pthread_mutex_lock(&txBufferMutex);
+-    /**
+-    This causes hangups at times, when the pm3 unit is unresponsive or disconnected. The main console thread is alive,
+-    but comm thread just spins here. Not good.../holiman
+-    **/
+-    while (txBuffer_pending) {
+-        // wait for communication thread to complete sending a previous command
+-        pthread_cond_wait(&txBufferSig, &txBufferMutex);
++    if (!pm3_tx_lock_ready(&txBufferMutex, &txBufferSig, &txBuffer_pending, &comm_thread_dead)) {
++        PrintAndLogEx(INFO, "Sending bytes to proxmark failed - offline");
++        return;
+     }
+ 
+     txBufferNG.pre.magic = COMMANDNG_PREAMBLE_MAGIC;
+@@ -419,6 +411,31 @@
+     return ret;
+ }
+ 
++typedef struct {
++    serial_port port;
++    const communication_arg_t *connection;
++} framed_receive_context_t;
++
++static int framed_receive(void *context, uint8_t *output, uint32_t length, uint32_t *received) {
++    framed_receive_context_t *ctx = context;
++    return uart_receive(ctx->port, output, length, received);
++}
++
++static uint64_t framed_clock(void *context) {
++    (void)context;
++    return msclock();
++}
++
++static bool framed_running(void *context) {
++    framed_receive_context_t *ctx = context;
++    return ctx->connection->run;
++}
++
++static void framed_idle(void *context) {
++    (void)context;
++    xyield();
++}
++
+ // The communications thread.
+ // signals to main thread when a response is ready to process.
+ //
+@@ -430,6 +447,7 @@
+ #endif
+ *uart_communication(void *targ) {
+     const communication_arg_t *connection = (communication_arg_t *)targ;
++    framed_receive_context_t framed_context = {sp, connection};
+     uint32_t rxlen;
+     bool commfailed = false;
+     PacketResponseNG rx;
+@@ -447,6 +465,19 @@
+         bool ACK_received = false;
+         bool error = false;
+         int res;
++        pm3_frame_reader_t frame_reader = {
++            .context = &framed_context,
++            .receive = framed_receive,
++            .now = framed_clock,
++            .running = framed_running,
++            .idle = framed_idle,
++            .success = PM3_SUCCESS,
++            .no_data = PM3_ENODATA,
++            .timeout = PM3_ETIMEOUT,
++            .stopped = PM3_EOPABORTED,
++            .invalid = PM3_EINVARG,
++            .budget_ms = PM3_FRAME_RX_BUDGET_MS,
++        };
+ 
+         // Signal to main thread that communications seems off.
+         // main thread will kill and restart this thread.
+@@ -455,7 +486,6 @@
+                     g_conn.last_command != CMD_START_FLASH) {
+                 PrintAndLogEx(WARNING, "\nCommunicating with Proxmark3 device " _RED_("failed"));
+             }
+-            __atomic_test_and_set(&comm_thread_dead, __ATOMIC_SEQ_CST);
+             break;
+         }
+ 
+@@ -496,7 +526,8 @@
+                 // comm_raw_data == NULL is used in SetCommunicationReceiveMode()
+                 __atomic_store_n(&comm_raw_data, NULL, __ATOMIC_SEQ_CST);
+             }
+-            res = uart_receive(sp, (uint8_t *)&rx_raw.pre, sizeof(PacketResponseNGPreamble), &rxlen);
++            res = pm3_frame_read_exact(&frame_reader, (uint8_t *)&rx_raw.pre,
++                                       sizeof(PacketResponseNGPreamble), &rxlen);
+ 
+             if ((res == PM3_SUCCESS) && (rxlen == sizeof(PacketResponseNGPreamble))) {
+ 
+@@ -516,7 +547,8 @@
+ 
+                     if ((!error) && (length > 0)) { // Get the variable length payload
+ 
+-                        res = uart_receive(sp, (uint8_t *)&rx_raw.data, length, &rxlen);
++                        res = pm3_frame_read_exact(&frame_reader, (uint8_t *)&rx_raw.data,
++                                                   length, &rxlen);
+ 
+                         if ((res != PM3_SUCCESS) || (rxlen != length)) {
+ 
+@@ -567,7 +599,8 @@
+                     }
+ 
+                     if (!error) {                        // Get the postamble
+-                        res = uart_receive(sp, (uint8_t *)&rx_raw.foopost, sizeof(PacketResponseNGPostamble), &rxlen);
++                        res = pm3_frame_read_exact(&frame_reader, (uint8_t *)&rx_raw.foopost,
++                                                   sizeof(PacketResponseNGPostamble), &rxlen);
+                         if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseNGPostamble))) {
+                             PrintAndLogEx(WARNING, "Received packet frame without postamble");
+                             error = true;
+@@ -603,7 +636,9 @@
+                     PacketResponseOLD rx_old;
+                     memcpy(&rx_old, &rx_raw.pre, sizeof(PacketResponseNGPreamble));
+ 
+-                    res = uart_receive(sp, ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble), sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
++                    res = pm3_frame_read_exact(&frame_reader,
++                                               ((uint8_t *)&rx_old) + sizeof(PacketResponseNGPreamble),
++                                               sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble), &rxlen);
+                     if ((res != PM3_SUCCESS) || (rxlen != sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble))) {
+                         PrintAndLogEx(WARNING, "Received packet OLD frame with payload too short? %d/%zu", rxlen, sizeof(PacketResponseOLD) - sizeof(PacketResponseNGPreamble));
+                         error = true;
+@@ -642,6 +677,13 @@
+                     commfailed = true;
+                 }
+             }
++            if (!connection->run) break;
++            // A dead stream cannot be repaired by draining bytes. Propagate
++            // fatal errors from every framed part, not just its preamble.
++            if (res == PM3_ENOTTY || res == PM3_EIO) {
++                commfailed = true;
++                continue;
++            }
+         }
+ 
+         is_receiving_raw_last = is_receiving_raw;
+@@ -706,6 +748,9 @@
+         pthread_mutex_unlock(&txBufferMutex);
+     }
+ 
++    // Unblock senders before the UART is closed, including fatal framed RX.
++    pm3_tx_stop(&txBufferMutex, &txBufferSig, &txBuffer_pending, &txBufferNGLen,
++                &comm_thread_dead);
+     // when thread dies, we close the serial port.
+     uart_close(sp);
+     sp = NULL;
+@@ -790,8 +835,8 @@
+         // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
+         g_conn.send_via_fpc_usart = false;
+ 
++        __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
+         pthread_create(&communication_thread, NULL, &uart_communication, &g_conn);
+-        __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
+         __atomic_clear(&reconnect_ok, __ATOMIC_SEQ_CST);
+ 
+         g_session.pm3_present = true; // TODO support for multiple devices
+@@ -856,8 +901,8 @@
+         // "Session" flag, to tell via which interface next msgs should be sent: USB or FPC USART
+         g_conn.send_via_fpc_usart = false;
+ 
++        __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
+         pthread_create(&communication_thread, NULL, &uart_communication, &g_conn);
+-        __atomic_clear(&comm_thread_dead, __ATOMIC_SEQ_CST);
+         g_session.pm3_present = true; // TODO support for multiple devices
+ 
+         fflush(stdout);
+--- a/client/src/uart/uart_win32.c
++++ b/client/src/uart/uart_win32.c
+@@ -35,6 +35,7 @@
+ #include <windows.h>
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
++#include "uart_win32_wait.h"
+ 
+ typedef struct {
+     HANDLE hPort;          // Serial port handle
+@@ -538,29 +539,17 @@
+             HANDLE handles[2] = {ov.hEvent, hWakeEvent};
+             DWORD waitRes = WaitForMultipleObjects(2, handles, FALSE, rx_timeout_ms);
+ 
+-            if (waitRes == WAIT_TIMEOUT) {
+-                // No data within the COMMTIMEOUTS window: abort the *wait* (not a
+-                // data read) and report nothing, matching the old ReadFile timeout.
+-                CancelIoEx(spw->hPort, &ov);
++            // Retire the wait before ov/eventMask leave the stack, including
++            // timeout/wakeup/cancellation races. CancelIoEx alone is asynchronous.
++            uart_comm_wait_result_t wait_status =
++                uart_complete_comm_wait(spw->hPort, hWakeEvent, &ov, waitRes);
++            if (wait_status != UART_COMM_WAIT_READY) {
+                 *pszRxLen = 0;
+-                return PM3_SUCCESS;
+-            }
+-            if (waitRes == WAIT_OBJECT_0 + 1) {
+-                // Woken to send: cancel the pending WaitCommEvent (the wait only),
+-                // leaving any already-queued bytes in the driver buffer.
+-                ResetEvent(hWakeEvent);
+-                CancelIoEx(spw->hPort, &ov);
+-                *pszRxLen = 0;
+-                return PM3_ENODATA;
+-            }
+-            if (waitRes == WAIT_FAILED) {
+-                CancelIoEx(spw->hPort, &ov);
+-                *pszRxLen = 0;
+-                return PM3_ENOTTY;
+-            }
+-            // EV_RXCHAR fired; finalize the wait.
+-            DWORD dummy;
+-            GetOverlappedResult(spw->hPort, &ov, &dummy, TRUE);
++                if (wait_status == UART_COMM_WAIT_EMPTY) {
++                    return PM3_SUCCESS;
++                }
++                return wait_status == UART_COMM_WAIT_WAKE ? PM3_ENODATA : PM3_ENOTTY;
++            }
+         }
+ 
+         // Data is now available; read it.
+--- /dev/null
++++ b/client/src/uart/frame_reader.h
+@@ -0,0 +1,72 @@
++/* SPDX-License-Identifier: GPL-3.0-or-later
++ * Bounded stream assembly for the framed (not raw) receive path.
++ * uart_receive() is deliberately an "up to" interface: a short successful
++ * read is not a damaged PM3 packet. The same absolute budget covers the
++ * preamble, variable payload and postamble of one packet.
++ */
++#ifndef PM3_UART_FRAME_READER_H
++#define PM3_UART_FRAME_READER_H
++
++#include <stdbool.h>
++#include <stdint.h>
++
++#define PM3_FRAME_RX_BUDGET_MS 750u
++
++typedef struct {
++    void *context;
++    int (*receive)(void *, uint8_t *, uint32_t, uint32_t *);
++    uint64_t (*now)(void *);
++    bool (*running)(void *);
++    void (*idle)(void *);
++    int success;
++    int no_data;
++    int timeout;
++    int stopped;
++    int invalid;
++    uint32_t budget_ms;
++    uint64_t started_ms;
++    bool active;
++} pm3_frame_reader_t;
++
++/* Call with a fresh reader for each packet, then reuse it for all parts.
++ * Before the first byte, a single empty receive returns immediately so the
++ * communication thread can service TX and wake signals. Once bytes exist,
++ * empty reads/wakes retain them until completion or the absolute deadline.
++ * The callback's own bounded I/O time can overrun this software budget; a
++ * completed read is checked again before being accepted. No I/O is replayed.
++ */
++static inline int pm3_frame_read_exact(pm3_frame_reader_t *reader, uint8_t *output,
++                                      uint32_t length, uint32_t *received) {
++    if (!reader || !received) return reader ? reader->invalid : -1;
++    *received = 0;
++    if (!output || !length || !reader->receive || !reader->now ||
++            !reader->running || !reader->budget_ms) return reader->invalid;
++
++    while (*received < length) {
++        uint64_t before = reader->now(reader->context);
++        uint32_t count = 0;
++        int result;
++        if (!reader->running(reader->context)) return reader->stopped;
++        if (reader->active && before - reader->started_ms >= reader->budget_ms)
++            return reader->timeout;
++
++        result = reader->receive(reader->context, output + *received,
++                                 length - *received, &count);
++        if (count > length - *received) return reader->invalid;
++        if (count && !reader->active) {
++            reader->active = true;
++            reader->started_ms = before;
++        }
++        *received += count;
++        if (result != reader->success && result != reader->no_data) return result;
++        if (!reader->running(reader->context)) return reader->stopped;
++        if (!reader->active) return result;
++        if (reader->now(reader->context) - reader->started_ms >= reader->budget_ms)
++            return reader->timeout;
++        if (*received == length) return reader->success;
++        if (!count && reader->idle) reader->idle(reader->context);
++    }
++    return reader->success;
++}
++
++#endif
+--- /dev/null
++++ b/client/src/uart/tx_lifecycle.h
+@@ -0,0 +1,38 @@
++/* SPDX-License-Identifier: GPL-3.0-or-later */
++#ifndef PM3_UART_TX_LIFECYCLE_H
++#define PM3_UART_TX_LIFECYCLE_H
++
++#include <stdbool.h>
++#include <stddef.h>
++#include <pthread.h>
++
++/* Success transfers the locked mutex to the caller, which can enqueue one
++ * command. Failure releases it. A dead receive thread must never leave a
++ * producer asleep waiting for a previous command that cannot be transmitted.
++ */
++static inline bool pm3_tx_lock_ready(pthread_mutex_t *mutex, pthread_cond_t *changed,
++                                     bool *pending, const bool *dead) {
++    pthread_mutex_lock(mutex);
++    while (*pending && !__atomic_load_n(dead, __ATOMIC_SEQ_CST)) {
++        pthread_cond_wait(changed, mutex);
++    }
++    if (__atomic_load_n(dead, __ATOMIC_SEQ_CST)) {
++        pthread_mutex_unlock(mutex);
++        return false;
++    }
++    return true;
++}
++
++/* Serialize death publication with enqueue, drop unsent data and wake every
++ * blocked producer. This runs before closing the UART handle. */
++static inline void pm3_tx_stop(pthread_mutex_t *mutex, pthread_cond_t *changed,
++                               bool *pending, size_t *ng_length, bool *dead) {
++    pthread_mutex_lock(mutex);
++    __atomic_store_n(dead, true, __ATOMIC_SEQ_CST);
++    *pending = false;
++    *ng_length = 0;
++    pthread_cond_broadcast(changed);
++    pthread_mutex_unlock(mutex);
++}
++
++#endif
+--- /dev/null
++++ b/client/src/uart/uart_win32_wait.h
+@@ -0,0 +1,50 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++// WaitCommEvent completion must outlive its OVERLAPPED and event-mask storage.
++#ifndef UART_WIN32_WAIT_H
++#define UART_WIN32_WAIT_H
++
++#include <windows.h>
++
++typedef enum {
++    UART_COMM_WAIT_READY,
++    UART_COMM_WAIT_EMPTY,
++    UART_COMM_WAIT_WAKE,
++    UART_COMM_WAIT_ERROR
++} uart_comm_wait_result_t;
++
++/* Called only after WaitCommEvent returned ERROR_IO_PENDING. Even when
++ * cancellation reports ERROR_NOT_FOUND, completion can have won the race:
++ * GetOverlappedResult(TRUE) must retire that same operation before its caller
++ * returns or reuses the stack OVERLAPPED/event mask. Only the wait is cancelled;
++ * no ReadFile is cancelled and queued serial bytes are left untouched.
++ */
++static inline uart_comm_wait_result_t uart_complete_comm_wait(
++    HANDLE port, HANDLE wake_event, OVERLAPPED *operation, DWORD wait_result) {
++    const BOOL cancel_wait = wait_result != WAIT_OBJECT_0;
++    if (wait_result == WAIT_OBJECT_0 + 1) {
++        ResetEvent(wake_event);
++    }
++    if (cancel_wait) {
++        /* Requesting cancellation does not wait for the operation to finish. */
++        CancelIoEx(port, operation);
++    }
++
++    DWORD transferred = 0;
++    const BOOL completed = GetOverlappedResult(port, operation, &transferred, TRUE);
++    const DWORD error = completed ? ERROR_SUCCESS : GetLastError();
++    if (!completed && error != ERROR_OPERATION_ABORTED) {
++        return UART_COMM_WAIT_ERROR;
++    }
++    if (wait_result == WAIT_TIMEOUT) {
++        return UART_COMM_WAIT_EMPTY;
++    }
++    if (wait_result == WAIT_OBJECT_0 + 1) {
++        return UART_COMM_WAIT_WAKE;
++    }
++    if (wait_result != WAIT_OBJECT_0) {
++        return UART_COMM_WAIT_ERROR;
++    }
++    return completed ? UART_COMM_WAIT_READY : UART_COMM_WAIT_WAKE;
++}
++
++#endif

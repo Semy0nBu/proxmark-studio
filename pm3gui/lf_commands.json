@@ -1,0 +1,1514 @@
+{
+  "version": "v4.23346",
+  "source": "https://github.com/RfidResearchGroup/proxmark3/blob/v4.23346/doc/commands.md",
+  "license": "GPL-3.0-or-later",
+  "client_sha256": "c9496915358cd982c114274e83e94dfd22ea005cb139b69005f6104bab7c7f20",
+  "commands": [
+    {
+      "command": "lf help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\n-----------      -------------- Low Frequency --------------\r\nawid             { AWID RFIDs...              }\r\ncotag            { COTAG CHIPs...             }\r\ndestron          { FDX-A Destron RFIDs...     }\r\nem               { EM CHIPs & RFIDs...        }\r\nfdxb             { FDX-B RFIDs...             }\r\ngallagher        { GALLAGHER RFIDs...         }\r\ngproxii          { Guardall Prox II RFIDs...  }\r\nhid              { HID Prox RFIDs...          }\r\nhitag            { Hitag CHIPs...             }\r\nidteck           { Idteck RFIDs...            }\r\nindala           { Indala RFIDs...            }\r\nio               { ioProx RFIDs...            }\r\njablotron        { Jablotron RFIDs...         }\r\nkeri             { KERI RFIDs...              }\r\nmotorola         { Motorola Flexpass RFIDs... }\r\nnedap            { Nedap RFIDs...             }\r\nnexwatch         { NexWatch RFIDs...          }\r\nnoralsy          { Noralsy RFIDs...           }\r\npac              { PAC/Stanley RFIDs...       }\r\nparadox          { Paradox RFIDs...           }\r\npcf7931          { PCF7931 CHIPs...           }\r\npresco           { Presco RFIDs...            }\r\npyramid          { Farpointe/Pyramid RFIDs... }\r\nsecurakey        { Securakey RFIDs...         }\r\nti               { TI CHIPs...                }\r\nt55xx            { T55xx CHIPs...             }\r\ntrovan           { Trovan animal IDs...       }\r\nviking           { Viking RFIDs...            }\r\nvisa2000         { Visa2000 RFIDs...          }\r\n-----------      --------------------- General ---------------------\r\nsearch           Read and Search for valid known tag"
+    },
+    {
+      "command": "lf config",
+      "offline": false,
+      "description": "Get/Set config for LF sampling, bit/sample, decimation, frequency\r",
+      "help": "Get/Set config for LF sampling, bit/sample, decimation, frequency\r\nThese changes are temporary, will be reset after a power cycle.\r\n\r\n - use `lf read` performs a read (active field)\r\n - use `lf sniff` performs a sniff (no active field)\r\n\r\nusage:\r\n    lf config [-hr] [--125] [--134] [-a <0|1>] [-b <1-8>] [--dec <1-8>] [--divisor <19-255>] [-f <47-600>]\r\n                    [-s <dec>] [-t <0-128>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --125                          125 kHz frequency\r\n    --134                          134 kHz frequency\r\n    -a, --avg <0|1>                averaging - if set, will average the stored sample value when decimating (default 1)\r\n    -b, --bps <1-8>                sets resolution of bits per sample (default 8)\r\n    --dec <1-8>                    sets decimation. A value of N saves only 1 in N samples (default 1)\r\n    --divisor <19-255>             Manually set freq divisor. 88 -> 134 kHz, 95 -> 125 kHz\r\n    -f, --freq <47-600>            manually set frequency in kHz\r\n    -r, --reset                    reset values to defaults\r\n    -s, --skip <dec>               sets a number of samples to skip before capture (default 0)\r\n    -t, --trig <0-128>             sets trigger threshold. 0 means no threshold\r\n\r\nexamples/notes:\r\n    lf config                          -> shows current config\r\n    lf config -b 8 --125               -> samples at 125 kHz, 8 bps\r\n    lf config -b 4 --134 --dec 3       -> samples at 134 kHz, averages three samples into one, stored with a resolution of 4 bits per sample\r\n    lf config --trig 20 -s 10000       -> trigger sampling when above 20, skip 10 000 first samples after triggered\r\n    lf config --reset                  -> reset back to default values"
+    },
+    {
+      "command": "lf cmdread",
+      "offline": false,
+      "description": "Modulate LF reader field to send command before read. All periods in microseconds.\r",
+      "help": "Modulate LF reader field to send command before read. All periods in microseconds.\r\n - use `lf config` to set parameters\r\n\r\nusage:\r\n    lf cmdread [-hvk@] [-d <us>] [-c <0|1|...>] [-e <us>]... [-o <us>] [-z <us>] [-s <dec>] [--crc-ht]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -d, --duration <us>            delay OFF period, (0 for bitbang mode)\r\n    -c, --cmd <0|1|...>            command symbols\r\n    -e, --extra <us>               Extra symbol definition and duration (up to 4)\r\n    -o, --one <us>                 ONE time period\r\n    -z, --zero <us>                ZERO time period\r\n    -s, --samples <dec>            number of samples to collect\r\n    -v, --verbose                  verbose output\r\n    -k, --keep                     keep signal field ON after receive\r\n    --crc-ht                       calculate and append CRC-8/HITAG (also for ZX8211)\r\n    -@                             continuous mode\r\n\r\nexamples/notes:\r\n    lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W00110                                 -> probing for Hitag 1/S\r\n    lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000                                 -> probing for Hitag 2/S\r\n    lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11010                                 -> probing for Hitag S\r\n    lf cmdread -d 50 -z 116 -o 166 -e W3000 -c W11000 -s 2000 -@                      -> probing for Hitag 2/S, oscilloscope style\r\n    lf cmdread -d 48 -z 112 -o 176 -e W3000 -e S240 -e E336 -c W0S00000010000E        -> probing for Hitag æ(micro)"
+    },
+    {
+      "command": "lf read",
+      "offline": false,
+      "description": "Sniff low frequency signal.\r",
+      "help": "Sniff low frequency signal.\r\n - use `lf config` to set parameters.\r\n - use `data plot` to look at it.\r\nIf the number of samples is more than the device memory limit, it will try to use the real-time sampling mode.\r\n\r\nusage:\r\n    lf read [-hv@] [-s <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -s, --samples <dec>            number of samples to collect\r\n    -v, --verbose                  verbose output\r\n    -@                             continuous reading mode\r\n\r\nexamples/notes:\r\n    lf read -v -s 12000            -> collect 12000 samples\r\n    lf read -s 3000 -@             -> oscilloscope style"
+    },
+    {
+      "command": "lf relay",
+      "offline": false,
+      "description": "Relay LF signal between two Proxmark3 devices over TCP.\r",
+      "help": "Relay LF signal between two Proxmark3 devices over TCP.\r\nBy default it uses PORT 8000 and uses 30000 samples from Graphbuffer\r\n  --rdr  : Reading device, act as IP client and reads LF tag and sends data\r\n  --tag  : Simulation device, act as IP server and simulates relayed data\r\n\r\n\r\nusage:\r\n    lf relay [-h] [--tag] [--rdr] [-i <ipaddr>] [-s <dec>] [-p <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --tag                          Simulation device, act as Server\r\n    --rdr                          Sniffing device, act as client\r\n    -i, --ip <ipaddr>              Target IPv4 address to send data to. Used with `--rdr`\r\n    -s, --samples <dec>            Number of samples to collect (def: 30000)\r\n    -p, --port <dec>               Port number (def: 8000)\r\n\r\nexamples/notes:\r\n    Device A, reading LF tag, client\r\n    lf relay --rdr --ip 192.168.1.141                -> Client, connect to IP 192.168.1.141:8000\r\n    lf relay --rdr --ip 192.168.1.141 -p 18111       -> Client, connect to IP 192.168.1.141:18111 \r\n                                                    \r\n    Device B, simulate LF tag, server      \r\n    lf relay --tag -p 8111                          -> Server listening port 8111, recv 30000 samples\r\n    lf relay --tag -s 10000                         -> Server listening port 8000, recv 10000 samples"
+    },
+    {
+      "command": "lf search",
+      "offline": true,
+      "description": "Read and search for valid known tag. For offline mode, you can `data load` first then search.\r",
+      "help": "Read and search for valid known tag. For offline mode, you can `data load` first then search.\r\n\r\nusage:\r\n    lf search [-h1cu]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1                             Use data from Graphbuffer to search (offline mode)\r\n    -c                             Continue searching after successful match\r\n    -u                             Search for unknown tags\r\n\r\nexamples/notes:\r\n    lf search                      -> try reading data from tag & search for known tag\r\n    lf search -u                   -> try reading data from tag & search for known and unknown tag\r\n    lf search -1                   -> use data from the GraphBuffer & search for known tag\r\n    lf search -1uc                 -> use data from the GraphBuffer & search for known and unknown tag"
+    },
+    {
+      "command": "lf sim",
+      "offline": false,
+      "description": "Simulate low frequency tag from graphbuffer\r",
+      "help": "Simulate low frequency tag from graphbuffer\r\nUse `lf config` to set parameters\r\n\r\nusage:\r\n    lf sim [-h] [-g <ms>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -g, --gap <ms>                 start gap in microseconds\r\n\r\nexamples/notes:\r\n    lf sim                        \r\n    lf sim --gap 240               -> start simulating with 240ms gap"
+    },
+    {
+      "command": "lf simask",
+      "offline": false,
+      "description": "Simulate ASK tag from DemodBuffer or input\r",
+      "help": "Simulate ASK tag from DemodBuffer or input\r\n\r\nusage:\r\n    lf simask [-hiv] [-c <dec>] [--bi] [--am] [--ar] [--stt] [-d <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -i, --inv                      invert data\r\n    -c, --clk <dec>                manually set clock - can autodetect if using DemodBuffer (default 64)\r\n    --bi                           ask/biphase encoding\r\n    --am                           ask/manchester encoding (default)\r\n    --ar                           ask/raw encoding\r\n    --stt                          add t55xx Sequence Terminator gap - default: no gaps (only manchester)\r\n    -d, --data <hex>               data to sim - omit to use DemodBuffer\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf simask --clk 32 --am -d 0102030405         -> simulate ASK/MAN rf/32\r\n    lf simask --clk 32 --bi -d 0102030405         -> simulate ASK/BIPHASE rf/32\r\n                                                 \r\n    lf simask --clk 64 --am -d ffbd8001686f1924                     -> simulate a EM410x tag\r\n    lf simask --clk 64 --am --stt -d 5649533200003F340000001B       -> simulate a VISA2K tag"
+    },
+    {
+      "command": "lf simfsk",
+      "offline": false,
+      "description": "Simulate FSK tag from DemodBuffer or input. There are about four FSK modulations to know of.\r",
+      "help": "Simulate FSK tag from DemodBuffer or input. There are about four FSK modulations to know of.\r\nFSK1  -  where fc/8 = high  and fc/5 = low\r\nFSK1a -  is inverted FSK1,  ie:   fc/5 = high and fc/8 = low\r\nFSK2  -  where fc/10 = high  and fc/8 = low\r\nFSK2a -  is inverted FSK2,  ie:   fc/10 = high and fc/8 = low\r\n\r\nNOTE: if you set one clock manually set them all manually\r\n\r\nusage:\r\n    lf simfsk [-hv] [-c <dec>] [--low <dec>] [--high <dec>] [--stt] [-d <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -c, --clk <dec>                manually set clock - can autodetect if using DemodBuffer (default 64)\r\n    --low <dec>                    manually set larger Field Clock\r\n    --high <dec>                   manually set smaller Field Clock\r\n    --stt                          TBD! - STT to enable a gap between playback repetitions (default: no gap)\r\n    -d, --data <hex>               data to sim - omit to use DemodBuffer\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf simfsk -c 40 --high 8 --low 5 -d 010203        -> FSK1  rf/40  data 010203\r\n    lf simfsk -c 40 --high 5 --low 8 -d 010203        -> FSK1a rf/40  data 010203\r\n    lf simfsk -c 64 --high 10 --low 8 -d 010203       -> FSK2  rf/64  data 010203\r\n    lf simfsk -c 64 --high 8 --low 10 -d 010203       -> FSK2a rf/64  data 010203\r\n                                                     \r\n    lf simfsk -c 50 --high 10 --low 8 -d 1D5559555569A9A555A59569              -> simulate HID Prox tag manually\r\n    lf simfsk -c 50 --high 10 --low 8 --stt -d 011DB2487E8D811111111111        -> simulate AWID tag manually"
+    },
+    {
+      "command": "lf simpsk",
+      "offline": false,
+      "description": "Simulate PSK tag from DemodBuffer or input\r",
+      "help": "Simulate PSK tag from DemodBuffer or input\r\n\r\nusage:\r\n    lf simpsk [-h123iv] [-c <dec>] [--fc <dec>] [-d <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1, --psk1                     set PSK1 (default)\r\n    -2, --psk2                     set PSK2\r\n    -3, --psk3                     set PSK3\r\n    -i, --inv                      invert data\r\n    -c, --clk <dec>                manually set clock - can autodetect if using DemodBuffer (default 32)\r\n    --fc <dec>                     2|4|8 are valid carriers (default 2)\r\n    -d, --data <hex>               data to sim - omit to use DemodBuffer\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf simpsk -1 --clk 40 --fc 4 -d 01020304         -> simulate PSK1 rf/40 psksub fc/4, data 01020304\r\n                                                    \r\n    lf simpsk -1 --clk 32 --fc 2 -d a0000000bd989a11         -> simulate a indala tag manually"
+    },
+    {
+      "command": "lf sniff",
+      "offline": false,
+      "description": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually.\r",
+      "help": "Sniff low frequency signal. You need to configure the LF part on the Proxmark3 device manually.\r\nUsually a trigger and skip samples is a good thing to set before doing a low frequency sniff.\r\n\r\n - use `lf config` to set parameters.\r\n - use `data plot` to look at sniff signal.\r\n - use `lf search -1` to see if signal can be automatic decoded.\r\nIf the number of samples is more than the device memory limit, it will try to use the real-time sampling mode.\r\n\r\nusage:\r\n    lf sniff [-hv@] [-s <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -s, --samples <dec>            number of samples to collect\r\n    -v, --verbose                  verbose output\r\n    -@                             continuous sniffing mode\r\n\r\nexamples/notes:\r\n    lf sniff -v                   \r\n    lf sniff -s 3000 -@            -> oscilloscope style"
+    },
+    {
+      "command": "lf tune",
+      "offline": false,
+      "description": "Continuously measure LF antenna tuning.\r",
+      "help": "Continuously measure LF antenna tuning.\r\nPress button or <Enter> to interrupt.\r\n\r\nusage:\r\n    lf tune [-hv] [-n <dec>] [-q <dec>] [-f <float>] [--bar] [--mix] [--value] [--rgb]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -n, --iter <dec>               number of iterations (default: 0=infinite)\r\n    -q, --divisor <dec>            Frequency divisor. 88 -> 134 kHz, 95 -> 125 kHz\r\n    -f, --freq <float>             Frequency in kHz\r\n    --bar                          bar style\r\n    --mix                          mixed style\r\n    --value                        values style\r\n    -v, --verbose                  verbose output\r\n    --rgb                          (PM5) mirror the tuning level on the antenna RGB LED\r\n\r\nexamples/notes:\r\n    lf tune                       \r\n    lf tune --mix                 \r\n\r\n\r\n\r\n=======================================================================================\r\nlf awid\r\n\r\n { AWID RFIDs...              }"
+    },
+    {
+      "command": "lf awid help",
+      "offline": true,
+      "description": "help             this help\r",
+      "help": "help             this help\r\ndemod            demodulate an AWID FSK tag from the GraphBuffer"
+    },
+    {
+      "command": "lf awid brute",
+      "offline": false,
+      "description": "Enables bruteforce of AWID reader with specified facility-code.\r",
+      "help": "Enables bruteforce of AWID reader with specified facility-code.\r\nThis is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step\r\nif cardnumber is not given, it starts with 1 and goes up to 65535\r\n\r\nusage:\r\n    lf awid brute [-hv] --fmt <dec> --fc <dec> [--cn <dec>] [--delay <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --fmt <dec>                    format length 26|50\r\n    --fc <dec>                     8|16bit value facility code\r\n    --cn <dec>                     optional -  card number to start with, max 65535\r\n    --delay <dec>                  optional - delay betweens attempts in ms. Default 1000ms\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf awid brute --fmt 26 --fc 224\r\n    lf awid brute --fmt 50 --fc 2001 --delay 2000\r\n    lf awid brute --fmt 50 --fc 2001 --cn 200 --delay 2000 -v"
+    },
+    {
+      "command": "lf awid clone",
+      "offline": false,
+      "description": "clone a AWID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag\r",
+      "help": "clone a AWID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag\r\n\r\nusage:\r\n    lf awid clone [-h] --fmt <dec> --fc <dec> --cn <dec> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --fmt <dec>                    format length 26|34|37|50\r\n    --fc <dec>                     8|16bit value facility code\r\n    --cn <dec>                     16|32-bit value card number\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf awid clone --fmt 26 --fc 123 --cn 1337            -> encode for T55x7 tag\r\n    lf awid clone --fmt 50 --fc 2001 --cn 13371337       -> encode long fmt for T55x7 tag\r\n    lf awid clone --fmt 26 --fc 123 --cn 1337 --q5       -> encode for Q5/T5555 tag\r\n    lf awid clone --fmt 26 --fc 123 --cn 1337 --em       -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf awid demod",
+      "offline": true,
+      "description": "Try to find AWID Prox preamble, if found decode / descramble data\r",
+      "help": "Try to find AWID Prox preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf awid demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf awid demod                 \r\n    lf awid demod --raw"
+    },
+    {
+      "command": "lf awid reader",
+      "offline": false,
+      "description": "read a AWID Prox tag\r",
+      "help": "read a AWID Prox tag\r\n\r\nusage:\r\n    lf awid reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf awid reader -@              -> continuous reader mode"
+    },
+    {
+      "command": "lf awid sim",
+      "offline": false,
+      "description": "Enables simulation of AWID card with specified facility-code and card number.\r",
+      "help": "Enables simulation of AWID card with specified facility-code and card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf awid sim [-h] --fmt <dec> --fc <dec> --cn <dec>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --fmt <dec>                    format length 26|32|36|40\r\n    --fc <dec>                     8-bit value facility code\r\n    --cn <dec>                     16-bit value card number\r\n\r\nexamples/notes:\r\n    lf awid sim --fmt 26 --fc 123 --cn 1337\r\n    lf awid sim --fmt 50 --fc 2001 --cn 13371337"
+    },
+    {
+      "command": "lf awid watch",
+      "offline": false,
+      "description": "Enables AWID compatible reader mode printing details of scanned AWID26 or AWID50 tags.\r",
+      "help": "Enables AWID compatible reader mode printing details of scanned AWID26 or AWID50 tags.\r\nRun until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf awid watch [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf awid watch                 \r\n\r\n\r\n\r\n=======================================================================================\r\nlf cotag\r\n\r\n { COTAG CHIPs...             }"
+    },
+    {
+      "command": "lf cotag help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate a COTAG tag"
+    },
+    {
+      "command": "lf cotag demod",
+      "offline": true,
+      "description": "Demodulate COTAG samples from g_GraphBuffer.\r",
+      "help": "Demodulate COTAG samples from g_GraphBuffer.\r\nTry to find COTAG preamble, if found decode / descramble data.\r\n\r\nusage:\r\n    lf cotag demod [-hv] [-c <dec>] [-t <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -v, --verbose                  verbose output\r\n    -c, --clk <dec>                set clock manually (def 768)\r\n    -t, --threshold <dec>          set high value threshold manually (def: auto-detected)\r\n\r\nexamples/notes:\r\n    lf cotag demod"
+    },
+    {
+      "command": "lf cotag reader",
+      "offline": false,
+      "description": "Read a COTAG tag.\r",
+      "help": "Read a COTAG tag.\r\n - use `lf config` to set parameters except divisor (which is assumed 90 for cotag. Use --divisor to override).\r\n - use `data plot` to look at it.\r\n - use `lf cotag demod` to try to demodulate it.\r\nIf the number of samples is more than the device memory limit, it will try to use the real-time sampling mode.\r\n\r\nNote: Cotag has an extremely slow data rate - RF/768 -- capturing a full 128 bit card read requires a minimum of 128 x 768 samples, or a multiple thereof.\r\n\r\nusage:\r\n    lf cotag reader [-hv@] [-s <dec>] [--divisor <19-255>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -s, --samples <dec>            number of samples to collect (def 500000)\r\n    -v, --verbose                  verbose output\r\n    -@                             continuous reading mode\r\n    --divisor <19-255>             Manually set freq divisor\r\n\r\nexamples/notes:\r\n    lf cotag reader -v -s 700000         -> collect 700000 samples\r\n    lf cotag reader -v --divisor 89 -s 700000         -> use divisor 89, collect 700000 samples\r\n                                                     \r\n\r\n\r\n\r\n=======================================================================================\r\nlf destron\r\n\r\n { FDX-A Destron RFIDs...     }"
+    },
+    {
+      "command": "lf destron help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate an Destron tag from the GraphBuffer"
+    },
+    {
+      "command": "lf destron demod",
+      "offline": true,
+      "description": "Try to find Destron preamble, if found decode / descramble data\r",
+      "help": "Try to find Destron preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf destron demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf destron demod"
+    },
+    {
+      "command": "lf destron reader",
+      "offline": false,
+      "description": "read a Destron tag\r",
+      "help": "read a Destron tag\r\n\r\nusage:\r\n    lf destron reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf destron reader -@           -> continuous reader mode"
+    },
+    {
+      "command": "lf destron clone",
+      "offline": false,
+      "description": "clone a Destron tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a Destron tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf destron clone [-h] -u <hex> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -u, --uid <hex>                5 bytes max\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf destron clone --uid 1A2B3C4D5E\r\n    lf destron clone --q5  --uid 1A2B3C4D5E        -> encode for Q5/T5555 tag\r\n    lf destron clone --em  --uid 1A2B3C4D5E        -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf destron sim",
+      "offline": false,
+      "description": "Try to find Destron preamble, if found decode / descramble data\r",
+      "help": "Try to find Destron preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf destron sim [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf destron sim                \r\n\r\n\r\n\r\n=======================================================================================\r\nlf em\r\n\r\n { EM CHIPs & RFIDs...        }"
+    },
+    {
+      "command": "lf em help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\n410x             { EM 4102 commands... }\r\n4x05             { EM 4205 / 4305 / 4369 / 4469 commands... }\r\n4x50             { EM 4350 / 4450 commands... }\r\n4x70             { EM 4070 / 4170 commands... }\r\n\r\n\r\n\r\n=======================================================================================\r\nlf em 410x\r\n\r\n { EM 4102 commands... }"
+    },
+    {
+      "command": "lf em 410x help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate a EM410x tag from the GraphBuffer"
+    },
+    {
+      "command": "lf em 410x demod",
+      "offline": true,
+      "description": "Try to find EM 410x preamble, if found decode / descramble data\r",
+      "help": "Try to find EM 410x preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf em 410x demod [-hia] [--clk <dec>] [--err <dec>] [--len <dec>] [--bin <bin>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --clk <dec>                    clock (default autodetect)\r\n    --err <dec>                    maximum allowed errors (default 100)\r\n    --len <dec>                    maximum length\r\n    -i, --invert                   invert output\r\n    -a, --amp                      amplify signal\r\n    --bin <bin>                    Binary string i.e 0001001001\r\n\r\nexamples/notes:\r\n    lf em 410x demod                           -> demod an EM410x Tag ID from GraphBuffer\r\n    lf em 410x demod --clk 32                  -> demod an EM410x Tag ID from GraphBuffer using a clock of RF/32\r\n    lf em 410x demod --clk 32 -i               -> demod an EM410x Tag ID from GraphBuffer using a clock of RF/32 and inverting data\r\n    lf em 410x demod -i                        -> demod an EM410x Tag ID from GraphBuffer while inverting data\r\n    lf em 410x demod --clk 64 -i --err 0       -> demod an EM410x Tag ID from GraphBuffer using a clock of RF/64 and inverting data and allowing 0 demod errors"
+    },
+    {
+      "command": "lf em 410x reader",
+      "offline": false,
+      "description": "read EM 410x tag\r",
+      "help": "read EM 410x tag\r\n\r\nusage:\r\n    lf em 410x reader [-hiab@v] [--clk <dec>] [--err <dec>] [--len <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --clk <dec>                    clock (default autodetect)\r\n    --err <dec>                    maximum allowed errors (default 100)\r\n    --len <dec>                    maximum length\r\n    -i, --invert                   invert output\r\n    -a, --amp                      amplify signal\r\n    -b                             break on first found\r\n    -@                             continuous reader mode\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf em 410x reader             \r\n    lf em 410x reader -@                        -> continuous reader mode\r\n    lf em 410x reader --clk 32                  -> using a clock of RF/32\r\n    lf em 410x reader --clk 32 -i               -> using a clock of RF/32 and inverting data\r\n    lf em 410x reader -i                        -> inverting data\r\n    lf em 410x reader --clk 64 -i --err 0       -> using a clock of RF/64 and inverting data and allowing 0 demod errors"
+    },
+    {
+      "command": "lf em 410x sim",
+      "offline": false,
+      "description": "Enables simulation of EM 410x card.\r",
+      "help": "Enables simulation of EM 410x card.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\nMost common readers expects the code to be sent in loop without a break (i.e. --gap 0).\r\nFor other, more advanced readers there might be a need to set a non-zero gap value.\r\n\r\nusage:\r\n    lf em 410x sim [-h] [--clk <dec>] --id <hex> [--gap <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --clk <dec>                    <32|64> clock (default 64)\r\n    --id <hex>                     EM Tag ID number (5 hex bytes)\r\n    --gap <dec>                    gap (0's) between ID repeats (default 0)\r\n\r\nexamples/notes:\r\n    lf em 410x sim --id 0F0368568B\r\n    lf em 410x sim --id 0F0368568B --clk 32\r\n    lf em 410x sim --id 0F0368568B --gap 20"
+    },
+    {
+      "command": "lf em 410x brute",
+      "offline": false,
+      "description": "bruteforcing by emulating EM 410x tag\r",
+      "help": "bruteforcing by emulating EM 410x tag\r\n\r\nusage:\r\n    lf em 410x brute [-h] [--clk <dec>] [--delay <dec>] -f <hex> [--gap <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --clk <dec>                    <32|64> clock (default 64)\r\n    --delay <dec>                  pause delay in milliseconds between UIDs simulation (default 1000ms)\r\n    -f, --file <hex>               file with EM Tag IDs, one id per line\r\n    --gap <dec>                    gap (0's) between ID repeats (default 20)\r\n\r\nexamples/notes:\r\n    lf em 410x brute -f ids.txt   \r\n    lf em 410x brute -f ids.txt --clk 32\r\n    lf em 410x brute -f ids.txt --delay 3000\r\n    lf em 410x brute -f ids.txt --delay 3000 --clk 32"
+    },
+    {
+      "command": "lf em 410x watch",
+      "offline": false,
+      "description": "Enables Electro Marine (EM) compatible reader mode printing details of scanned tags.\r",
+      "help": "Enables Electro Marine (EM) compatible reader mode printing details of scanned tags.\r\nRun until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf em 410x watch [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf em 410x watch"
+    },
+    {
+      "command": "lf em 410x spoof",
+      "offline": false,
+      "description": "Watch 'nd Spoof, activates reader\r",
+      "help": "Watch 'nd Spoof, activates reader\r\nWaits until a EM 410x tag gets presented then Proxmark3 starts simulating the found EM Tag ID\r\n\r\nusage:\r\n    lf em 410x spoof [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf em 410x spoof"
+    },
+    {
+      "command": "lf em 410x clone",
+      "offline": false,
+      "description": "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469, Hitag S/8211/8268/8310 or Hitag æ/8265 tag.\r",
+      "help": "clone a EM410x ID to a T55x7, Q5/T5555, EM4305/4469, Hitag S/8211/8268/8310 or Hitag æ/8265 tag.\r\n\r\nusage:\r\n    lf em 410x clone [-h] [--clk <dec>] --id <hex> [--q5] [--em] [--hts] [--htu] [--electra]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --clk <dec>                    <16|32|40|64> clock (default 64)\r\n    --id <hex>                     EM Tag ID number (5 hex bytes)\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n    --hts                          optional - specify writing to Hitag S/8211/8268/8310 tag\r\n    --htu                          optional - specify writing to Hitag æ/8265 tag\r\n    --electra                      optional - add Electra blocks to tag\r\n\r\nexamples/notes:\r\n    lf em 410x clone --id 0F0368568B             -> encode for T55x7 tag\r\n    lf em 410x clone --id 0F0368568B --q5        -> encode for Q5/T5555 tag\r\n    lf em 410x clone --id 0F0368568B --em        -> encode for EM4305/4469\r\n    lf em 410x clone --id 0F0368568B --hts       -> encode for Hitag S/8211/8268/8310\r\n    lf em 410x clone --id 0F0368568B --htu       -> encode for Hitag æ/8265 tag\r\n\r\n\r\n\r\n=======================================================================================\r\nlf em 4x05\r\n\r\n { EM 4205 / 4305 / 4369 / 4469 commands... }"
+    },
+    {
+      "command": "lf em 4x05 help",
+      "offline": true,
+      "description": "-----------      ----------------------- General -----------------------\r",
+      "help": "-----------      ----------------------- General -----------------------\r\nhelp             This help\r\n-----------      ----------------------- Operations -----------------------\r\nconfig           Create common configuration words\r\ndemod            Demodulate a EM4x05/EM4x69 tag from the GraphBuffer\r\nsniff            Attempt to recover em4x05 commands from sample buffer\r\nview             Display content from tag dump file"
+    },
+    {
+      "command": "lf em 4x05 clonehelp",
+      "offline": false,
+      "description": "Display a list of available commands for cloning specific techs on EM4305/4469 tags\r",
+      "help": "Display a list of available commands for cloning specific techs on EM4305/4469 tags\r\n\r\nusage:\r\n    lf em 4x05 clonehelp [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf em 4x05 clonehelp"
+    },
+    {
+      "command": "lf em 4x05 brute",
+      "offline": false,
+      "description": "This command tries to bruteforce the password of a EM4205/4305/4469/4569\r",
+      "help": "This command tries to bruteforce the password of a EM4205/4305/4469/4569\r\nThe loop is running on device side,  press Proxmark3 button to abort\r\n\r\n\r\nusage:\r\n    lf em 4x05 brute [-h] [-s <hex>] [-n <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -s, --start <hex>              Start bruteforce enumeration from this password value\r\n    -n <dec>                       Stop after having found n candidates. Default: 0 (infinite)\r\n\r\nexamples/notes:\r\n    Note: if you get many false positives, change position on the antennalf em 4x05 brute\r\n    lf em 4x05 brute -n 1                 -> stop after first candidate found\r\n    lf em 4x05 brute -s 000022AA          -> start at 000022AA"
+    },
+    {
+      "command": "lf em 4x05 chk",
+      "offline": false,
+      "description": "This command uses a dictionary attack against EM4205/4305/4469/4569\r",
+      "help": "This command uses a dictionary attack against EM4205/4305/4469/4569\r\n\r\nusage:\r\n    lf em 4x05 chk [-h] [-f <fn>] [-e <pwd>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                loads a default keys dictionary file <*.dic>\r\n    -e, --em <pwd>                 try the calculated password from some cloners based on EM4100 ID\r\n\r\nexamples/notes:\r\n    lf em 4x05 chk                \r\n    lf em 4x05 chk -e 000022B8                 -> check password 000022B8\r\n    lf em 4x05 chk -f t55xx_default_pwds       -> use T55xx default dictionary"
+    },
+    {
+      "command": "lf em 4x05 config",
+      "offline": true,
+      "description": "Create common configuration blocks\r",
+      "help": "Create common configuration blocks\r\n\r\nusage:\r\n    lf em 4x05 config [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf em 4x05 config"
+    },
+    {
+      "command": "lf em 4x05 demod",
+      "offline": true,
+      "description": "Try to find EM 4x05 preamble, if found decode / descramble data\r",
+      "help": "Try to find EM 4x05 preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf em 4x05 demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf em 4x05 demod"
+    },
+    {
+      "command": "lf em 4x05 dump",
+      "offline": false,
+      "description": "Dump EM4x05/EM4x69.  Tag must be on antenna.\r",
+      "help": "Dump EM4x05/EM4x69.  Tag must be on antenna.\r\n\r\nusage:\r\n    lf em 4x05 dump [-h] [-p <hex>] [-f <fn>] [--ns]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --pwd <hex>                password (00000000)\r\n    -f, --file <fn>                override filename prefix (optional).  Default is based on UID/Serial\r\n    --ns                           no save to file\r\n\r\nexamples/notes:\r\n    lf em 4x05 dump               \r\n    lf em 4x05 dump -p 11223344   \r\n    lf em 4x05 dump -f myfile -p 11223344"
+    },
+    {
+      "command": "lf em 4x05 info",
+      "offline": false,
+      "description": "Tag information EM4205/4305/4469//4569 tags. Tag must be on antenna.\r",
+      "help": "Tag information EM4205/4305/4469//4569 tags. Tag must be on antenna.\r\n\r\nusage:\r\n    lf em 4x05 info [-hv] [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --pwd <hex>                optional - password, 4 hex bytes\r\n    -v, --verbose                  Verbose output\r\n\r\nexamples/notes:\r\n    lf em 4x05 info               \r\n    lf em 4x05 info -p 11223344"
+    },
+    {
+      "command": "lf em 4x05 read",
+      "offline": false,
+      "description": "Read EM4x05/EM4x69. Tag must be on antenna.\r",
+      "help": "Read EM4x05/EM4x69. Tag must be on antenna.\r\n\r\nusage:\r\n    lf em 4x05 read [-h] -a <dec> [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -a, --addr <dec>               memory address to read. (0-15)\r\n    -p, --pwd <hex>                optional - password, 4 bytes hex\r\n\r\nexamples/notes:\r\n    lf em 4x05 read -a 1          \r\n    lf em 4x05 read --addr 1 --pwd 11223344"
+    },
+    {
+      "command": "lf em 4x05 sniff",
+      "offline": true,
+      "description": "Sniff EM4x05 commands sent from a programmer\r",
+      "help": "Sniff EM4x05 commands sent from a programmer\r\n\r\nusage:\r\n    lf em 4x05 sniff [-h1r]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1, --buf                      Use the data in the buffer\r\n    -r, --rev                      Reverse the bit order for data blocks\r\n\r\nexamples/notes:\r\n    lf em 4x05 sniff               -> sniff via lf sniff\r\n    lf em 4x05 sniff -1            -> sniff from data loaded into the buffer\r\n    lf em 4x05 sniff -r            -> reverse the bit order when showing block data"
+    },
+    {
+      "command": "lf em 4x05 unlock",
+      "offline": false,
+      "description": "execute tear off against EM4205/4305/4469/4569\r",
+      "help": "execute tear off against EM4205/4305/4469/4569\r\n\r\nusage:\r\n    lf em 4x05 unlock [-hv] [-n <int>] [-s <us>] [-e <us>] [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -n <int>                       steps to skip\r\n    -s, --start <us>               start scan from delay (us)\r\n    -e, --end <us>                 end scan at delay (us)\r\n    -p, --pwd <hex>                password (def 00000000)\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf em 4x05 unlock             \r\n    lf em 4x05 unlock -s 4100 -e 4100            -> lock on and autotune at 4100us\r\n    lf em 4x05 unlock -n 10 -s 3000 -e 4400      -> scan delays 3000us -> 4400us"
+    },
+    {
+      "command": "lf em 4x05 view",
+      "offline": true,
+      "description": "Print a EM4205/4305/4369/4469 dump file\r",
+      "help": "Print a EM4205/4305/4369/4469 dump file\r\nnote:\r\nWe don't track if password is known in current dump file formats.\r\nAll zeros password block might be filler data\r\n\r\nusage:\r\n    lf em 4x05 view [-hv] -f <fn>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                Specify a filename for dump file\r\n    -v, --verbose                  Verbose output\r\n\r\nexamples/notes:\r\n    lf em 4x05 view -f lf-4x05-01020304-dump.json"
+    },
+    {
+      "command": "lf em 4x05 wipe",
+      "offline": false,
+      "description": "Wipe EM4x05/EM4x69. Tag must be on antenna.\r",
+      "help": "Wipe EM4x05/EM4x69. Tag must be on antenna.\r\n\r\nusage:\r\n    lf em 4x05 wipe [-h] [--4205] [--4305] [--4369] [--4469] [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --4205                         target chip type EM 4205\r\n    --4305                         target chip type EM 4305 (default)\r\n    --4369                         target chip type EM 4369\r\n    --4469                         target chip type EM 4469\r\n    -p, --pwd <hex>                optional - password, 4 bytes hex\r\n\r\nexamples/notes:\r\n    lf em 4x05 wipe --4305 -p 11223344       -> wipe EM 4305 w pwd\r\n    lf em 4x05 wipe --4205                   -> wipe EM 4205\r\n    lf em 4x05 wipe --4369                   -> wipe EM 4369"
+    },
+    {
+      "command": "lf em 4x05 write",
+      "offline": false,
+      "description": "Write EM4x05/EM4x69. Tag must be on antenna.\r",
+      "help": "Write EM4x05/EM4x69. Tag must be on antenna.\r\n\r\nusage:\r\n    lf em 4x05 write [-h] [-a <dec>] -d <hex> [-p <hex>] [--po]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -a, --addr <dec>               memory address to write to. (0-13)\r\n    -d, --data <hex>               data to write (4 hex bytes)\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    --po                           protect operation\r\n\r\nexamples/notes:\r\n    lf em 4x05 write -a 1 -d deadc0de\r\n    lf em 4x05 write --addr 1 --pwd 11223344 --data deadc0de\r\n    lf em 4x05 write --po --pwd 11223344 --data deadc0de\r\n                                  \r\n\r\n\r\n\r\n=======================================================================================\r\nlf em 4x50\r\n\r\n { EM 4350 / 4450 commands... }"
+    },
+    {
+      "command": "lf em 4x50 help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\n-----------      --------------------- operations ---------------------\r\nview             Display content from tag dump file\r\n-----------      --------------------- simulation ---------------------"
+    },
+    {
+      "command": "lf em 4x50 brute",
+      "offline": false,
+      "description": "Tries to bruteforce the password of a EM4x50 card.\r",
+      "help": "Tries to bruteforce the password of a EM4x50 card.\r\nFunction can be stopped by pressing pm3 button.\r\n\r\n\r\nusage:\r\n    lf em 4x50 brute [-h] --mode <str> [--begin <hex>] [--end <hex>] [--digits] [--uppercase]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --mode <str>                   Bruteforce mode (range|charset|smart)\r\n    --begin <hex>                  Range mode - start of the key range\r\n    --end <hex>                    Range mode - end of the key range\r\n    --digits                       Charset mode - include ASCII codes for digits\r\n    --uppercase                    Charset mode - include ASCII codes for uppercase letters\r\n\r\nexamples/notes:\r\n    lf em 4x50 brute --mode range --begin 12330000 --end 12340000      -> tries pwds from 0x12330000 to 0x12340000\r\n    lf em 4x50 brute --mode charset --digits --uppercase      -> tries all combinations of ASCII codes for digits and uppercase letters\r\n    lf em 4x50 brute --mode smart      -> enable 'smart' pattern key cracking"
+    },
+    {
+      "command": "lf em 4x50 chk",
+      "offline": false,
+      "description": "Run dictionary key recovery against EM4x50 card.\r",
+      "help": "Run dictionary key recovery against EM4x50 card.\r\n\r\nusage:\r\n    lf em 4x50 chk [-h] [-f <fn>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                specify dictionary filename\r\n\r\nexamples/notes:\r\n    lf em 4x50 chk                 -> uses T55xx default dictionary\r\n    lf em 4x50 chk -f my.dic"
+    },
+    {
+      "command": "lf em 4x50 dump",
+      "offline": false,
+      "description": "Reads all blocks/words from EM4x50 tag and saves dump in (bin/json) format\r",
+      "help": "Reads all blocks/words from EM4x50 tag and saves dump in (bin/json) format\r\n\r\nusage:\r\n    lf em 4x50 dump [-h] [-f <fn>] [-p <hex>] [--ns]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                specify dump filename\r\n    -p, --pwd <hex>                password, 4 hex bytes, lsb\r\n    --ns                           no save to file\r\n\r\nexamples/notes:\r\n    lf em 4x50 dump               \r\n    lf em 4x50 dump -f mydump     \r\n    lf em 4x50 dump -p 12345678   \r\n    lf em 4x50 dump -f mydump -p 12345678"
+    },
+    {
+      "command": "lf em 4x50 info",
+      "offline": false,
+      "description": "Tag information EM4x50.\r",
+      "help": "Tag information EM4x50.\r\n\r\nusage:\r\n    lf em 4x50 info [-hv] [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --pwd <hex>                password, 4 hex bytes, lsb\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf em 4x50 info               \r\n    lf em 4x50 info -v             -> show data section\r\n    lf em 4x50 info -p 12345678    -> uses pwd 0x12345678"
+    },
+    {
+      "command": "lf em 4x50 login",
+      "offline": false,
+      "description": "Login into EM4x50 tag.\r",
+      "help": "Login into EM4x50 tag.\r\n\r\nusage:\r\n    lf em 4x50 login [-h] -p <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --passsword <hex>          password, 4 bytes, lsb\r\n\r\nexamples/notes:\r\n    lf em 4x50 login -p 12345678         -> login with password 12345678"
+    },
+    {
+      "command": "lf em 4x50 rdbl",
+      "offline": false,
+      "description": "Reads single EM4x50 block/word.\r",
+      "help": "Reads single EM4x50 block/word.\r\n\r\nusage:\r\n    lf em 4x50 rdbl [-h] -b <dec> [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -b, --block <dec>              block/word address\r\n    -p, --pwd <hex>                password, 4 hex bytes, lsb\r\n\r\nexamples/notes:\r\n    lf em 4x50 rdbl -b 3          \r\n    lf em 4x50 rdbl -b 32 -p 12345678        -> reads block 32 with pwd 0x12345678"
+    },
+    {
+      "command": "lf em 4x50 reader",
+      "offline": false,
+      "description": "Shows standard read data of EM4x50 tag.\r",
+      "help": "Shows standard read data of EM4x50 tag.\r\n\r\nusage:\r\n    lf em 4x50 reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf em 4x50 reader             \r\n    lf em 4x50 reader -@           -> continuous reader mode"
+    },
+    {
+      "command": "lf em 4x50 restore",
+      "offline": false,
+      "description": "Restores data from dumpfile (bin/eml/json) onto a EM4x50 tag.\r",
+      "help": "Restores data from dumpfile (bin/eml/json) onto a EM4x50 tag.\r\nif used with -u,  the filetemplate `lf-4x50-UID-dump.bin` is used as filename\r\n\r\nusage:\r\n    lf em 4x50 restore [-h] [-u <hex>] [-f <fn>] [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -u, --uid <hex>                uid, 4 hex bytes, msb\r\n    -f, --file <fn>                specify a filename for dump file\r\n    -p, --pwd <hex>                password, 4 hex bytes, lsb\r\n\r\nexamples/notes:\r\n    lf em 4x50 restore -u 1b5aff5c                -> uses lf-4x50-1B5AFF5C-dump.bin\r\n    lf em 4x50 restore -f mydump.eml             \r\n    lf em 4x50 restore -u 1b5aff5c -p 12345678   \r\n    lf em 4x50 restore -f mydump.eml -p 12345678"
+    },
+    {
+      "command": "lf em 4x50 view",
+      "offline": true,
+      "description": "Print a EM4x50 dump file\r",
+      "help": "Print a EM4x50 dump file\r\n\r\n\r\nusage:\r\n    lf em 4x50 view [-h] [-f <fn>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                specify a filename for dump file\r\n\r\nexamples/notes:\r\n    lf em 4x50 view -f lf-4x50-01020304-dump.json"
+    },
+    {
+      "command": "lf em 4x50 wipe",
+      "offline": false,
+      "description": "Wipes EM4x50 tag by filling it with zeros, including the new password\r",
+      "help": "Wipes EM4x50 tag by filling it with zeros, including the new password\r\nMust give a password.\r\n\r\nusage:\r\n    lf em 4x50 wipe [-h] -p <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --passsword <hex>          password, 4 bytes, lsb\r\n\r\nexamples/notes:\r\n    lf em 4x50 wipe -p 12345678"
+    },
+    {
+      "command": "lf em 4x50 wrbl",
+      "offline": false,
+      "description": "Writes single block/word to EM4x50 tag.\r",
+      "help": "Writes single block/word to EM4x50 tag.\r\n\r\nusage:\r\n    lf em 4x50 wrbl [-h] -b <dec> -d <hex> [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -b, --block <dec>              block/word address, dec\r\n    -d, --data <hex>               data, 4 bytes, lsb\r\n    -p, --pwd <hex>                password, 4 bytes, lsb\r\n\r\nexamples/notes:\r\n    lf em 4x50 wrbl -b 3 -d 4f22e7ff \r\n    lf em 4x50 wrbl -b 3 -d 4f22e7ff -p 12345678"
+    },
+    {
+      "command": "lf em 4x50 wrpwd",
+      "offline": false,
+      "description": "Writes EM4x50 password.\r",
+      "help": "Writes EM4x50 password.\r\n\r\nusage:\r\n    lf em 4x50 wrpwd [-h] -p <hex> -n <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --pwd <hex>                password, 4 hex bytes, lsb\r\n    -n, --new <hex>                new password, 4 hex bytes, lsb\r\n\r\nexamples/notes:\r\n    lf em 4x50 wrpwd -p 4f22e7ff -n 12345678"
+    },
+    {
+      "command": "lf em 4x50 eload",
+      "offline": false,
+      "description": "Loads EM4x50 tag dump (bin/eml/json) into emulator memory on device\r",
+      "help": "Loads EM4x50 tag dump (bin/eml/json) into emulator memory on device\r\n\r\nusage:\r\n    lf em 4x50 eload [-h] -f <fn>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                Specify a filename for dump file\r\n\r\nexamples/notes:\r\n    lf em 4x50 eload -f mydump.bin"
+    },
+    {
+      "command": "lf em 4x50 esave",
+      "offline": false,
+      "description": "Saves bin/json dump file of emulator memory.\r",
+      "help": "Saves bin/json dump file of emulator memory.\r\n\r\nusage:\r\n    lf em 4x50 esave [-h] [-f <fn>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                specifiy filename\r\n\r\nexamples/notes:\r\n    lf em 4x50 esave                         -> use UID as filename\r\n    lf em 4x50 esave -f mydump"
+    },
+    {
+      "command": "lf em 4x50 eview",
+      "offline": false,
+      "description": "Displays em4x50 content of emulator memory.\r",
+      "help": "Displays em4x50 content of emulator memory.\r\n\r\nusage:\r\n    lf em 4x50 eview [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf em 4x50 eview"
+    },
+    {
+      "command": "lf em 4x50 sim",
+      "offline": false,
+      "description": "Simulates a EM4x50 tag\r",
+      "help": "Simulates a EM4x50 tag\r\nFirst upload to device using `lf em 4x50 eload`\r\n\r\nusage:\r\n    lf em 4x50 sim [-h] [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --passsword <hex>          password, 4 bytes, lsb\r\n\r\nexamples/notes:\r\n    lf em 4x50 sim                \r\n    lf em 4x50 sim -p 27182818     -> uses password for eload data\r\n\r\n\r\n\r\n=======================================================================================\r\nlf em 4x70\r\n\r\n { EM 4070 / 4170 commands... }"
+    },
+    {
+      "command": "lf em 4x70 help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ncalc             Calculate EM4x70 challenge and response\r\nrecover          Recover remaining key from partial key"
+    },
+    {
+      "command": "lf em 4x70 brute",
+      "offline": false,
+      "description": "Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70\r",
+      "help": "Optimized partial key-update attack of 16-bit key block 7, 8 or 9 of an EM4x70\r\nThis attack does NOT write anything to the tag.\r\nBefore starting this attack, 0000 must be written to the 16-bit key block: 'lf em 4x70 write -b 9 -d 0000'.\r\nAfter success, the 16-bit key block have to be restored with the key found: 'lf em 4x70 write -b 9 -d c0de'\r\n\r\n\r\nusage:\r\n    lf em 4x70 brute [-h] -b <dec> --rnd <hex> --frn <hex> [-s <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -b, --block <dec>              block/word address, dec\r\n    --rnd <hex>                    Random 56-bit\r\n    --frn <hex>                    F(RN) 28-bit as 4 hex bytes\r\n    -s, --start <hex>              Start bruteforce enumeration from this key value\r\n\r\nexamples/notes:\r\n    lf em 4x70 brute -b 9 --rnd 45F54ADA252AAC --frn 4866BB70          -> bruteforcing key bits k95...k80 (pm3 test key)\r\n    lf em 4x70 brute -b 8 --rnd 3FFE1FB6CC513F --frn F355F1A0          -> bruteforcing key bits k79...k64 (research paper key)\r\n    lf em 4x70 brute -b 7 --rnd 7D5167003571F8 --frn 982DBCC0          -> bruteforcing key bits k63...k48 (autorecovery test key)"
+    },
+    {
+      "command": "lf em 4x70 info",
+      "offline": false,
+      "description": "Tag Information EM4x70\r",
+      "help": "Tag Information EM4x70\r\n  Tag variants include ID48 automotive transponder.\r\n  ID48 does not use command parity (default).\r\n  V4070 and EM4170 do require parity bit.\r\n\r\nusage:\r\n    lf em 4x70 info [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf em 4x70 info"
+    },
+    {
+      "command": "lf em 4x70 write",
+      "offline": false,
+      "description": "Write EM4x70\r",
+      "help": "Write EM4x70\r\n\r\n\r\nusage:\r\n    lf em 4x70 write [-h] -b <dec> -d <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -b, --block <dec>              block/word address, dec\r\n    -d, --data <hex>               data, 2 bytes\r\n\r\nexamples/notes:\r\n    lf em 4x70 write -b 15 -d c0de            -> write 'c0de' to block 15"
+    },
+    {
+      "command": "lf em 4x70 unlock",
+      "offline": false,
+      "description": "Unlock EM4x70 by sending PIN\r",
+      "help": "Unlock EM4x70 by sending PIN\r\nDefault pin may be:\r\n AAAAAAAA\r\n 00000000\r\n\r\n\r\nusage:\r\n    lf em 4x70 unlock [-h] -p <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --pin <hex>                pin, 4 bytes\r\n\r\nexamples/notes:\r\n    lf em 4x70 unlock -p 11223344      -> Unlock with PIN"
+    },
+    {
+      "command": "lf em 4x70 auth",
+      "offline": false,
+      "description": "Authenticate against an EM4x70 by sending random number (RN) and F(RN)\r",
+      "help": "Authenticate against an EM4x70 by sending random number (RN) and F(RN)\r\n  If F(RN) is incorrect based on the tag key, the tag will not respond\r\n  If F(RN) is correct based on the tag key, the tag will give a 20-bit response\r\n\r\n\r\nusage:\r\n    lf em 4x70 auth [-h] --rnd <hex> --frn <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --rnd <hex>                    Random 56-bit\r\n    --frn <hex>                    F(RN) 28-bit as 4 hex bytes\r\n\r\nexamples/notes:\r\n    lf em 4x70 auth --rnd 45F54ADA252AAC --frn 4866BB70           -> (using pm3 test key)\r\n    lf em 4x70 auth --rnd 3FFE1FB6CC513F --frn F355F1A0           -> (using research paper key)\r\n    lf em 4x70 auth --rnd 7D5167003571F8 --frn 982DBCC0           -> (autorecovery test key)"
+    },
+    {
+      "command": "lf em 4x70 setpin",
+      "offline": false,
+      "description": "Write new PIN\r",
+      "help": "Write new PIN\r\n\r\n\r\nusage:\r\n    lf em 4x70 setpin [-h] -p <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --pin <hex>                pin, 4 bytes\r\n\r\nexamples/notes:\r\n    lf em 4x70 setpin -p 11223344      -> Write new PIN"
+    },
+    {
+      "command": "lf em 4x70 setkey",
+      "offline": false,
+      "description": "Write new 96-bit key to tag\r",
+      "help": "Write new 96-bit key to tag\r\n\r\n\r\nusage:\r\n    lf em 4x70 setkey [-h] -k <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -k, --key <hex>                Key as 12 hex bytes\r\n\r\nexamples/notes:\r\n    lf em 4x70 setkey -k F32AA98CF5BE4ADFA6D3480B   (pm3 test key)\r\n    lf em 4x70 setkey -k A090A0A02080000000000000   (research paper key)\r\n    lf em 4x70 setkey -k 022A028C02BE000102030405   (autorecovery test key)"
+    },
+    {
+      "command": "lf em 4x70 calc",
+      "offline": true,
+      "description": "Calculates both the reader and tag challenge for a user-provided key and rnd.\r",
+      "help": "Calculates both the reader and tag challenge for a user-provided key and rnd.\r\n\r\n\r\nusage:\r\n    lf em 4x70 calc [-h] --key <hex> --rnd <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --key <hex>                    Key 96-bit as 12 hex bytes\r\n    --rnd <hex>                    56-bit random value sent to tag for authentication\r\n\r\nexamples/notes:\r\n    lf em 4x70 calc --key F32AA98CF5BE4ADFA6D3480B --rnd 45F54ADA252AAC   (pm3 test key)\r\n    lf em 4x70 calc --key A090A0A02080000000000000 --rnd 3FFE1FB6CC513F   (research paper key)\r\n    lf em 4x70 calc --key 022A028C02BE000102030405 --rnd 7D5167003571F8   (autorecovery test key)"
+    },
+    {
+      "command": "lf em 4x70 recover",
+      "offline": true,
+      "description": "After obtaining key bits 95..48 (such as via 'lf em 4x70 brute'), this command will recover\r",
+      "help": "After obtaining key bits 95..48 (such as via 'lf em 4x70 brute'), this command will recover\r\nkey bits 47..00.  By default, this process does NOT require a tag to be present.\r\n\r\nBy default, the potential keys are shown (typically 1-6) along with a corresponding\r\n'lf em 4x70 auth' command that will authenticate, if that potential key is correct.\r\nThe user can copy/paste these commands when the tag is present to manually check\r\nwhich of the potential keys is correct.\r\n\r\n\r\nusage:\r\n    lf em 4x70 recover [-h] -k <hex> --rnd <hex> --frn <hex> --grn <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -k, --key <hex>                Key as 6 hex bytes\r\n    --rnd <hex>                    Random 56-bit\r\n    --frn <hex>                    F(RN) 28-bit as 4 hex bytes\r\n    --grn <hex>                    G(RN) 20-bit as 3 hex bytes\r\n\r\nexamples/notes:\r\n    lf em 4x70 recover --key F32AA98CF5BE --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180   (pm3 test key)\r\n    lf em 4x70 recover --key A090A0A02080 --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60   (research paper key)\r\n    lf em 4x70 recover --key 022A028C02BE --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0   (autorecovery test key)\r\n                                  \r\n\r\n[=] Recovered 0 potential keys:"
+    },
+    {
+      "command": "lf em 4x70 autorecover",
+      "offline": false,
+      "description": "This command will perform automatic recovery of the key from a writable tag.\r",
+      "help": "This command will perform automatic recovery of the key from a writable tag.\r\nAll steps are possible to do manually.  The corresponding sequence, if done\r\nmanually, is as follows:\r\n1. Verify passed parameters authenticate with the tag (safety check)\r\n   lf em 4x70 auth --rnd <rnd_1> --frn <frn_1>\r\n2. Brute force the key bits in block 9\r\n   lf em 4x70 write -b 9 -d 0000\r\n   lf em 4x70 recover -b 9 --rnd <rnd_1> --frn <frn_1>\r\n   lf em 4x70 write -b 9 -d <key_block_9>\r\n3. Brute force the key bits in block 8\r\n   lf em 4x70 write -b 8 -d 0000\r\n   lf em 4x70 recover -b 8 --rnd <rnd_1> --frn <frn_1>\r\n   lf em 4x70 write -b 8 -d <key_block_8>\r\n4. Brute force the key bits in block 7\r\n   lf em 4x70 write -b 7 -d 0000)\r\n   lf em 4x70 recover -b 7 --rnd <rnd_1> --frn <frn_1>\r\n   lf em 4x70 write -b 7 -d <key_block_7>\r\n5. Recover potential values of the lower 48 bits of the key\r\n   lf em 4x70 recover --key <key_block_9><key_block_8><key_block_7> --rnd <rnd_1> --frn <frn_1>\r\n6. Verify which potential key is actually on the tag (using a different rnd/frn combination)\r\n   lf em 4x70 auth --rnd <rnd_2> --frn <frn_N>\r\n7. Print the validated key\r\n\r\nThis command simply requires the rnd/frn/grn from a single known-good authentication.\r\n\r\n\r\n\r\nusage:\r\n    lf em 4x70 autorecover [-h] --rnd <hex> --frn <hex> --grn <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --rnd <hex>                    Random 56-bit from known-good authentication\r\n    --frn <hex>                    F(RN) 28-bit as 4 hex bytes from known-good authentication\r\n    --grn <hex>                    G(RN) 20-bit as 3 hex bytes from known-good authentication\r\n\r\nexamples/notes:\r\n    lf em 4x70 autorecover --rnd 45F54ADA252AAC --frn 4866BB70 --grn 9BD180   (pm3 test key)\r\n    lf em 4x70 autorecover --rnd 3FFE1FB6CC513F --frn F355F1A0 --grn 609D60   (research paper key)\r\n    lf em 4x70 autorecover --rnd 7D5167003571F8 --frn 982DBCC0 --grn 36C0E0   (autorecovery test key)\r\n                                  \r\n\r\n\r\n\r\n=======================================================================================\r\nlf fdxb\r\n\r\n { FDX-B RFIDs...             }"
+    },
+    {
+      "command": "lf fdxb help",
+      "offline": true,
+      "description": "help             this help\r",
+      "help": "help             this help\r\ndemod            demodulate a FDX-B ISO11784/85 tag from the GraphBuffer"
+    },
+    {
+      "command": "lf fdxb demod",
+      "offline": true,
+      "description": "Try to find FDX-B preamble, if found decode / descramble data\r",
+      "help": "Try to find FDX-B preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf fdxb demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf fdxb demod"
+    },
+    {
+      "command": "lf fdxb reader",
+      "offline": false,
+      "description": "read a FDX-B animal tag\r",
+      "help": "read a FDX-B animal tag\r\nNote that the continuous mode is less verbose\r\n\r\nusage:\r\n    lf fdxb reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf fdxb reader -@              -> continuous reader mode"
+    },
+    {
+      "command": "lf fdxb clone",
+      "offline": false,
+      "description": "clone a FDX-B tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a FDX-B tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf fdxb clone [-ha] -c <dec> -n <dec> [--extended <hex>] [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -c, --country <dec>            country code\r\n    -n, --national <dec>           national code\r\n    --extended <hex>               extended data\r\n    -a, --animal                   optional - set animal bit\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf fdxb clone --country 999 --national 1337 --animal             -> encode for T55x7 tag, with animal bit\r\n    lf fdxb clone --country 999 --national 1337 --extended 016A      -> encode for T55x7 tag, with extended data\r\n    lf fdxb clone --country 999 --national 1337 --q5                 -> encode for Q5/T5555 tag\r\n    lf fdxb clone --country 999 --national 1337 --em                 -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf fdxb sim",
+      "offline": false,
+      "description": "Enables simulation of  FDX-B animal tag.\r",
+      "help": "Enables simulation of  FDX-B animal tag.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf fdxb sim [-ha] -c <dec> -n <dec> [--extended <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -c, --country <dec>            country code\r\n    -n, --national <dec>           national code\r\n    --extended <hex>               extended data\r\n    -a, --animal                   optional - set animal bit\r\n\r\nexamples/notes:\r\n    lf fdxb sim --country 999 --national 1337 --animal\r\n    lf fdxb sim --country 999 --national 1337 --extended 016A\r\n                                  \r\n\r\n\r\n\r\n=======================================================================================\r\nlf gallagher\r\n\r\n { GALLAGHER RFIDs...         }"
+    },
+    {
+      "command": "lf gallagher help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate an GALLAGHER tag from the GraphBuffer"
+    },
+    {
+      "command": "lf gallagher demod",
+      "offline": true,
+      "description": "Try to find GALLAGHER preamble, if found decode / descramble data\r",
+      "help": "Try to find GALLAGHER preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf gallagher demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf gallagher demod"
+    },
+    {
+      "command": "lf gallagher reader",
+      "offline": false,
+      "description": "read a GALLAGHER tag\r",
+      "help": "read a GALLAGHER tag\r\n\r\nusage:\r\n    lf gallagher reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf gallagher reader -@         -> continuous reader mode"
+    },
+    {
+      "command": "lf gallagher clone",
+      "offline": false,
+      "description": "clone a GALLAGHER tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a GALLAGHER tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf gallagher clone [-h] [-r <hex>] [--q5] [--em] [--rc <decimal>] [--fc <decimal>] [--cn <decimal>] [--il <decimal>]\r\n                   \r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw hex data. 12 bytes max\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n    --rc <decimal>                 Region code. 4 bits max\r\n    --fc <decimal>                 Facility code. 2 bytes max\r\n    --cn <decimal>                 Card number. 3 bytes max\r\n    --il <decimal>                 Issue level. 4 bits max\r\n\r\nexamples/notes:\r\n    lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32           -> encode for T55x7 tag\r\n    lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32 --q5      -> encode for Q5/T5555 tag\r\n    lf gallagher clone --raw 0FFD5461A9DA1346B2D1AC32 --em      -> encode for EM4305/4469\r\n    lf gallagher clone --rc 0 --fc 9876 --cn 1234 --il 1        -> encode for T55x7 tag from decoded data"
+    },
+    {
+      "command": "lf gallagher sim",
+      "offline": false,
+      "description": "Enables simulation of GALLAGHER card with specified card number.\r",
+      "help": "Enables simulation of GALLAGHER card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\n\r\nusage:\r\n    lf gallagher sim [-h] [-r <hex>] [--rc <decimal>] [--fc <decimal>] [--cn <decimal>] [--il <decimal>]\r\n                   \r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw hex data. 12 bytes max\r\n    --rc <decimal>                 Region code. 4 bits max\r\n    --fc <decimal>                 Facility code. 2 bytes max\r\n    --cn <decimal>                 Card number. 3 bytes max\r\n    --il <decimal>                 Issue level. 4 bits max\r\n\r\nexamples/notes:\r\n    lf gallagher sim --raw 0FFD5461A9DA1346B2D1AC32\r\n    lf gallagher sim --rc 0 --fc 9876 --cn 1234 --il 1\r\n\r\n\r\n\r\n=======================================================================================\r\nlf gproxii\r\n\r\n { Guardall Prox II RFIDs...  }"
+    },
+    {
+      "command": "lf gproxii help",
+      "offline": true,
+      "description": "help             this help\r",
+      "help": "help             this help\r\ndemod            demodulate a G Prox II tag from the GraphBuffer"
+    },
+    {
+      "command": "lf gproxii demod",
+      "offline": true,
+      "description": "Try to find Guardall Prox-II preamble, if found decode / descramble data\r",
+      "help": "Try to find Guardall Prox-II preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf gproxii demod [-h] [-r <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw bytes\r\n\r\nexamples/notes:\r\n    lf gproxii demod               -> use graphbuffer to decode\r\n    lf gproxii demod --raw fb8ee718ee3b8cc785c11b92        ->"
+    },
+    {
+      "command": "lf gproxii reader",
+      "offline": false,
+      "description": "read a Guardall tag\r",
+      "help": "read a Guardall tag\r\n\r\nusage:\r\n    lf gproxii reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf gproxii reader -@           -> continuous reader mode"
+    },
+    {
+      "command": "lf gproxii clone",
+      "offline": false,
+      "description": "Clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "Clone a Guardall tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\nThe facility-code is 8-bit and the card number is 20-bit.  Larger values are truncated.\r\nCurrently work only on 26 | 36 bit format\r\n\r\nusage:\r\n    lf gproxii clone [-h] --xor <dec> --fmt <dec> --fc <dec> --cn <dec> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --xor <dec>                    8-bit xor value (installation dependant)\r\n    --fmt <dec>                    format length 26|32|36|40\r\n    --fc <dec>                     8-bit value facility code\r\n    --cn <dec>                     16-bit value card number\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337            -> encode for T55x7 tag\r\n    lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337 --q5       -> encode for Q5/T5555 tag\r\n    lf gproxii clone --xor 141 --fmt 26 --fc 123 --cn 1337 --em       -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf gproxii sim",
+      "offline": false,
+      "description": "Enables simulation of Guardall card with specified card number.\r",
+      "help": "Enables simulation of Guardall card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\nThe facility-code is 8-bit and the card number is 16-bit.  Larger values are truncated.\r\nCurrently work only on 26 | 36 bit format\r\n\r\nusage:\r\n    lf gproxii sim [-h] --xor <dec> --fmt <dec> --fc <dec> --cn <dec>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --xor <dec>                    8-bit xor value (installation dependant)\r\n    --fmt <dec>                    format length 26|32|36|40\r\n    --fc <dec>                     8-bit value facility code\r\n    --cn <dec>                     16-bit value card number\r\n\r\nexamples/notes:\r\n    lf gproxii sim --xor 141 --fmt 26 --fc 123 --cn 1337\r\n                                  \r\n\r\n\r\n\r\n=======================================================================================\r\nlf hid\r\n\r\n { HID Prox RFIDs...          }"
+    },
+    {
+      "command": "lf hid help",
+      "offline": true,
+      "description": "help             this help\r",
+      "help": "help             this help\r\ndemod            demodulate HID Prox tag from the GraphBuffer"
+    },
+    {
+      "command": "lf hid demod",
+      "offline": true,
+      "description": "Try to find HID Prox preamble, if found decode / descramble data\r",
+      "help": "Try to find HID Prox preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf hid demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf hid demod"
+    },
+    {
+      "command": "lf hid reader",
+      "offline": false,
+      "description": "read a HID Prox tag\r",
+      "help": "read a HID Prox tag\r\n\r\nusage:\r\n    lf hid reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf hid reader -@               -> continuous reader mode"
+    },
+    {
+      "command": "lf hid clone",
+      "offline": false,
+      "description": "clone a HID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a HID Prox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\nTag must be on the antenna when issuing this command.\r\n\r\nusage:\r\n    lf hid clone [-h] [-w <format>] [--fc <dec>] [--cn <dec>] [-i <dec>] [-o <dec>] [-r <hex>] [--q5] [--em]\r\n                    [--bin <bin>] [--new <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -w, --wiegand <format>         see \u001b[33m`wiegand list`\u001b[0m for available formats\r\n    --fc <dec>                     facility code\r\n    --cn <dec>                     card number\r\n    -i <dec>                       issue level\r\n    -o, --oem <dec>                OEM code\r\n    -r, --raw <hex>                raw bytes\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n    --bin <bin>                    Binary string i.e 0001001001\r\n    --new <hex>                    new ASN.1 PACS hex from `wiegand encode --new`\r\n\r\nexamples/notes:\r\n    lf hid clone -r 2006ec0c86                           -> write raw value for T55x7 tag (HID 10301 26 bit)\r\n    lf hid clone --bin 10001111100000001010100011       -> write binary HID payload for T55x7 tag\r\n    lf hid clone --new 068F80A8C0                       -> write PACS-encoded HID payload for T55x7 tag\r\n    lf hid clone -r 2e0ec00c87                           -> write raw value for T55x7 tag (HID Corporate 35 bit)\r\n    lf hid clone -r 01f0760643c3                         -> write raw value for T55x7 tag (HID P10001 40 bit)\r\n    lf hid clone -r 01400076000c86                       -> write raw value for T55x7 tag (HID Corporate 48 bit)\r\n    lf hid clone -w H10301 --fc 118 --cn 1603            -> HID 10301 26 bit, encode for T55x7 tag\r\n    lf hid clone -w H10301 --fc 118 --cn 1603 --q5       -> HID 10301 26 bit, encode for Q5/T5555 tag\r\n    lf hid clone -w H10301 --fc 118 --cn 1603 --em       -> HID 10301 26 bit, encode for EM4305/4469"
+    },
+    {
+      "command": "lf hid sim",
+      "offline": false,
+      "description": "Enables simulation of HID card with card number.\r",
+      "help": "Enables simulation of HID card with card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf hid sim [-h] [-w <format>] [--fc <dec>] [--cn <dec>] [-i <dec>] [-o <dec>] [-r <hex>] [--bin <bin>]\r\n                    [--new <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -w, --wiegand <format>         see \u001b[33m`wiegand list`\u001b[0m for available formats\r\n    --fc <dec>                     facility code\r\n    --cn <dec>                     card number\r\n    -i <dec>                       issue level\r\n    -o, --oem <dec>                OEM code\r\n    -r, --raw <hex>                raw bytes\r\n    --bin <bin>                    Binary string i.e 0001001001\r\n    --new <hex>                    new ASN.1 PACS hex from `wiegand encode --new`\r\n\r\nexamples/notes:\r\n    lf hid sim -r 2006ec0c86                     -> HID 10301 26 bit\r\n    lf hid sim --bin 10001111100000001010100011 \r\n    lf hid sim --new 068F80A8C0                 \r\n    lf hid sim -r 2e0ec00c87                     -> HID Corporate 35 bit\r\n    lf hid sim -w H10301 --fc 118 --cn 1603      -> HID 10301 26 bit"
+    },
+    {
+      "command": "lf hid brute",
+      "offline": false,
+      "description": "Enables bruteforce of HID readers with specified facility code or card number. This is an attack against the reader.\r",
+      "help": "Enables bruteforce of HID readers with specified facility code or card number. This is an attack against the reader.\r\nIf the field being bruteforced is provided, it starts with it and goes up / down one step while maintaining other supplied values.\r\nIf the field being bruteforced is not provided, it will iterate through the full range while maintaining other supplied values.\r\n\r\nusage:\r\n    lf hid brute [-hv] -w <format> --field <fc|cn> [--fc <dec>] [--cn <dec>] [-i <dec>] [-o <dec>]\r\n                    [-d <dec>] [--up] [--down]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -v, --verbose                  verbose output\r\n    -w, --wiegand <format>         see \u001b[33m`wiegand list`\u001b[0m for available formats\r\n    --field <fc|cn>                field to bruteforce\r\n    --fc <dec>                     facility code\r\n    --cn <dec>                     card number\r\n    -i, --issue <dec>              issue level\r\n    -o, --oem <dec>                OEM code\r\n    -d, --delay <dec>              delay betweens attempts in ms. (def is 1000)\r\n    --up                           direction to increment field value. (def is both directions)\r\n    --down                         direction to decrement field value. (def is both directions)\r\n\r\nexamples/notes:\r\n    lf hid brute -w H10301 --field fc --fc 224 --cn 6278\r\n    lf hid brute -w H10301 --field cn --fc 21 -d 2000\r\n    lf hid brute -v -w H10301 --field cn --fc 21 --cn 200 -d 2000\r\n    lf hid brute -v -w H10301 --field fc --fc 21 --cn 200 -d 2000 --up"
+    },
+    {
+      "command": "lf hid watch",
+      "offline": false,
+      "description": "Enables HID compatible reader mode printing details.\r",
+      "help": "Enables HID compatible reader mode printing details.\r\nBy default, values are printed and logged until the button is pressed or another USB command is issued.\r\n\r\n\r\nusage:\r\n    lf hid watch [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf hid watch                  \r\n\r\n\r\n\r\n=======================================================================================\r\nlf hitag\r\n\r\n { Hitag CHIPs...             }"
+    },
+    {
+      "command": "lf hitag help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\nlist             List Hitag trace history\r\nhts              { Hitag S/8211 operations }\r\nhtu              { Hitag æ/8265 operations }\r\ntest             Perform self tests\r\nview             Display content from tag dump file\r\nlookup           Uses authentication trace to check for key in dictionary file"
+    },
+    {
+      "command": "lf hitag list",
+      "offline": true,
+      "description": "Alias of `trace list -t ht2` with selected protocol data to annotate trace buffer\r",
+      "help": "Alias of `trace list -t ht2` with selected protocol data to annotate trace buffer\r\nYou can load a trace from file (see `trace load -h`) or it be downloaded from device by default\r\nIt accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol\r\n\r\nusage:\r\n    lf hitag list [-h1crux] [--frame] [-f <fn>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1, --buffer                   use data from trace buffer\r\n    --frame                        show frame delay times\r\n    -c                             mark CRC bytes\r\n    -r                             show frame delay times relative to the previous transfer\r\n    -u                             display times in microseconds instead of clock cycles\r\n    -x                             show hexdump to convert to pcap(ng)\r\n                                   or to import into Wireshark using encapsulation type \"ISO 14443\"\r\n    -f, --file <fn>                filename of dictionary\r\n\r\nexamples/notes:\r\n    lf hitag list --frame          -> show frame delay times\r\n    lf hitag list -1               -> use trace buffer"
+    },
+    {
+      "command": "lf hitag info",
+      "offline": false,
+      "description": "Hitag 2 tag information\r",
+      "help": "Hitag 2 tag information\r\nThe configuration byte lives in page 3, which needs authentication.\r\nWithout a key the two factory defaults are tried.\r\n\r\nusage:\r\n    lf hitag info [-h] [-k <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -k, --key <hex>                key, 4 bytes for password mode, 6 bytes for crypto mode\r\n\r\nexamples/notes:\r\n    lf hitag info                 \r\n    lf hitag info -k 4D494B52               -> 4 bytes, password mode\r\n    lf hitag info -k 4F4E4D494B52           -> 6 bytes, crypto mode"
+    },
+    {
+      "command": "lf hitag reader",
+      "offline": false,
+      "description": "Act as a Hitag 2 reader.  Look for Hitag 2 tags until Enter or the pm3 button is pressed\r",
+      "help": "Act as a Hitag 2 reader.  Look for Hitag 2 tags until Enter or the pm3 button is pressed\r\n\r\n\r\nusage:\r\n    lf hitag reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             continuous reader mode\r\n\r\nexamples/notes:\r\n    lf hitag reader               \r\n    lf hitag reader -@             -> Continuous mode"
+    },
+    {
+      "command": "lf hitag test",
+      "offline": true,
+      "description": "Perform self tests of Hitag crypto engine\r",
+      "help": "Perform self tests of Hitag crypto engine\r\n\r\nusage:\r\n    lf hitag test [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf hitag test"
+    },
+    {
+      "command": "lf hitag dump",
+      "offline": false,
+      "description": "Read all Hitag 2 card memory and save to file\r",
+      "help": "Read all Hitag 2 card memory and save to file\r\nCrypto mode key format: ISK high + ISK low,  4F4E4D494B52 (ONMIKR)\r\nPassword mode, default key 4D494B52 (MIKR)\r\n\r\n\r\nusage:\r\n    lf hitag dump [-h] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>] [-f <fn>] [--ns]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --pwd                          password mode\r\n    --nrar <hex>                   nonce / answer reader, 8 hex bytes\r\n    --crypto                       crypto mode\r\n    -k, --key <hex>                key, 4 or 6 hex bytes\r\n    -f, --file <fn>                specify file name\r\n    --ns                           no save to file\r\n\r\nexamples/notes:\r\n    lf hitag dump --pwd                     -> use def pwd\r\n    lf hitag dump -k 4D494B52               -> pwd mode\r\n    lf hitag dump --crypto                  -> use def crypto\r\n    lf hitag dump -k 4F4E4D494B52           -> crypto mode\r\n    lf hitag dump --nrar 0102030411223344"
+    },
+    {
+      "command": "lf hitag read",
+      "offline": false,
+      "description": "Read Hitag memory. It support Hitag 2\r",
+      "help": "Read Hitag memory. It support Hitag 2\r\n\r\n  Password mode:\r\n    - default key 4D494B52 (MIKR)\r\n\r\n  Crypto mode: \r\n    - key format ISK high + ISK low\r\n    - default key 4F4E4D494B52 (ONMIKR)\r\n\r\n\r\nusage:\r\n    lf hitag read [-h2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -2, --ht2                      Hitag 2\r\n    --pwd                          password mode\r\n    --nrar <hex>                   nonce / answer writer, 8 hex bytes\r\n    --crypto                       crypto mode\r\n    -k, --key <hex>                key, 4 or 6 hex bytes\r\n\r\nexamples/notes:\r\n      lf hitag read --ht2 --pwd                        -> Hitag 2, pwd mode, def key\r\n      lf hitag read --ht2 -k 4D494B52                  -> Hitag 2, pwd mode\r\n      lf hitag read --ht2 --nrar 0102030411223344      -> Hitag 2, challenge mode\r\n      lf hitag read --ht2 --crypto                     -> Hitag 2, crypto mode, def key\r\n      lf hitag read --ht2 -k 4F4E4D494B52              -> Hitag 2, crypto mode"
+    },
+    {
+      "command": "lf hitag sniff",
+      "offline": false,
+      "description": "Sniff the communication between reader and tag\r",
+      "help": "Sniff the communication between reader and tag\r\nUse `lf hitag list` to view collected data.\r\n\r\nusage:\r\n    lf hitag sniff [-h] [-t <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -t, --threshold <dec>          edge detect threshold, 0 = default 32\r\n\r\nexamples/notes:\r\n     lf hitag sniff               \r\n     lf hitag sniff -t 20          -> lower edge detect threshold"
+    },
+    {
+      "command": "lf hitag view",
+      "offline": true,
+      "description": "Print a HITAG dump file (bin/eml/json)\r",
+      "help": "Print a HITAG dump file (bin/eml/json)\r\n\r\nusage:\r\n    lf hitag view [-hv] -f <fn>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                Specify a filename for dump file\r\n    -v, --verbose                  Verbose output\r\n\r\nexamples/notes:\r\n    lf hitag view -f lf-hitag-01020304-dump.bin"
+    },
+    {
+      "command": "lf hitag wrbl",
+      "offline": false,
+      "description": "Write a page in Hitag memory. It support Hitag 2\r",
+      "help": "Write a page in Hitag memory. It support Hitag 2\r\n  Password mode:\r\n    - default key 4D494B52 (MIKR)\r\n\r\n  Crypto mode: \r\n    - key format ISK high + ISK low\r\n    - default key 4F4E4D494B52 (ONMIKR)\r\n\r\n\r\nusage:\r\n    lf hitag wrbl [-h2] [--pwd] [--nrar <hex>] [--crypto] [-k <hex>] -p <dec> -d <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -2, --ht2                      Hitag 2\r\n    --pwd                          password mode\r\n    --nrar <hex>                   nonce / answer writer, 8 hex bytes\r\n    --crypto                       crypto mode\r\n    -k, --key <hex>                key, 4 or 6 hex bytes\r\n    -p, --page <dec>               page address to write to\r\n    -d, --data <hex>               data, 4 hex bytes\r\n\r\nexamples/notes:\r\n      lf hitag wrbl --ht2 -p 6 -d 01020304 --pwd                        -> Hitag 2, pwd mode, def key\r\n      lf hitag wrbl --ht2 -p 6 -d 01020304 -k 4D494B52                  -> Hitag 2, pwd mode\r\n      lf hitag wrbl --ht2 -p 6 -d 01020304 --nrar 0102030411223344      -> Hitag 2, challenge mode\r\n      lf hitag wrbl --ht2 -p 6 -d 01020304 --crypto                     -> Hitag 2, crypto mode, def key\r\n      lf hitag wrbl --ht2 -p 6 -d 01020304 -k 4F4E4D494B52              -> Hitag 2, crypto mode"
+    },
+    {
+      "command": "lf hitag restore",
+      "offline": false,
+      "description": "Write a Hitag 2 dump file back to a tag.\r",
+      "help": "Write a Hitag 2 dump file back to a tag.\r\nPages are written in dependency order: user pages first, then the key\r\nmaterial in pages 1 and 2, and the configuration in page 3 last - because\r\npage 3 is what switches the tag's mode, and pages 1 and 2 change the very\r\ncredential needed to write it.\r\nPage 0 holds the UID and is never written.\r\n\r\nusage:\r\n    lf hitag restore [-h] -f <fn> [-k <hex>] [--force]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                specify dump filename\r\n    -k, --key <hex>                key, 4 bytes for password mode, 6 bytes for crypto mode\r\n    --force                        write even if the configuration byte looks wrong\r\n\r\nexamples/notes:\r\n    lf hitag restore -f dump.bin -k 4D494B52\r\n    lf hitag restore -f dump.bin -k 4F4E4D494B52\r\n    lf hitag restore -f dump.bin                       -> try the factory defaults"
+    },
+    {
+      "command": "lf hitag eload",
+      "offline": false,
+      "description": "Loads hitag tag dump into emulator memory on device\r",
+      "help": "Loads hitag tag dump into emulator memory on device\r\n\r\nusage:\r\n    lf hitag eload [-h12sm] -f <fn>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                Specify dump filename\r\n    -1, --ht1                      Card type Hitag 1\r\n    -2, --ht2                      Card type Hitag 2\r\n    -s, --hts                      Card type Hitag S\r\n    -m, --htm                      Card type Hitag μ\r\n\r\nexamples/notes:\r\n    lf hitag eload -2 -f lf-hitag-11223344-dump.bin"
+    },
+    {
+      "command": "lf hitag eview",
+      "offline": false,
+      "description": "It displays emulator memory\r",
+      "help": "It displays emulator memory\r\n\r\nusage:\r\n    lf hitag eview [-hv12sm]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -v, --verbose                  Verbose output\r\n    -1, --ht1                      Card type Hitag 1\r\n    -2, --ht2                      Card type Hitag 2 (default)\r\n    -s, --hts                      Card type Hitag S\r\n    -m, --htm                      Card type Hitag μ\r\n\r\nexamples/notes:\r\n    lf hitag eview -2             \r\n    lf hitag eview -s"
+    },
+    {
+      "command": "lf hitag sim",
+      "offline": false,
+      "description": "Simulate Hitag transponder\r",
+      "help": "Simulate Hitag transponder\r\nYou need to `lf hitag eload` first\r\n\r\nusage:\r\n    lf hitag sim [-h12] [-t <dec>] [--twait <dec>] [--invert] [--noalt] [--hold] [--diag <dec>] [--sof <dec>]\r\n                    [--duty <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1, --ht1                      simulate Hitag 1\r\n    -2, --ht2                      simulate Hitag 2\r\n    -t, --threshold <dec>          edge detect threshold, 0 = auto (def: 0)\r\n    --twait <dec>                  tag response delay in T0, 0 = default 227\r\n    --invert                       invert load modulation polarity\r\n    --noalt                        answer every START_AUTH, not every second\r\n    --hold                         diagnostic: hold coil load on\r\n    --diag <dec>                   diagnostic flag bits, ORed into flags (32 = slope, now default)\r\n    --sof <dec>                    SOF bits in the tag answer (def: 6)\r\n    --duty <dec>                   carrier periods loaded per half bit, 1..16 (def: 16)\r\n\r\nexamples/notes:\r\n    lf hitag sim -2               \r\n    lf hitag sim -2 -t 20          -> set edge detect threshold to 20"
+    },
+    {
+      "command": "lf hitag cc",
+      "offline": false,
+      "description": "Check challenges, load a file with saved hitag crypto challenges and test them all.\r",
+      "help": "Check challenges, load a file with saved hitag crypto challenges and test them all.\r\nThe file should be 8 * 60 bytes long, the file extension defaults to `.cc` \r\n\r\nusage:\r\n    lf hitag cc [-h] -f <fn>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                filename to load ( w/o ext )\r\n\r\nexamples/notes:\r\n    lf hitag cc -f my_hitag_challenges"
+    },
+    {
+      "command": "lf hitag crack2",
+      "offline": false,
+      "description": "This command tries to recover 2048 bits of Hitag 2 crypto stream data from card.\r",
+      "help": "This command tries to recover 2048 bits of Hitag 2 crypto stream data from card.\r\nPut card on pm3 before running this command\r\n\r\n\r\nusage:\r\n    lf hitag crack2 [-h] [--nrar <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --nrar <hex>                   specify nonce / answer as 8 hex bytes\r\n\r\nexamples/notes:\r\n    lf hitag crack2 --nrar 73AA5A62EAB8529C"
+    },
+    {
+      "command": "lf hitag chk",
+      "offline": false,
+      "description": "Run dictionary key or password recovery against Hitag card.\r",
+      "help": "Run dictionary key or password recovery against Hitag card.\r\n\r\nusage:\r\n    lf hitag chk [-h] [-f <fn>] [--pwd] [--crypto]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                specify dictionary filename\r\n    --pwd                          password mode\r\n    --crypto                       crypto mode\r\n\r\nexamples/notes:\r\n    lf hitag chk                   -> checks for both pwd / crypto keys\r\n    lf hitag chk --crypto          -> use def dictionary\r\n    lf hitag chk --pwd -f my.dic   -> pwd mode, custom dictionary"
+    },
+    {
+      "command": "lf hitag lookup",
+      "offline": true,
+      "description": "This command take sniffed trace data and try to recovery a Hitag 2 crypto key.\r",
+      "help": "This command take sniffed trace data and try to recovery a Hitag 2 crypto key.\r\n You can either\r\n - verify that NR/AR matches a known crypto key\r\n - verify if NR/AR matches a known 6 byte crypto key in a dictionary\r\n\r\nusage:\r\n    lf hitag lookup [-h] [-f <fn>] [-k <hex>] -u <hex> [--nr <hex>] [--ar <hex>] [--nrar <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                specify dictionary filename\r\n    -k, --key <hex>                specify known cryptokey as 6 bytes\r\n    -u, --uid <hex>                specify UID as 4 hex bytes\r\n    --nr <hex>                     specify nonce as 4 hex bytes\r\n    --ar <hex>                     specify answer as 4 hex bytes\r\n    --nrar <hex>                   specify nonce / answer as 8 hex bytes\r\n\r\nexamples/notes:\r\n    lf hitag lookup --uid 11223344 --nr 73AA5A62 --ar EAB8529C -k 010203040506      -> check key\r\n    lf hitag lookup --uid 11223344 --nr 73AA5A62 --ar EAB8529C                      -> use def dictionary\r\n    lf hitag lookup --uid 11223344 --nr 73AA5A62 --ar EAB8529C -f my.dic            -> use custom dictionary\r\n    lf hitag lookup --uid 11223344 --nrar 73AA5A62EAB8529C"
+    },
+    {
+      "command": "lf hitag hts help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\nlist             List Hitag S trace history"
+    },
+    {
+      "command": "lf hitag hts list",
+      "offline": true,
+      "description": "Alias of `trace list -t hts` with selected protocol data to annotate trace buffer\r",
+      "help": "Alias of `trace list -t hts` with selected protocol data to annotate trace buffer\r\nYou can load a trace from file (see `trace load -h`) or it be downloaded from device by default\r\nIt accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol\r\n\r\nusage:\r\n    lf hitag hts list [-h1crux] [--frame] [-f <fn>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1, --buffer                   use data from trace buffer\r\n    --frame                        show frame delay times\r\n    -c                             mark CRC bytes\r\n    -r                             show frame delay times relative to the previous transfer\r\n    -u                             display times in microseconds instead of clock cycles\r\n    -x                             show hexdump to convert to pcap(ng)\r\n                                   or to import into Wireshark using encapsulation type \"ISO 14443\"\r\n    -f, --file <fn>                filename of dictionary\r\n\r\nexamples/notes:\r\n    lf hitag hts list --frame           -> show frame delay times\r\n    lf hitag hts list -1                -> use trace buffer"
+    },
+    {
+      "command": "lf hitag hts reader",
+      "offline": false,
+      "description": "Act as a Hitag S reader.  Look for Hitag S tags until Enter or the pm3 button is pressed\r",
+      "help": "Act as a Hitag S reader.  Look for Hitag S tags until Enter or the pm3 button is pressed\r\n\r\n\r\nusage:\r\n    lf hitag hts reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             continuous reader mode\r\n\r\nexamples/notes:\r\n    lf hitag hts reader           \r\n    lf hitag hts reader -@         -> Continuous mode"
+    },
+    {
+      "command": "lf hitag hts rdbl",
+      "offline": false,
+      "description": "Read Hitag S memory\r",
+      "help": "Read Hitag S memory\r\n  Response protocol modes:\r\n   0 - Standard 00110\r\n   1 - Advanced 11000\r\n   2 - Advanced 11001\r\n   3 - Fast Advanced 11010 (def)\r\n\r\n  Crypto mode: \r\n    - key format ISK high + ISK low\r\n    - default key 4F4E4D494B52 (ONMIKR)\r\n\r\n  8268/8310 password mode: \r\n    - default password BBDD3399\r\n\r\n\r\nusage:\r\n    lf hitag hts rdbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <0|1|2|3>] [-p <dec>] [-c <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -8, --82xx                     8268/8310 mode\r\n    --nrar <hex>                   nonce / answer writer, 8 hex bytes\r\n    --crypto                       crypto mode\r\n    -k, --key <hex>                pwd or key, 4 or 6 hex bytes\r\n    -m, --mode <0|1|2|3>           response protocol mode (def 3)\r\n    -p, --page <dec>               page address to read from\r\n    -c, --count <dec>              how many pages to read. '0' reads all pages up to the end page (def: 1)\r\n\r\nexamples/notes:\r\n      lf hitag hts rdbl -p 1                              -> Hitag S/8211, plain mode\r\n      lf hitag hts rdbl -p 1 --82xx -k BBDD3399           -> 8268/8310, password mode\r\n      lf hitag hts rdbl -p 1 --nrar 0102030411223344      -> Hitag S, challenge mode\r\n      lf hitag hts rdbl -p 1 --crypto                     -> Hitag S, crypto mode, def key\r\n      lf hitag hts rdbl -p 1 -k 4F4E4D494B52              -> Hitag S, crypto mode"
+    },
+    {
+      "command": "lf hitag hts dump",
+      "offline": false,
+      "description": "Read all Hitag S memory and save to file\r",
+      "help": "Read all Hitag S memory and save to file\r\n Crypto mode: \r\n    - key format ISK high + ISK low\r\n    - default key 4F4E4D494B52 (ONMIKR)\r\n\r\n  8268/8310 password mode: \r\n    - default password BBDD3399\r\n\r\n\r\nusage:\r\n    lf hitag hts dump [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] [-f <fn>] [--ns]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -8, --82xx                     8268/8310 mode\r\n    --nrar <hex>                   nonce / answer writer, 8 hex bytes\r\n    --crypto                       crypto mode\r\n    -k, --key <hex>                pwd or key, 4 or 6 hex bytes\r\n    -m, --mode <dec>               response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)\r\n    -f, --file <fn>                specify file name\r\n    --ns                           no save to file\r\n\r\nexamples/notes:\r\n    lf hitag hts dump --82xx                      -> use def pwd\r\n    lf hitag hts dump --82xx -k BBDD3399          -> pwd mode\r\n    lf hitag hts dump --crypto                    -> use def crypto\r\n    lf hitag hts dump -k 4F4E4D494B52             -> crypto mode\r\n    lf hitag hts dump --nrar 0102030411223344"
+    },
+    {
+      "command": "lf hitag hts restore",
+      "offline": false,
+      "description": "Restore a dump file onto Hitag S tag\r",
+      "help": "Restore a dump file onto Hitag S tag\r\n Crypto mode: \r\n    - key format ISK high + ISK low\r\n    - default key 4F4E4D494B52 (ONMIKR)\r\n\r\n  8268/8310 password mode: \r\n    - default password BBDD3399\r\n\r\n\r\nusage:\r\n    lf hitag hts restore [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] [-f <fn>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -8, --82xx                     8268/8310 mode\r\n    --nrar <hex>                   nonce / answer writer, 8 hex bytes\r\n    --crypto                       crypto mode\r\n    -k, --key <hex>                pwd or key, 4 or 6 hex bytes\r\n    -m, --mode <dec>               response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)\r\n    -f, --file <fn>                specify file name\r\n\r\nexamples/notes:\r\n    lf hitag hts restore -f myfile --82xx                      -> use def pwd\r\n    lf hitag hts restore -f myfile --82xx -k BBDD3399          -> pwd mode\r\n    lf hitag hts restore -f myfile --crypto                    -> use def crypto\r\n    lf hitag hts restore -f myfile -k 4F4E4D494B52             -> crypto mode\r\n    lf hitag hts restore -f myfile --nrar 0102030411223344"
+    },
+    {
+      "command": "lf hitag hts wrbl",
+      "offline": false,
+      "description": "Write a page in Hitag S memory.\r",
+      "help": "Write a page in Hitag S memory.\r\n  Crypto mode: \r\n    - key format ISK high + ISK low\r\n    - default key 4F4E4D494B52 (ONMIKR)\r\n\r\n  8268/8310 password mode: \r\n    - default password BBDD3399\r\n\r\n\r\nusage:\r\n    lf hitag hts wrbl [-h8] [--nrar <hex>] [--crypto] [-k <hex>] [-m <dec>] -p <dec> -d <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -8, --82xx                     8268/8310 mode\r\n    --nrar <hex>                   nonce / answer writer, 8 hex bytes\r\n    --crypto                       crypto mode\r\n    -k, --key <hex>                pwd or key, 4 or 6 hex bytes\r\n    -m, --mode <dec>               response protocol mode. 0 (Standard 00110), 1 (Advanced 11000), 2 (Advanced 11001), 3 (Fast Advanced 11010) (def: 3)\r\n    -p, --page <dec>               page address to write to\r\n    -d, --data <hex>               data, 4 hex bytes\r\n\r\nexamples/notes:\r\n      lf hitag hts wrbl -p 6 -d 01020304                              -> Hitag S/8211, plain mode\r\n      lf hitag hts wrbl -p 6 -d 01020304 --82xx                       -> use def pwd\r\n      lf hitag hts wrbl -p 6 -d 01020304 --82xx -k BBDD3399           -> 8268/8310, password mode\r\n      lf hitag hts wrbl -p 6 -d 01020304 --nrar 0102030411223344      -> Hitag S, challenge mode\r\n      lf hitag hts wrbl -p 6 -d 01020304 --crypto                     -> Hitag S, crypto mode, default key\r\n      lf hitag hts wrbl -p 6 -d 01020304 -k 4F4E4D494B52              -> Hitag S, crypto mode"
+    },
+    {
+      "command": "lf hitag hts sim",
+      "offline": false,
+      "description": "Simulate Hitag S transponder\r",
+      "help": "Simulate Hitag S transponder\r\nYou need to `lf hitag hts eload` first\r\n\r\nusage:\r\n    lf hitag hts sim [-h8] [-t <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -8, --82xx                     simulate 8268/8310\r\n    -t, --threshold <dec>          set edge detect threshold (def: 127)\r\n\r\nexamples/notes:\r\n    lf hitag hts sim              \r\n    lf hitag hts sim --82xx       \r\n    lf hitag hts sim -t 30         -> set threshold to 30\r\n\r\n\r\n\r\n=======================================================================================\r\nlf hitag htu\r\n\r\n { Hitag æ/8265 operations }"
+    },
+    {
+      "command": "lf hitag htu help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\nlist             List Hitag æ trace history"
+    },
+    {
+      "command": "lf hitag htu list",
+      "offline": true,
+      "description": "Alias of `trace list -t htu` with selected protocol data to annotate trace buffer\r",
+      "help": "Alias of `trace list -t htu` with selected protocol data to annotate trace buffer\r\nYou can load a trace from file (see `trace load -h`) or it be downloaded from device by default\r\nIt accepts all other arguments of `trace list`. Note that some might not be relevant for this specific protocol\r\n\r\nusage:\r\n    lf hitag htu list [-h1crux] [--frame] [-f <fn>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1, --buffer                   use data from trace buffer\r\n    --frame                        show frame delay times\r\n    -c                             mark CRC bytes\r\n    -r                             show frame delay times relative to the previous transfer\r\n    -u                             display times in microseconds instead of clock cycles\r\n    -x                             show hexdump to convert to pcap(ng)\r\n                                   or to import into Wireshark using encapsulation type \"ISO 14443\"\r\n    -f, --file <fn>                filename of dictionary\r\n\r\nexamples/notes:\r\n    lf hitag htu list --frame           -> show frame delay times\r\n    lf hitag htu list -1                -> use trace buffer"
+    },
+    {
+      "command": "lf hitag htu reader",
+      "offline": false,
+      "description": "Act as a Hitag æ reader. Look for Hitag æ tags until Enter or the pm3 button is pressed\r",
+      "help": "Act as a Hitag æ reader. Look for Hitag æ tags until Enter or the pm3 button is pressed\r\n\r\n\r\nusage:\r\n    lf hitag htu reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             continuous reader mode\r\n\r\nexamples/notes:\r\n    lf hitag htu reader           \r\n    lf hitag htu reader -@         -> Continuous mode"
+    },
+    {
+      "command": "lf hitag htu rdbl",
+      "offline": false,
+      "description": "Read Hitag æ memory.\r",
+      "help": "Read Hitag æ memory.\r\n\r\n  82xx password mode: \r\n    - default password 00000000\r\n\r\n\r\nusage:\r\n    lf hitag htu rdbl [-h8] [-k <hex>] [-p <dec>] [-c <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -8, --82xx                     82xx mode\r\n    -k, --key <hex>                pwd, 4 hex bytes\r\n    -p, --page <dec>               block address to read from (def: 0)\r\n    -c, --count <dec>              how many blocks to read. '0' reads all blocks (def: 1)\r\n\r\nexamples/notes:\r\n      lf hitag htu rdbl -p 1                         -> Hitag æ, plain mode\r\n      lf hitag htu rdbl -p 1 --82xx                  -> 82xx, password mode, def pass\r\n      lf hitag htu rdbl -p 1 --82xx -k 9AC4999C      -> 82xx, password mode"
+    },
+    {
+      "command": "lf hitag htu dump",
+      "offline": false,
+      "description": "Read all Hitag æ memory and save to file\r",
+      "help": "Read all Hitag æ memory and save to file\r\n  82xx password mode: \r\n    - default password 00000000\r\n\r\n\r\nusage:\r\n    lf hitag htu dump [-h8] [-k <hex>] [-f <fn>] [--ns]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -8, --82xx                     82xx mode\r\n    -k, --key <hex>                pwd, 4 hex bytes\r\n    -f, --file <fn>                specify file name\r\n    --ns                           no save to file\r\n\r\nexamples/notes:\r\n    lf hitag htu dump --82xx                   -> use def pwd\r\n    lf hitag htu dump --82xx -k 9AC4999C       -> pwd mode"
+    },
+    {
+      "command": "lf hitag htu wrbl",
+      "offline": false,
+      "description": "Write a block in Hitag æ memory.\r",
+      "help": "Write a block in Hitag æ memory.\r\n  82xx password mode: \r\n    - default password 00000000\r\n\r\n\r\nusage:\r\n    lf hitag htu wrbl [-h8] [-k <hex>] -p <dec> -d <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -8, --82xx                     82xx mode\r\n    -k, --key <hex>                pwd, 4 hex bytes\r\n    -p, --page <dec>               block address to write to\r\n    -d, --data <hex>               data, 4 hex bytes\r\n\r\nexamples/notes:\r\n      lf hitag htu wrbl -p 6 -d 01020304                         -> Hitag æ, plain mode\r\n      lf hitag htu wrbl -p 6 -d 01020304 --82xx                  -> use def pwd\r\n      lf hitag htu wrbl -p 6 -d 01020304 --82xx -k 9AC4999C      -> 82xx, password mode"
+    },
+    {
+      "command": "lf hitag htu sim",
+      "offline": false,
+      "description": "Simulate Hitag æ transponder\r",
+      "help": "Simulate Hitag æ transponder\r\nYou need to `lf hitag htu eload` first\r\n\r\nusage:\r\n    lf hitag htu sim [-h8] [-t <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -8, --82xx                     simulate 82xx\r\n    -t, --threshold <dec>          set edge detect threshold (def: 127)\r\n\r\nexamples/notes:\r\n    lf hitag htu sim              \r\n    lf hitag htu sim --82xx       \r\n    lf hitag htu sim -t 30         -> set threshold to 30\r\n\r\n\r\n\r\n=======================================================================================\r\nlf idteck\r\n\r\n { Idteck RFIDs...            }"
+    },
+    {
+      "command": "lf idteck help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate an Idteck tag from the GraphBuffer"
+    },
+    {
+      "command": "lf idteck demod",
+      "offline": true,
+      "description": "Try to find Idteck preamble, if found decode / descramble data\r",
+      "help": "Try to find Idteck preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf idteck demod [-h] [-r <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw bytes\r\n\r\nexamples/notes:\r\n    lf idteck demod               \r\n    lf idteck demod --raw 4944544B351FBE4B"
+    },
+    {
+      "command": "lf idteck reader",
+      "offline": false,
+      "description": "read a Idteck tag\r",
+      "help": "read a Idteck tag\r\n\r\nusage:\r\n    lf idteck reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf idteck reader -@            -> continuous reader mode"
+    },
+    {
+      "command": "lf idteck clone",
+      "offline": false,
+      "description": "clone a Idteck tag to T55x7 or Q5/T5555 tag\r",
+      "help": "clone a Idteck tag to T55x7 or Q5/T5555 tag\r\nTag must be on the antenna when issuing this command.\r\n\r\nusage:\r\n    lf idteck clone [-h] -r <hex> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw bytes\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf idteck clone --raw 4944544B351FBE4B"
+    },
+    {
+      "command": "lf idteck sim",
+      "offline": false,
+      "description": "Enables simulation of Idteck card.\r",
+      "help": "Enables simulation of Idteck card.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf idteck sim [-h] -r <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw bytes\r\n\r\nexamples/notes:\r\n    lf idteck sim --raw 4944544B351FBE4B\r\n\r\n\r\n\r\n=======================================================================================\r\nlf indala\r\n\r\n { Indala RFIDs...            }"
+    },
+    {
+      "command": "lf indala help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            Demodulate an Indala tag (PSK1) from the GraphBuffer\r\naltdemod         Alternative method to demodulate samples for Indala 64 bit UID (option '224' for 224 bit)"
+    },
+    {
+      "command": "lf indala brute",
+      "offline": false,
+      "description": "Enables bruteforce of INDALA readers with specified facility code.\r",
+      "help": "Enables bruteforce of INDALA readers with specified facility code.\r\nThis is a attack against reader. if cardnumber is given, it starts with it and goes up / down one step\r\nif cardnumber is not given, it starts with 1 and goes up to 65535\r\n\r\nusage:\r\n    lf indala brute [-hv] [--fc <dec>] [--cn <dec>] [-d <dec>] [--up] [--down] [--4041x]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -v, --verbose                  verbose output\r\n    --fc <dec>                     facility code\r\n    --cn <dec>                     card number to start with\r\n    -d, --delay <dec>              delay betweens attempts in ms. Default 1000ms\r\n    --up                           direction to increment card number. (default is both directions)\r\n    --down                         direction to decrement card number. (default is both directions)\r\n    --4041x                        specify Indala 4041X format\r\n\r\nexamples/notes:\r\n    lf indala brute --fc 224      \r\n    lf indala brute --fc 21 -d 2000\r\n    lf indala brute -v --fc 21 --cn 200 -d 2000\r\n    lf indala brute -v --fc 21 --cn 200 -d 2000 --up"
+    },
+    {
+      "command": "lf indala demod",
+      "offline": true,
+      "description": "Tries to PSK demodulate the graphbuffer as Indala\r",
+      "help": "Tries to PSK demodulate the graphbuffer as Indala\r\n\r\nusage:\r\n    lf indala demod [-hi] [--clock <dec>] [--maxerr <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --clock <dec>                  optional - set clock (as integer), if not set, autodetect.\r\n    --maxerr <dec>                 optional - set maximum allowed errors, default = 100\r\n    -i, --invert                   optional - invert output\r\n\r\nexamples/notes:\r\n    lf indala demod               \r\n    lf indala demod --clock 32           -> demod a Indala tag from the GraphBuffer using a clock of RF/32\r\n    lf indala demod --clock 32 -i         -> demod a Indala tag from the GraphBuffer using a clock of RF/32 and inverting data\r\n    lf indala demod --clock 64 -i --maxerror 0       -> demod a Indala tag from the GraphBuffer using a clock of RF/64, inverting data and allowing 0 demod errors"
+    },
+    {
+      "command": "lf indala altdemod",
+      "offline": true,
+      "description": "Tries to PSK demodulate the graphbuffer as Indala\r",
+      "help": "Tries to PSK demodulate the graphbuffer as Indala\r\nThis is uses a alternative way to demodulate and was used from the beginning in the Pm3 client.\r\nIt's now considered obsolete but remains because it has sometimes its advantages.\r\n\r\nusage:\r\n    lf indala altdemod [-hl]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -l, --long                     optional - demod as 224b long format\r\n\r\nexamples/notes:\r\n    lf indala altdemod            \r\n    lf indala altdemod --long          -> demod a Indala tag from the GraphBuffer as 224 bit long format"
+    },
+    {
+      "command": "lf indala reader",
+      "offline": false,
+      "description": "read a Indala tag\r",
+      "help": "read a Indala tag\r\n\r\nusage:\r\n    lf indala reader [-hi@] [--clock <dec>] [--maxerr <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --clock <dec>                  optional - set clock (as integer), if not set, autodetect.\r\n    --maxerr <dec>                 optional - set maximum allowed errors, default = 100\r\n    -i, --invert                   optional - invert output\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf indala reader -@            -> continuous reader mode"
+    },
+    {
+      "command": "lf indala clone",
+      "offline": false,
+      "description": "clone Indala UID to T55x7 or Q5/T5555 tag using different known formats\r",
+      "help": "clone Indala UID to T55x7 or Q5/T5555 tag using different known formats\r\n\r\nWarning, encoding with FC/CN doesn't always work\r\n\r\nusage:\r\n    lf indala clone [-h] [-r <hex>] [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--q5] [--em]\r\n                    [--4041x]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw bytes\r\n    --heden <decimal>              Card number for Heden 2L format\r\n    --fc <decimal>                 Facility code (26 bit H10301 format)\r\n    --cn <decimal>                 Card number (26 bit H10301 format)\r\n    --q5                           Optional - specify writing to Q5/T5555 tag\r\n    --em                           Optional - specify writing to EM4305/4469 tag\r\n    --4041x                        Optional - specify Indala 4041X format, must use with fc and cn\r\n\r\nexamples/notes:\r\n    lf indala clone --heden 888   \r\n    lf indala clone --fc 123 --cn 1337\r\n    lf indala clone --fc 123 --cn 1337 --4041x\r\n    lf indala clone -r a0000000a0002021\r\n    lf indala clone -r 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5"
+    },
+    {
+      "command": "lf indala sim",
+      "offline": false,
+      "description": "Enables simulation of Indala card with specified facility code and card number.\r",
+      "help": "Enables simulation of Indala card with specified facility code and card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf indala sim [-h] [-r <hex>] [--heden <decimal>] [--fc <decimal>] [--cn <decimal>] [--4041x]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw bytes\r\n    --heden <decimal>              Cardnumber for Heden 2L format\r\n    --fc <decimal>                 Facility code (26 bit H10301 format)\r\n    --cn <decimal>                 Card number (26 bit H10301 format)\r\n    --4041x                        Optional - specify Indala 4041X format, must use with fc and cn\r\n\r\nexamples/notes:\r\n    lf indala sim --heden 888     \r\n    lf indala sim --fc 123 --cn 1337 \r\n    lf indala sim --fc 123 --cn 1337 --4041x\r\n    lf indala sim --raw a0000000a0002021\r\n    lf indala sim --raw 80000001b23523a6c2e31eba3cbee4afb3c6ad1fcf649393928c14e5\r\n\r\n\r\n\r\n=======================================================================================\r\nlf io\r\n\r\n { ioProx RFIDs...            }"
+    },
+    {
+      "command": "lf io help",
+      "offline": true,
+      "description": "help             this help\r",
+      "help": "help             this help\r\ndemod            demodulate an ioProx tag from the GraphBuffer"
+    },
+    {
+      "command": "lf io demod",
+      "offline": true,
+      "description": "Try to find ioProx preamble, if found decode / descramble data\r",
+      "help": "Try to find ioProx preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf io demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf io demod"
+    },
+    {
+      "command": "lf io reader",
+      "offline": false,
+      "description": "read a ioProx tag\r",
+      "help": "read a ioProx tag\r\n\r\nusage:\r\n    lf io reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf io reader -@                -> continuous reader mode"
+    },
+    {
+      "command": "lf io clone",
+      "offline": false,
+      "description": "clone a ioProx card with specified facility-code and card number\r",
+      "help": "clone a ioProx card with specified facility-code and card number\r\nto a T55x7, Q5/T5555 or EM4305/4469 tag.\r\nTag must be on the antenna when issuing this command.\r\n\r\nusage:\r\n    lf io clone [-h] --vn <dec> --fc <dec> --cn <dec> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --vn <dec>                     8bit version\r\n    --fc <dec>                     8bit facility code\r\n    --cn <dec>                     16bit card number\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf io clone --vn 1 --fc 101 --cn 1337"
+    },
+    {
+      "command": "lf io sim",
+      "offline": false,
+      "description": "Enables simulation of ioProx card with specified facility-code and card number.\r",
+      "help": "Enables simulation of ioProx card with specified facility-code and card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf io sim [-h] --vn <dec> --fc <dec> --cn <dec>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --vn <dec>                     8bit version\r\n    --fc <dec>                     8bit facility code\r\n    --cn <dec>                     16bit card number\r\n\r\nexamples/notes:\r\n    lf io sim --vn 1 --fc 101 --cn 1337"
+    },
+    {
+      "command": "lf io watch",
+      "offline": false,
+      "description": "Enables ioProx compatible reader mode printing details.\r",
+      "help": "Enables ioProx compatible reader mode printing details.\r\nBy default, values are printed and logged until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf io watch [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf io watch                   \r\n\r\n\r\n\r\n=======================================================================================\r\nlf jablotron\r\n\r\n { Jablotron RFIDs...         }"
+    },
+    {
+      "command": "lf jablotron help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate an Jablotron tag from the GraphBuffer"
+    },
+    {
+      "command": "lf jablotron demod",
+      "offline": true,
+      "description": "Try to find Jablotron preamble, if found decode / descramble data\r",
+      "help": "Try to find Jablotron preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf jablotron demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf jablotron demod"
+    },
+    {
+      "command": "lf jablotron reader",
+      "offline": false,
+      "description": "read a jablotron tag\r",
+      "help": "read a jablotron tag\r\n\r\nusage:\r\n    lf jablotron reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf jablotron reader -@         -> continuous reader mode"
+    },
+    {
+      "command": "lf jablotron clone",
+      "offline": false,
+      "description": "clone a Jablotron tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a Jablotron tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\nTag must be on the antenna when issuing this command.\r\n\r\nusage:\r\n    lf jablotron clone [-h] --cn <hex> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <hex>                     Jablotron card ID - 5 bytes max\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf jablotron clone --cn 01b669           -> encode for T55x7 tag\r\n    lf jablotron clone --cn 01b669 --q5      -> encode for Q5/T5555 tag\r\n    lf jablotron clone --cn 01b669 --em      -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf jablotron sim",
+      "offline": false,
+      "description": "Enables simulation of jablotron card with specified card number.\r",
+      "help": "Enables simulation of jablotron card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf jablotron sim [-h] --cn <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <hex>                     Jablotron card ID - 5 bytes max\r\n\r\nexamples/notes:\r\n    lf jablotron sim --cn 01b669  \r\n\r\n\r\n\r\n=======================================================================================\r\nlf keri\r\n\r\n { KERI RFIDs...              }"
+    },
+    {
+      "command": "lf keri help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate an KERI tag from the GraphBuffer"
+    },
+    {
+      "command": "lf keri demod",
+      "offline": true,
+      "description": "Try to find KERI preamble, if found decode / descramble data\r",
+      "help": "Try to find KERI preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf keri demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf keri demod"
+    },
+    {
+      "command": "lf keri reader",
+      "offline": false,
+      "description": "read a keri tag\r",
+      "help": "read a keri tag\r\n\r\nusage:\r\n    lf keri reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf keri reader -@              -> continuous reader mode"
+    },
+    {
+      "command": "lf keri clone",
+      "offline": false,
+      "description": "clone a KERI tag to a T55x7, Q5/T5555 or EM4305/4469 tag\r",
+      "help": "clone a KERI tag to a T55x7, Q5/T5555 or EM4305/4469 tag\r\n\r\nusage:\r\n    lf keri clone [-h] [-t <m|i>] [--fc <dec>] --cn <dec> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -t, --type <m|i>               Type m - MS, i - Internal ID\r\n    --fc <dec>                     Facility Code\r\n    --cn <dec>                     KERI card ID\r\n    --q5                           specify writing to Q5/T5555 tag\r\n    --em                           specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf keri clone -t i --cn 12345              -> Internal ID\r\n    lf keri clone -t m --fc 6 --cn 12345       -> MS ID"
+    },
+    {
+      "command": "lf keri sim",
+      "offline": false,
+      "description": "Enables simulation of KERI card with internal ID.\r",
+      "help": "Enables simulation of KERI card with internal ID.\r\nYou supply a KERI card id and it will converted to a KERI internal ID.\r\n\r\nusage:\r\n    lf keri sim [-h] --id <dec>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --id <dec>                     KERI card ID\r\n\r\nexamples/notes:\r\n    lf keri sim --cn 112233       \r\n\r\n\r\n\r\n=======================================================================================\r\nlf motorola\r\n\r\n { Motorola Flexpass RFIDs... }"
+    },
+    {
+      "command": "lf motorola help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate an MOTOROLA tag from the GraphBuffer"
+    },
+    {
+      "command": "lf motorola demod",
+      "offline": true,
+      "description": "Try to find Motorola Flexpass preamble, if found decode / descramble data\r",
+      "help": "Try to find Motorola Flexpass preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf motorola demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf motorola demod"
+    },
+    {
+      "command": "lf motorola reader",
+      "offline": false,
+      "description": "read a Motorola Flexpass tag\r",
+      "help": "read a Motorola Flexpass tag\r\n\r\nusage:\r\n    lf motorola reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf motorola reader -@          -> continuous reader mode"
+    },
+    {
+      "command": "lf motorola clone",
+      "offline": false,
+      "description": "clone Motorola UID to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone Motorola UID to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\ndefaults to 64 bit format\r\n\r\nusage:\r\n    lf motorola clone [-h] -r <hex> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw hex bytes. 8 bytes\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf motorola clone --raw a0000000a0002021            -> encode for T55x7 tag\r\n    lf motorola clone --raw a0000000a0002021 --q5       -> encode for Q5/T5555 tag\r\n    lf motorola clone --raw a0000000a0002021 --em       -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf motorola sim",
+      "offline": false,
+      "description": "Enables simulation of Motorola card with specified card number.\r",
+      "help": "Enables simulation of Motorola card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf motorola sim [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf motorola sim               \r\n\r\n\r\n\r\n=======================================================================================\r\nlf nedap\r\n\r\n { Nedap RFIDs...             }"
+    },
+    {
+      "command": "lf nedap help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate Nedap tag from the GraphBuffer"
+    },
+    {
+      "command": "lf nedap demod",
+      "offline": true,
+      "description": "Try to find Nedap preamble, if found decode / descramble data\r",
+      "help": "Try to find Nedap preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf nedap demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf nedap demod"
+    },
+    {
+      "command": "lf nedap reader",
+      "offline": false,
+      "description": "read a Nedap tag\r",
+      "help": "read a Nedap tag\r\n\r\nusage:\r\n    lf nedap reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf nedap reader -@             -> continuous reader mode"
+    },
+    {
+      "command": "lf nedap clone",
+      "offline": false,
+      "description": "clone a Nedap tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a Nedap tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf nedap clone [-hl] [--st <dec>] --cc <dec> --id <dec> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --st <dec>                     optional - sub type (default 5)\r\n    --cc <dec>                     customer code (0-4095)\r\n    --id <dec>                     ID (0-99999)\r\n    -l, --long                     optional - long (128), default to short (64)\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf nedap clone --st 1 --cc 101 --id 1337"
+    },
+    {
+      "command": "lf nedap sim",
+      "offline": false,
+      "description": "Enables simulation of NEDAP card with specified card number.\r",
+      "help": "Enables simulation of NEDAP card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf nedap sim [-hl] [--st <dec>] --cc <dec> --id <dec>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --st <dec>                     optional - sub type (default 5)\r\n    --cc <dec>                     customer code (0-4095)\r\n    --id <dec>                     ID (0-99999)\r\n    -l, --long                     optional - long (128), default to short (64)\r\n\r\nexamples/notes:\r\n    lf nedap sim --st 1 --cc 101 --id 1337\r\n\r\n\r\n\r\n=======================================================================================\r\nlf nexwatch\r\n\r\n { NexWatch RFIDs...          }"
+    },
+    {
+      "command": "lf nexwatch help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate a NexWatch tag (nexkey, quadrakey) from the GraphBuffer"
+    },
+    {
+      "command": "lf nexwatch demod",
+      "offline": true,
+      "description": "Try to find Nexwatch preamble, if found decode / descramble data\r",
+      "help": "Try to find Nexwatch preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf nexwatch demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf nexwatch demod"
+    },
+    {
+      "command": "lf nexwatch reader",
+      "offline": false,
+      "description": "read a Nexwatch tag\r",
+      "help": "read a Nexwatch tag\r\n\r\nusage:\r\n    lf nexwatch reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf nexwatch reader -@          -> continuous reader mode"
+    },
+    {
+      "command": "lf nexwatch clone",
+      "offline": false,
+      "description": "clone a Nexwatch tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a Nexwatch tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\nYou can use raw hex values or create a credential based on id, mode\r\nand type of credential (Nexkey / Quadrakey / Russian)\r\n\r\nusage:\r\n    lf nexwatch clone [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc] [--q5] [--em] [--magic <hex>] [--psk2]\r\n                   \r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw hex data. 12 bytes\r\n    --cn <dec>                     card id\r\n    -m, --mode <dec>               mode (decimal) (0-15, defaults to 1)\r\n    --nc                           Nexkey credential\r\n    --qc                           Quadrakey credential\r\n    --hc                           Honeywell credential\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n    --magic <hex>                  optional - magic hex data. 1 byte\r\n    --psk2                         optional - specify writing a tag in psk2 modulation\r\n\r\nexamples/notes:\r\n    lf nexwatch clone --raw 5600000000213C9F8F150C00\r\n    lf nexwatch clone --cn 521512301 -m 1 --nc         -> Nexkey credential\r\n    lf nexwatch clone --cn 521512301 -m 1 --qc         -> Quadrakey credential\r\n    lf nexwatch clone --cn 521512301 -m 1 --hc         -> Honeywell credential"
+    },
+    {
+      "command": "lf nexwatch sim",
+      "offline": false,
+      "description": "Enables simulation of secura card with specified card number.\r",
+      "help": "Enables simulation of secura card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\nYou can use raw hex values or create a credential based on id, mode\r\nand type of credential (Nexkey/Quadrakey)\r\n\r\nusage:\r\n    lf nexwatch sim [-h] [-r <hex>] [--cn <dec>] [-m <dec>] [--nc] [--qc] [--hc] [--magic <hex>] [--psk2]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw hex data. 12 bytes\r\n    --cn <dec>                     card id\r\n    -m, --mode <dec>               mode (decimal) (0-15, defaults to 1)\r\n    --nc                           Nexkey credential\r\n    --qc                           Quadrakey credential\r\n    --hc                           Honeywell credential\r\n    --magic <hex>                  optional - magic hex data. 1 byte\r\n    --psk2                         optional - specify writing a tag in psk2 modulation\r\n\r\nexamples/notes:\r\n    lf nexwatch sim --raw 5600000000213C9F8F150C00\r\n    lf nexwatch sim --cn 521512301 -m 1 --nc         -> Nexkey credential\r\n    lf nexwatch sim --cn 521512301 -m 1 --qc         -> Quadrakey credential\r\n    lf nexwatch sim --cn 521512301 -m 1 --hc         -> Honeywell credential\r\n                                                    \r\n\r\n\r\n\r\n=======================================================================================\r\nlf noralsy\r\n\r\n { Noralsy RFIDs...           }"
+    },
+    {
+      "command": "lf noralsy help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate an Noralsy tag from the GraphBuffer"
+    },
+    {
+      "command": "lf noralsy demod",
+      "offline": true,
+      "description": "Try to find Noralsy preamble, if found decode / descramble data\r",
+      "help": "Try to find Noralsy preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf noralsy demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf noralsy demod"
+    },
+    {
+      "command": "lf noralsy reader",
+      "offline": false,
+      "description": "read a Noralsy tag\r",
+      "help": "read a Noralsy tag\r\n\r\nusage:\r\n    lf noralsy reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf noralsy reader -@           -> continuous reader mode"
+    },
+    {
+      "command": "lf noralsy clone",
+      "offline": false,
+      "description": "clone a Noralsy tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a Noralsy tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf noralsy clone [-h] --cn <dec> [-y <dec>] [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <dec>                     Noralsy card ID\r\n    -y, --year <dec>               tag allocation year\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf noralsy clone --cn 112233                -> encode for T55x7 tag\r\n    lf noralsy clone --cn 112233 --q5           -> encode for Q5/T5555 tag\r\n    lf noralsy clone --cn 112233 --em           -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf noralsy sim",
+      "offline": false,
+      "description": "Enables simulation of Noralsy card with specified card number.\r",
+      "help": "Enables simulation of Noralsy card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\n\r\nusage:\r\n    lf noralsy sim [-h] --cn <dec> [-y <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <dec>                     Noralsy card ID\r\n    -y, --year <dec>               tag allocation year\r\n\r\nexamples/notes:\r\n    lf noralsy sim --cn 1337      \r\n    lf noralsy sim --cn 1337 --year 2010\r\n\r\n\r\n\r\n=======================================================================================\r\nlf pac\r\n\r\n { PAC/Stanley RFIDs...       }"
+    },
+    {
+      "command": "lf pac help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate a PAC tag from the GraphBuffer"
+    },
+    {
+      "command": "lf pac demod",
+      "offline": true,
+      "description": "Try to find PAC/Stanley preamble, if found decode / descramble data\r",
+      "help": "Try to find PAC/Stanley preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf pac demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf pac demod"
+    },
+    {
+      "command": "lf pac reader",
+      "offline": false,
+      "description": "read a PAC/Stanley tag\r",
+      "help": "read a PAC/Stanley tag\r\n\r\nusage:\r\n    lf pac reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf pac reader -@               -> continuous reader mode"
+    },
+    {
+      "command": "lf pac clone",
+      "offline": false,
+      "description": "clone a PAC/Stanley tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a PAC/Stanley tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf pac clone [-h] [--cn <dec>] [-r <hex>] [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <dec>                     8 byte PAC/Stanley card ID\r\n    -r, --raw <hex>                raw hex data. 16 bytes max\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf pac clone --cn CD4F5552                -> encode for T55x7 tag\r\n    lf pac clone --cn CD4F5552 --q5           -> encode for Q5/T5555 tag\r\n    lf pac clone --cn CD4F5552 --em           -> encode for EM4305/4469\r\n    lf pac clone --raw FF2049906D8511C593155B56D5B2649F      -> encode for T55x7 tag, raw mode"
+    },
+    {
+      "command": "lf pac sim",
+      "offline": false,
+      "description": "Enables simulation of PAC/Stanley card with specified card number.\r",
+      "help": "Enables simulation of PAC/Stanley card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\nThe card ID is 8 byte number. Larger values are truncated.\r\n\r\nusage:\r\n    lf pac sim [-h] [--cn <dec>] [-r <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <dec>                     8 byte PAC/Stanley card ID\r\n    -r, --raw <hex>                raw hex data. 16 bytes max\r\n\r\nexamples/notes:\r\n    lf pac sim --cn CD4F5552      \r\n    lf pac sim --raw FF2049906D8511C593155B56D5B2649F\r\n\r\n\r\n\r\n=======================================================================================\r\nlf paradox\r\n\r\n { Paradox RFIDs...           }"
+    },
+    {
+      "command": "lf paradox help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate a Paradox FSK tag from the GraphBuffer"
+    },
+    {
+      "command": "lf paradox demod",
+      "offline": true,
+      "description": "Try to find Paradox preamble, if found decode / descramble data\r",
+      "help": "Try to find Paradox preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf paradox demod [-h] [--old]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --old                          optional - Display previous checksum version\r\n\r\nexamples/notes:\r\n    lf paradox demod --old         -> Display previous checksum version"
+    },
+    {
+      "command": "lf paradox reader",
+      "offline": false,
+      "description": "read a Paradox tag\r",
+      "help": "read a Paradox tag\r\n\r\nusage:\r\n    lf paradox reader [-h@] [--old]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n    --old                          optional - Display previous checksum version\r\n\r\nexamples/notes:\r\n    lf paradox reader -@           -> continuous reader mode\r\n    lf paradox reader --old        -> Display previous checksum version"
+    },
+    {
+      "command": "lf paradox clone",
+      "offline": false,
+      "description": "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a paradox tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf paradox clone [-h] [-r <hex>] [--fc <dec>] [--cn <dec>] [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw hex data. 12 bytes max\r\n    --fc <dec>                     facility code\r\n    --cn <dec>                     card number\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf paradox clone --fc 96 --cn 40426              -> encode for T55x7 tag with fc and cn\r\n    lf paradox clone --raw 0f55555695596a6a9999a59a              -> encode for T55x7 tag\r\n    lf paradox clone --raw 0f55555695596a6a9999a59a --q5         -> encode for Q5/T5555 tag\r\n    lf paradox clone --raw 0f55555695596a6a9999a59a --em         -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf paradox sim",
+      "offline": false,
+      "description": "Enables simulation of paradox card with specified card number.\r",
+      "help": "Enables simulation of paradox card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf paradox sim [-h] [-r <hex>] [--fc <dec>] [--cn <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw hex data. 12 bytes\r\n    --fc <dec>                     facility code\r\n    --cn <dec>                     card number\r\n\r\nexamples/notes:\r\n    lf paradox sim --raw 0f55555695596a6a9999a59a                -> simulate tag\r\n    lf paradox sim --fc 96 --cn 40426                          -> simulate tag with fc and cn\r\n                                                              \r\n\r\n\r\n\r\n=======================================================================================\r\nlf pcf7931\r\n\r\n { PCF7931 CHIPs...           }"
+    },
+    {
+      "command": "lf pcf7931 help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\nconfig           Configure the password, the tags initialization delay and time offsets (optional)"
+    },
+    {
+      "command": "lf pcf7931 reader",
+      "offline": false,
+      "description": "read a PCF7931 tag\r",
+      "help": "read a PCF7931 tag\r\n\r\nusage:\r\n    lf pcf7931 reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf pcf7931 reader -@           -> continuous reader mode"
+    },
+    {
+      "command": "lf pcf7931 write",
+      "offline": false,
+      "description": "This command tries to write a PCF7931 tag.\r",
+      "help": "This command tries to write a PCF7931 tag.\r\n\r\nusage:\r\n    lf pcf7931 write [-h] -b <dec> -i <dec> -d <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -b, --blk <dec>                [0-7] block number\r\n    -i, --idx <dec>                [0-15] index of byte inside block\r\n    -d, --data <hex>               one byte to be written\r\n\r\nexamples/notes:\r\n    lf pcf7931 write --blk 2 --idx 1 -d FF       -> Write 0xFF to block 2, index 1"
+    },
+    {
+      "command": "lf pcf7931 config",
+      "offline": true,
+      "description": "This command tries to set the configuration used with PCF7931 commands\r",
+      "help": "This command tries to set the configuration used with PCF7931 commands\r\nThe time offsets could be useful to correct slew rate generated by the antenna\r\nCaling without some parameter will print the current configuration.\r\n\r\nusage:\r\n    lf pcf7931 config [-hr] [-p <hex>] [-d <dec>] [--lw <dec>] [--lp <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --reset                    Reset configuration to default values\r\n    -p, --pwd <hex>                Password, 7bytes, LSB-order\r\n    -d, --delay <dec>              Tag initialization delay (in us)\r\n    --lw <dec>                     offset, low pulses width (in us), optional!\r\n    --lp <dec>                     offset, low pulses position (in us), optional!\r\n\r\nexamples/notes:\r\n    lf pcf7931 config --reset     \r\n    lf pcf7931 config --pwd 11223344556677 -d 20000\r\n    lf pcf7931 config --pwd 11223344556677 -d 17500 --lw -10 --lp 30\r\n\r\n\r\n\r\n=======================================================================================\r\nlf presco\r\n\r\n { Presco RFIDs...            }"
+    },
+    {
+      "command": "lf presco help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate Presco tag from the GraphBuffer"
+    },
+    {
+      "command": "lf presco demod",
+      "offline": true,
+      "description": "Try to find presco preamble, if found decode / descramble data\r",
+      "help": "Try to find presco preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf presco demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf presco demod"
+    },
+    {
+      "command": "lf presco reader",
+      "offline": false,
+      "description": "read a presco tag\r",
+      "help": "read a presco tag\r\n\r\nusage:\r\n    lf presco reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf presco reader -@            -> continuous reader mode"
+    },
+    {
+      "command": "lf presco clone",
+      "offline": false,
+      "description": "clone a presco tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a presco tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf presco clone [-h] [-c <hex>] [-d <digits>] [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -c <hex>                       8 digit hex card number\r\n    -d <digits>                    9 digit presco card ID\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf presco clone -d 018363467                -> encode for T55x7 tag\r\n    lf presco clone -d 018363467 --q5           -> encode for Q5/T5555 tag\r\n    lf presco clone -d 018363467 --em           -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf presco sim",
+      "offline": false,
+      "description": "Enables simulation of presco card with specified card number.\r",
+      "help": "Enables simulation of presco card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\nPer presco format, the card number is 9 digit number and can contain *# chars. Larger values are truncated.\r\n\r\nusage:\r\n    lf presco sim [-h] [-c <hex>] [-d <digits>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -c <hex>                       8 digit hex card number\r\n    -d <digits>                    9 digit presco card ID\r\n\r\nexamples/notes:\r\n    lf presco sim -d 018363467    \r\n\r\n\r\n\r\n=======================================================================================\r\nlf pyramid\r\n\r\n { Farpointe/Pyramid RFIDs... }"
+    },
+    {
+      "command": "lf pyramid help",
+      "offline": true,
+      "description": "help             this help\r",
+      "help": "help             this help\r\ndemod            demodulate a Pyramid FSK tag from the GraphBuffer"
+    },
+    {
+      "command": "lf pyramid demod",
+      "offline": true,
+      "description": "Try to find Farpoint/Pyramid preamble, if found decode / descramble data\r",
+      "help": "Try to find Farpoint/Pyramid preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf pyramid demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf pyramid demod"
+    },
+    {
+      "command": "lf pyramid reader",
+      "offline": false,
+      "description": "read a Farpointe/Pyramid tag\r",
+      "help": "read a Farpointe/Pyramid tag\r\n\r\nusage:\r\n    lf pyramid reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf pyramid reader -@           -> continuous reader mode"
+    },
+    {
+      "command": "lf pyramid clone",
+      "offline": false,
+      "description": "clone a Farpointe/Pyramid tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a Farpointe/Pyramid tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\nThe facility-code is 8-bit and the card number is 16-bit. Larger values are truncated.\r\nCurrently only works on 26bit\r\n\r\nusage:\r\n    lf pyramid clone [-h] [--fc <dec>] [--cn <dec>] [--q5] [--em] [-r <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --fc <dec>                     8-bit value facility code\r\n    --cn <dec>                     16-bit value card number\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n    -r, --raw <hex>                raw hex data. 16 bytes\r\n\r\nexamples/notes:\r\n    lf pyramid clone --fc 123 --cn 11223            -> encode for T55x7 tag\r\n    lf pyramid clone --raw 0001010101010101010440013223921c      -> idem, raw mode\r\n    lf pyramid clone --fc 123 --cn 11223 --q5       -> encode for Q5/T5555 tag\r\n    lf pyramid clone --fc 123 --cn 11223 --em       -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf pyramid sim",
+      "offline": false,
+      "description": "Enables simulation of Farpointe/Pyramid card with specified card number.\r",
+      "help": "Enables simulation of Farpointe/Pyramid card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\nThe facility-code is 8-bit and the card number is 16-bit. Larger values are truncated.\r\nCurrently work only on 26bit\r\n\r\nusage:\r\n    lf pyramid sim [-h] [--fc <dec>] [--cn <dec>] [-r <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --fc <dec>                     8-bit value facility code\r\n    --cn <dec>                     16-bit value card number\r\n    -r, --raw <hex>                raw hex data. 16 bytes\r\n\r\nexamples/notes:\r\n    lf pyramid sim --fc 123 --cn 1337\r\n    lf pyramid sim --raw 0001010101010101010440013223921c\r\n\r\n\r\n\r\n=======================================================================================\r\nlf securakey\r\n\r\n { Securakey RFIDs...         }"
+    },
+    {
+      "command": "lf securakey help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate an Securakey tag from the GraphBuffer"
+    },
+    {
+      "command": "lf securakey demod",
+      "offline": true,
+      "description": "Try to find Securakey preamble, if found decode / descramble data\r",
+      "help": "Try to find Securakey preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf securakey demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf securakey demod"
+    },
+    {
+      "command": "lf securakey reader",
+      "offline": false,
+      "description": "read a Securakey tag\r",
+      "help": "read a Securakey tag\r\n\r\nusage:\r\n    lf securakey reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf securakey reader -@         -> continuous reader mode"
+    },
+    {
+      "command": "lf securakey clone",
+      "offline": false,
+      "description": "clone a Securakey tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a Securakey tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf securakey clone [-h] -r <hex> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw hex data. 12 bytes\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf securakey clone --raw 7FCB400001ADEA5344300000           -> encode for T55x7 tag\r\n    lf securakey clone --raw 7FCB400001ADEA5344300000 --q5      -> encode for Q5/T5555 tag\r\n    lf securakey clone --raw 7FCB400001ADEA5344300000 --em      -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf securakey sim",
+      "offline": false,
+      "description": "Enables simulation of secura card with specified card number.\r",
+      "help": "Enables simulation of secura card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\nusage:\r\n    lf securakey sim [-h] [-r <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                 raw hex data. 12 bytes\r\n\r\nexamples/notes:\r\n    lf securakey sim --raw 7FCB400001ADEA5344300000\r\n\r\n\r\n\r\n=======================================================================================\r\nlf ti\r\n\r\n { TI CHIPs...                }"
+    },
+    {
+      "command": "lf ti help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            Demodulate raw bits for TI LF tag from the GraphBuffer"
+    },
+    {
+      "command": "lf ti demod",
+      "offline": true,
+      "description": "Try to find TI preamble, if found decode / descramble data\r",
+      "help": "Try to find TI preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf ti demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf ti demod"
+    },
+    {
+      "command": "lf ti reader",
+      "offline": false,
+      "description": "read a TI tag\r",
+      "help": "read a TI tag\r\n\r\nusage:\r\n    lf ti reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf ti reader -@                -> continuous reader mode"
+    },
+    {
+      "command": "lf ti write",
+      "offline": false,
+      "description": "write to a r/w TI tag.\r",
+      "help": "write to a r/w TI tag.\r\n\r\nusage:\r\n    lf ti write [-h] -r <hex> [--crc <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -r, --raw <hex>                raw hex data. 8 bytes max\r\n    --crc <hex>                    optional - crc\r\n\r\nexamples/notes:\r\n    lf ti write --raw 1122334455667788\r\n    lf ti write --raw 1122334455667788 --crc 1122\r\n                                  \r\n\r\n\r\n\r\n=======================================================================================\r\nlf t55xx\r\n\r\n { T55xx CHIPs...             }"
+    },
+    {
+      "command": "lf t55xx help",
+      "offline": true,
+      "description": "-----------      ------------------------------- notice ---------------------------------\r",
+      "help": "-----------      ------------------------------- notice ---------------------------------\r\n                 Always run `lf t55xx detect` first whenever a new card is placed\r\n                 on the Proxmark3 or the config block changed.\r\n                 \r\nhelp             This help\r\n-----------      ----------------------------- operations -------------------------------\r\nconfig           Set/Get T55XX configuration (modulation, inverted, offset, rate)\r\ndetect           Try detecting the tag modulation from reading the configuration block\r\ninfo             Show T55x7 configuration data (page 0/ blk 0)\r\ntrace            Show T55x7 traceability data (page 1/ blk 0-1)\r\nview             Display content from tag dump file\r\n-----------      ------------------------------ recovery --------------------------------\r\nsniff            Attempt to recover T55xx commands from sample buffer"
+    },
+    {
+      "command": "lf t55xx clonehelp",
+      "offline": false,
+      "description": "Display a list of available commands for cloning specific techs on T5xx tags\r",
+      "help": "Display a list of available commands for cloning specific techs on T5xx tags\r\n\r\nusage:\r\n    lf t55xx clonehelp [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf t55xx clonehelp"
+    },
+    {
+      "command": "lf t55xx config",
+      "offline": true,
+      "description": "Set/Get T55XX configuration of the pm3 client. Like modulation, inverted, offset, rate etc.\r",
+      "help": "Set/Get T55XX configuration of the pm3 client. Like modulation, inverted, offset, rate etc.\r\nOffset is start position to decode data.\r\n\r\nusage:\r\n    lf t55xx config [-hi] [--FSK] [--FSK1] [--FSK1A] [--FSK2] [--FSK2A] [--ASK] [--PSK1] [--PSK2] [--PSK3] [--NRZ] [--BI]\r\n                    [--BIA] [--q5] [--st] [--rate <dec>] [-c <hex>] [-o <0-255>] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --FSK                          set demodulation FSK\r\n    --FSK1                         set demodulation FSK 1\r\n    --FSK1A                        set demodulation FSK 1a (inv)\r\n    --FSK2                         set demodulation FSK 2\r\n    --FSK2A                        set demodulation FSK 2a (inv)\r\n    --ASK                          set demodulation ASK\r\n    --PSK1                         set demodulation PSK 1\r\n    --PSK2                         set demodulation PSK 2\r\n    --PSK3                         set demodulation PSK 3\r\n    --NRZ                          set demodulation NRZ\r\n    --BI                           set demodulation Biphase\r\n    --BIA                          set demodulation Diphase (inverted biphase)\r\n    -i, --inv                      set/reset data signal inversion\r\n    --q5                           set/reset as Q5/T5555 chip instead of T55x7\r\n    --st                           set/reset Sequence Terminator on\r\n    --rate <dec>                   set bitrate <8|16|32|40|50|64|100|128>\r\n    -c, --blk0 <hex>               set configuration from a block0 (4 hex bytes)\r\n    -o, --offset <0-255>           set offset, where data should start decode in bitstream \r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx config --FSK               -> FSK demodulation\r\n    lf t55xx config --FSK -i            -> FSK demodulation, inverse data\r\n    lf t55xx config --FSK -i -o 3       -> FSK demodulation, inverse data, offset 3"
+    },
+    {
+      "command": "lf t55xx dangerraw",
+      "offline": false,
+      "description": "This command allows to emit arbitrary raw commands on T5577 and cut the field after arbitrary duration.\r",
+      "help": "This command allows to emit arbitrary raw commands on T5577 and cut the field after arbitrary duration.\r\nUncontrolled usage can easily write an invalid configuration, activate lock bits,\r\nOTP bit, password protection bit, deactivate test-mode, lock your card forever.\r\nWARNING: this may lock definitively the tag in an unusable state!\r\n\r\nusage:\r\n    lf t55xx dangerraw [-h] -d <bitstr> -t <us>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -d, --data <bitstr>            raw bit string\r\n    -t, --time <us>                <0 - 200000> time in microseconds before dropping the field\r\n\r\nexamples/notes:\r\n    lf t55xx dangerraw -d 01000000000000010000100000000100000000 -t 3200"
+    },
+    {
+      "command": "lf t55xx detect",
+      "offline": true,
+      "description": "Try detecting the tag modulation from reading the configuration block\r",
+      "help": "Try detecting the tag modulation from reading the configuration block\r\n\r\nusage:\r\n    lf t55xx detect [-h1] [-p <hex>] [--r0] [--r1] [--r2] [--r3] [--all]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1                             extract using data from graphbuffer\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n    --all                          try all downlink modes \r\n\r\nexamples/notes:\r\n    lf t55xx detect               \r\n    lf t55xx detect -1            \r\n    lf t55xx detect -p 11223344"
+    },
+    {
+      "command": "lf t55xx deviceconfig",
+      "offline": false,
+      "description": "Sets t55x7 timings for direct commands.\r",
+      "help": "Sets t55x7 timings for direct commands.\r\nThe timings are set here in Field Clocks (FC) which is converted to (US) on device.\r\n\r\nusage:\r\n    lf t55xx deviceconfig [-hpz] [-a <8..255>] [-b <8..255>] [-c <8..255>] [-d <8..255>] [-e <8..255>] [-f <8..255>]\r\n                    [-g <8..255>] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -a <8..255>                    Set start gap\r\n    -b <8..255>                    Set write gap\r\n    -c <8..255>                    Set write ZERO gap\r\n    -d <8..255>                    Set write ONE gap\r\n    -e <8..255>                    Set read gap\r\n    -f <8..255>                    Set write TWO gap (1 of 4 only)\r\n    -g <8..255>                    Set write THREE gap (1 of 4 only)\r\n    -p, --persist                  persist to flash memory (RDV4)\r\n    -z                             Set default t55x7 timings (use `-p` to save if required)\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx deviceconfig -a 29 -b 17 -c 15 -d 47 -e 15         -> default T55XX\r\n    lf t55xx deviceconfig -a 55 -b 14 -c 21 -d 30               -> default EM4305"
+    },
+    {
+      "command": "lf t55xx dump",
+      "offline": false,
+      "description": "This command dumps a T55xx card Page 0 block 0-7.\r",
+      "help": "This command dumps a T55xx card Page 0 block 0-7.\r\nIt will create two files (bin/json)\r\n\r\nusage:\r\n    lf t55xx dump [-ho] [-f <fn>] [-p <hex>] [--ns] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                filename (default is generated on blk 0)\r\n    -o, --override                 override, force pwd read despite danger to card\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    --ns                           no save to file\r\n    --r0                           downlink - fixed bit length \r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx dump                 \r\n    lf t55xx dump -p aabbccdd --override\r\n    lf t55xx dump -f my_lf_dump"
+    },
+    {
+      "command": "lf t55xx info",
+      "offline": true,
+      "description": "Show T55x7 configuration data (page 0/ blk 0) from reading the configuration block\r",
+      "help": "Show T55x7 configuration data (page 0/ blk 0) from reading the configuration block\r\nfrom tag. Use `-c` to specify a config block data to be used instead of reading tag.\r\n\r\nusage:\r\n    lf t55xx info [-h1] [-p <hex>] [-c <hex>] [--q5] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1                             extract using data from graphbuffer\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    -c, --blk0 <hex>               use these data instead (4 hex bytes)\r\n    --q5                           interprete provided data as T5555/Q5 config\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx info                 \r\n    lf t55xx info -1              \r\n    lf t55xx info -p 11223344     \r\n    lf t55xx info -c 00083040     \r\n    lf t55xx info -c 6001805A --q5"
+    },
+    {
+      "command": "lf t55xx p1detect",
+      "offline": false,
+      "description": "Detect Page 1 of a T55xx chip\r",
+      "help": "Detect Page 1 of a T55xx chip\r\n\r\nusage:\r\n    lf t55xx p1detect [-h1] [-p <hex>] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1                             extract using data from graphbuffer\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx p1detect             \r\n    lf t55xx p1detect -1          \r\n    lf t55xx p1detect -p 11223344 --r3"
+    },
+    {
+      "command": "lf t55xx read",
+      "offline": false,
+      "description": "Read T55xx block data.  This commands defaults to page 0.\r",
+      "help": "Read T55xx block data.  This commands defaults to page 0.\r\n\r\n           * * * WARNING * * *\r\nUse of read with password on a tag not configured\r\nfor a password can damage the tag\r\n           * * * * * * * * * *\r\n\r\nusage:\r\n    lf t55xx read [-ho] -b <0-7> [-p <hex>] [--pg1] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -b, --blk <0-7>                block number to read\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    -o, --override                 override safety check\r\n    --pg1                          read page 1\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx read -b 0                         -> read data from block 0\r\n    lf t55xx read -b 0 --pwd 01020304          -> read data from block 0, pwd 01020304\r\n    lf t55xx read -b 0 --pwd 01020304 -o       -> read data from block 0, pwd 01020304, override"
+    },
+    {
+      "command": "lf t55xx resetread",
+      "offline": false,
+      "description": "Send Reset Cmd then `lf read` the stream to attempt\r",
+      "help": "Send Reset Cmd then `lf read` the stream to attempt\r\nto identify the start of it (needs a demod and/or plot after)\r\n\r\nusage:\r\n    lf t55xx resetread [-h1] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1                             extract using data from graphbuffer\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx resetread"
+    },
+    {
+      "command": "lf t55xx restore",
+      "offline": false,
+      "description": "Restore T55xx card page 0/1 n blocks from (bin/eml/json) dump file\r",
+      "help": "Restore T55xx card page 0/1 n blocks from (bin/eml/json) dump file\r\n\r\nusage:\r\n    lf t55xx restore [-h] [-f <fn>] [-p <hex>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                Specify a filename for dump file\r\n    -p, --pwd <hex>                password if target card has password set (4 hex bytes)\r\n\r\nexamples/notes:\r\n    lf t55xx restore -f lf-t55xx-00148040-dump.bin"
+    },
+    {
+      "command": "lf t55xx trace",
+      "offline": true,
+      "description": "Show T55x7 configuration data (page 0/ blk 0) from reading the configuration block\r",
+      "help": "Show T55x7 configuration data (page 0/ blk 0) from reading the configuration block\r\n\r\nusage:\r\n    lf t55xx trace [-h1] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1                             extract using data from graphbuffer\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx trace                \r\n    lf t55xx trace -1"
+    },
+    {
+      "command": "lf t55xx wakeup",
+      "offline": false,
+      "description": "This commands sends the Answer-On-Request command and leaves the readerfield ON afterwards\r",
+      "help": "This commands sends the Answer-On-Request command and leaves the readerfield ON afterwards\r\n\r\nusage:\r\n    lf t55xx wakeup [-hv] [-p <hex>] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    -v, --verbose                  verbose output\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx wakeup -p 11223344         -> send wakeup with password"
+    },
+    {
+      "command": "lf t55xx view",
+      "offline": true,
+      "description": "Print a T55xx dump file (bin/eml/json)\r",
+      "help": "Print a T55xx dump file (bin/eml/json)\r\n\r\n\r\nusage:\r\n    lf t55xx view [-hv] -f <fn>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -f, --file <fn>                Specify a filename for dump file\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf t55xx view -f lf-t55xx-00000000-11111111-22222222-33333333-dump.bin"
+    },
+    {
+      "command": "lf t55xx write",
+      "offline": false,
+      "description": "Write T55xx block data\r",
+      "help": "Write T55xx block data\r\n\r\nusage:\r\n    lf t55xx write [-ht] -b <0-7> [-d <hex>] [-p <hex>] [--pg1] [--verify] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -b, --blk <0-7>                block number to write\r\n    -d, --data <hex>               data to write (4 hex bytes)\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    -t, --tm                       test mode write ( \u001b[31mdanger\u001b[0m )\r\n    --pg1                          write page 1\r\n    --verify                       try validate data afterward\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx write -b 3 -d 11223344                               -> write 11223344 to block 3\r\n    lf t55xx write -b 3 -d 11223344 --pwd 01020304                -> write 11223344 to block 3, pwd 01020304\r\n    lf t55xx write -b 3 -d 11223344 --pwd 01020304 --verify       -> write 11223344 to block 3 and try validating write"
+    },
+    {
+      "command": "lf t55xx bruteforce",
+      "offline": false,
+      "description": "This command uses bruteforce to scan a number range.\r",
+      "help": "This command uses bruteforce to scan a number range.\r\nTry reading Page 0, block 7 before.\r\n\r\nWARNING this may brick non-password protected chips!\r\n\r\nusage:\r\n    lf t55xx bruteforce [-h] -s <hex> -e <hex> [--r0] [--r1] [--r2] [--r3] [--all]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -s, --start <hex>              search start password (4 hex bytes)\r\n    -e, --end <hex>                search end password (4 hex bytes)\r\n    --r0                           downlink - fixed bit length \r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n    --all                          try all downlink modes (def)\r\n\r\nexamples/notes:\r\n    lf t55xx bruteforce --r2 -s aaaaaa77 -e aaaaaa99"
+    },
+    {
+      "command": "lf t55xx chk",
+      "offline": false,
+      "description": "This command uses a dictionary attack.\r",
+      "help": "This command uses a dictionary attack.\r\nFor some cloners, try '--em' for known pwdgen algo.\r\nTry to reading Page 0 block 7 before.\r\nWARNING: this may brick non-password protected chips!\r\n\r\nusage:\r\n    lf t55xx chk [-hm] [-f <fn>] [--em <hex>] [--r0] [--r1] [--r2] [--r3] [--all]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -m, --fm                       use dictionary from flash memory (RDV4)\r\n    -f, --file <fn>                file name\r\n    --em <hex>                     EM4100 ID (5 hex bytes)\r\n    --r0                           downlink - fixed bit length \r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n    --all                          try all downlink modes (def)\r\n\r\nexamples/notes:\r\n    lf t55xx chk -m                          -> use dictionary from flash memory (RDV4)\r\n    lf t55xx chk -f my_dictionary_pwds       -> loads a default keys dictionary file\r\n    lf t55xx chk --em aa11223344             -> try known pwdgen algo from some cloners based on EM4100 ID"
+    },
+    {
+      "command": "lf t55xx protect",
+      "offline": false,
+      "description": "This command sets the pwd bit on T5577.\r",
+      "help": "This command sets the pwd bit on T5577.\r\nWARNING this locks the tag!\r\n\r\nusage:\r\n    lf t55xx protect [-ho] [-p <hex>] -n <hex> [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -o, --override                 override safety check\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    -n, --new <hex>                new password (4 hex bytes)\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx protect -n 01020304                   -> sets new pwd 01020304\r\n    lf t55xx protect -p 11223344 -n 00000000       -> use pwd 11223344, sets new pwd 00000000"
+    },
+    {
+      "command": "lf t55xx recoverpw",
+      "offline": false,
+      "description": "This command uses a few tricks to try to recover mangled password.\r",
+      "help": "This command uses a few tricks to try to recover mangled password.\r\nTry reading Page 0, block 7 before.\r\n\r\nWARNING this may brick non-password protected chips!\r\n\r\nusage:\r\n    lf t55xx recoverpw [-h] [-p <hex>] [--r0] [--r1] [--r2] [--r3] [--all]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    --r0                           downlink - fixed bit length \r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n    --all                          try all downlink modes (def)\r\n\r\nexamples/notes:\r\n    lf t55xx recoverpw            \r\n    lf t55xx recoverpw -p 11223344\r\n    lf t55xx recoverpw -p 11223344 --r3"
+    },
+    {
+      "command": "lf t55xx sniff",
+      "offline": true,
+      "description": "Sniff LF t55xx based trafic and decode possible cmd / blocks.\r",
+      "help": "Sniff LF t55xx based trafic and decode possible cmd / blocks.\r\nLower tolerance means tighter pulses. \r\n\r\nusage:\r\n    lf t55xx sniff [-h1] [-t <dec>] [-o <dec>] [-z <dec>]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -1                             extract using data from graphbuffer\r\n    -t, --tol <dec>                set tolerance level (default 5)\r\n    -o, --one <dec>                set samples width for ONE pulse (default auto)\r\n    -z, --zero <dec>               set samples width for ZERO pulse (default auto)\r\n\r\nexamples/notes:\r\n    lf t55xx sniff                \r\n    lf t55xx sniff -1 -t 2                    -> use buffer with tolerance of 2\r\n    lf t55xx sniff -1 --zero 7 --one 14       -> use buffer, zero pulse width 7, one pulse width 15"
+    },
+    {
+      "command": "lf t55xx special",
+      "offline": false,
+      "description": "Show block changes with 64 different offsets,  data taken from DemodBuffer.\r",
+      "help": "Show block changes with 64 different offsets,  data taken from DemodBuffer.\r\n\r\nusage:\r\n    lf t55xx special [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf t55xx special"
+    },
+    {
+      "command": "lf t55xx wipe",
+      "offline": false,
+      "description": "This commands wipes a tag, fills blocks 1-7 with zeros and a default configuration block\r",
+      "help": "This commands wipes a tag, fills blocks 1-7 with zeros and a default configuration block\r\n\r\nusage:\r\n    lf t55xx wipe [-h] [-c <hex>] [-p <hex>] [--q5] [--r0] [--r1] [--r2] [--r3]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -c, --cfg <hex>                configuration block0 (4 hex bytes)\r\n    -p, --pwd <hex>                password (4 hex bytes)\r\n    --q5                           specify writing to Q5/T5555 tag using dedicated config block\r\n    --r0                           downlink - fixed bit length (detected def)\r\n    --r1                           downlink - long leading reference \r\n    --r2                           downlink - leading zero \r\n    --r3                           downlink - 1 of 4 coding reference \r\n\r\nexamples/notes:\r\n    lf t55xx wipe                  -> wipes a T55x7 tag, config block 0x000880E0\r\n    lf t55xx wipe --q5             -> wipes a Q5/T5555 tag, config block 0x6001F004\r\n    lf t55xx wipe -p 11223344      -> wipes a T55x7 tag, config block 0x000880E0, using pwd\r\n\r\n\r\n\r\n=======================================================================================\r\nlf trovan\r\n\r\n { Trovan animal IDs...       }"
+    },
+    {
+      "command": "lf trovan help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate a Trovan tag from the GraphBuffer"
+    },
+    {
+      "command": "lf trovan demod",
+      "offline": true,
+      "description": "Demodulate a Trovan animal ID tag from the GraphBuffer\r",
+      "help": "Demodulate a Trovan animal ID tag from the GraphBuffer\r\n\r\nusage:\r\n    lf trovan demod [-hv]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf trovan demod"
+    },
+    {
+      "command": "lf trovan reader",
+      "offline": false,
+      "description": "read a Trovan animal ID tag\r",
+      "help": "read a Trovan animal ID tag\r\n\r\nusage:\r\n    lf trovan reader [-h@v]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n    -v, --verbose                  verbose output\r\n\r\nexamples/notes:\r\n    lf trovan reader -@            -> continuous reader mode"
+    },
+    {
+      "command": "lf trovan clone",
+      "offline": false,
+      "description": "clone a Trovan animal ID to a T55x7, Q5/T5555 or EM4305/4469 tag\r",
+      "help": "clone a Trovan animal ID to a T55x7, Q5/T5555 or EM4305/4469 tag\r\nThe ID is the 10 hex digits printed on the tag, with or without dashes.\r\n\r\nusage:\r\n    lf trovan clone [-h] --id <hex> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --id <hex>                     Trovan animal ID, 10 hex digits\r\n    --q5                           specify writing to Q5/T5555 tag\r\n    --em                           specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf trovan clone --id 0007F9043A\r\n    lf trovan clone --id 00-07F9-043A\r\n    lf trovan clone --id 0007F9043A --q5\r\n\r\n\r\n\r\n=======================================================================================\r\nlf viking\r\n\r\n { Viking RFIDs...            }"
+    },
+    {
+      "command": "lf viking help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate a Viking tag from the GraphBuffer"
+    },
+    {
+      "command": "lf viking demod",
+      "offline": true,
+      "description": "Try to find Viking AM preamble, if found decode / descramble data\r",
+      "help": "Try to find Viking AM preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf viking demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf viking demod"
+    },
+    {
+      "command": "lf viking reader",
+      "offline": false,
+      "description": "read a Viking AM tag\r",
+      "help": "read a Viking AM tag\r\n\r\nusage:\r\n    lf viking reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf viking reader -@            -> continuous reader mode"
+    },
+    {
+      "command": "lf viking clone",
+      "offline": false,
+      "description": "clone a Viking AM tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a Viking AM tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf viking clone [-h] --cn <hex> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <hex>                     8 digit hex viking card number\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf viking clone --cn 01A337             -> encode for T55x7 tag\r\n    lf viking clone --cn 01A337 --q5        -> encode for Q5/T5555 tag\r\n    lf viking clone --cn 112233 --em        -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf viking sim",
+      "offline": false,
+      "description": "Enables simulation of viking card with specified card number.\r",
+      "help": "Enables simulation of viking card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\nPer viking format, the card number is 8 digit hex number.  Larger values are truncated.\r\n\r\nusage:\r\n    lf viking sim [-h] --cn <hex>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <hex>                     8 digit hex viking card number\r\n\r\nexamples/notes:\r\n    lf viking sim --cn 01A337     \r\n\r\n\r\n\r\n=======================================================================================\r\nlf visa2000\r\n\r\n { Visa2000 RFIDs...          }"
+    },
+    {
+      "command": "lf visa2000 help",
+      "offline": true,
+      "description": "help             This help\r",
+      "help": "help             This help\r\ndemod            demodulate an VISA2000 tag from the GraphBuffer"
+    },
+    {
+      "command": "lf visa2000 demod",
+      "offline": true,
+      "description": "Try to find visa2000 preamble, if found decode / descramble data\r",
+      "help": "Try to find visa2000 preamble, if found decode / descramble data\r\n\r\nusage:\r\n    lf visa2000 demod [-h]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n\r\nexamples/notes:\r\n    lf visa2000 demod"
+    },
+    {
+      "command": "lf visa2000 reader",
+      "offline": false,
+      "description": "read a visa2000 tag\r",
+      "help": "read a visa2000 tag\r\n\r\nusage:\r\n    lf visa2000 reader [-h@]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    -@                             optional - continuous reader mode\r\n\r\nexamples/notes:\r\n    lf visa2000 reader -@          -> continuous reader mode"
+    },
+    {
+      "command": "lf visa2000 clone",
+      "offline": false,
+      "description": "clone a Visa2000 tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r",
+      "help": "clone a Visa2000 tag to a T55x7, Q5/T5555 or EM4305/4469 tag.\r\n\r\nusage:\r\n    lf visa2000 clone [-h] --cn <dec> [--q5] [--em]\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <dec>                     Visa2k card ID\r\n    --q5                           optional - specify writing to Q5/T5555 tag\r\n    --em                           optional - specify writing to EM4305/4469 tag\r\n\r\nexamples/notes:\r\n    lf visa2000 clone --cn 112233                -> encode for T55x7 tag\r\n    lf visa2000 clone --cn 112233 --q5           -> encode for Q5/T5555 tag\r\n    lf visa2000 clone --cn 112233 --em           -> encode for EM4305/4469"
+    },
+    {
+      "command": "lf visa2000 sim",
+      "offline": false,
+      "description": "Enables simulation of visa2k card with specified card number.\r",
+      "help": "Enables simulation of visa2k card with specified card number.\r\nSimulation runs until the button is pressed or another USB command is issued.\r\n\r\n\r\nusage:\r\n    lf visa2000 sim [-h] --cn <dec>\r\n\r\noptions:\r\n    -h, --help                     This help\r\n    --cn <dec>                     Visa2k card ID\r\n\r\nexamples/notes:\r\n    lf visa2000 sim --cn 1337     \r\n\r\n\r\n\r\n=======================================================================================\r\nmad\r\n\r\n { MAD commands... }"
+    }
+  ]
+}

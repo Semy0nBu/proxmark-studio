@@ -1,0 +1,522 @@
+--- a/client/src/comms.c
++++ b/client/src/comms.c
+@@ -33,6 +33,8 @@
+ #include "util_darwin.h" // en/dis-ableNapp();
+ #include "usart_defs.h"
+ #include "comms_bulk_download.h"
++#include "comms_handshake.h"
++#include "crypto/libpcrypto.h"
+ #include "proxmark3.h" // framed GUI cancellation while waiting for firmware
+ 
+ // #define COMMS_DEBUG
+@@ -950,10 +952,11 @@
+ 
+     g_conn.max_cmd_data_size = CAPABILITIES_LEGACY_CMD_DATA_SIZE;
+ 
+-    uint16_t len = 32;
+-    uint8_t data[len];
+-    for (uint16_t i = 0; i < len; i++) {
+-        data[i] = i & 0xFF;
++    uint8_t data[PM3_HANDSHAKE_PING_SIZE];
++    const uint16_t len = sizeof(data);
++    int random_result = pcrypto_rng_fill_oneshot(data, len, "pm3-connection-ping");
++    if (random_result != PM3_SUCCESS) {
++        return random_result;
+     }
+ 
+     __atomic_store_n(&last_packet_time,  msclock(), __ATOMIC_SEQ_CST);
+@@ -976,8 +979,8 @@
+         return PM3_ETIMEOUT;
+     }
+ 
+-    bool error = memcmp(data, resp.data.asBytes, len) != 0;
+-    if (error) {
++    if (!pm3_handshake_ping_matches(&resp, data)) {
++        PrintAndLogEx(WARNING, "Connection PING returned a stale or invalid echo");
+         return PM3_EIO;
+     }
+ 
+--- /dev/null
++++ b/client/src/comms_handshake.h
+@@ -0,0 +1,33 @@
++//-----------------------------------------------------------------------------
++// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
++//
++// This program is free software: you can redistribute it and/or modify
++// it under the terms of the GNU General Public License as published by
++// the Free Software Foundation, either version 3 of the License, or
++// (at your option) any later version.
++//
++// This program is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// See LICENSE.txt for the text of the license.
++//-----------------------------------------------------------------------------
++
++#ifndef PM3_COMMS_HANDSHAKE_H
++#define PM3_COMMS_HANDSHAKE_H
++
++#include <string.h>
++#include "pm3_cmd.h"
++
++#define PM3_HANDSHAKE_PING_SIZE 32u
++
++static inline bool pm3_handshake_ping_matches(const PacketResponseNG *response,
++                                             const uint8_t *expected) {
++    return response != NULL && expected != NULL && response->ng &&
++           response->cmd == CMD_PING && response->status == PM3_SUCCESS &&
++           response->length == PM3_HANDSHAKE_PING_SIZE &&
++           memcmp(response->data.asBytes, expected, PM3_HANDSHAKE_PING_SIZE) == 0;
++}
++
++#endif
+--- a/client/src/uart/uart_win32.c
++++ b/client/src/uart/uart_win32.c
+@@ -36,6 +36,7 @@
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
+ #include "uart_win32_wait.h"
++#include "uart_win32_io.h"
+ 
+ typedef struct {
+     HANDLE hPort;          // Serial port handle
+@@ -90,18 +91,10 @@
+     newtimeout_pending = false;
+ 
+     serial_port_windows_t *spw = (serial_port_windows_t *)sp;
+-    spw->ct.ReadIntervalTimeout         = newtimeout_value;
+-    spw->ct.ReadTotalTimeoutMultiplier  = 0;
+-    spw->ct.ReadTotalTimeoutConstant    = newtimeout_value;
+-    spw->ct.WriteTotalTimeoutMultiplier = newtimeout_value;
+-    spw->ct.WriteTotalTimeoutConstant   = 0;
+-
+-    if (!SetCommTimeouts(spw->hPort, &spw->ct)) {
+-        uart_close(spw);
++    if (uart_win32_configure_timeouts(spw->hPort, &spw->ct, newtimeout_value) != ERROR_SUCCESS) {
+         return PM3_EIO;
+     }
+ 
+-    PurgeComm(spw->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
+     return PM3_SUCCESS;
+ }
+ 
+@@ -392,7 +385,10 @@
+     }
+ 
+     uart_reconfigure_timeouts(UART_FPC_CLIENT_RX_TIMEOUT_MS);
+-    uart_reconfigure_timeouts_polling(sp);
++    if (uart_reconfigure_timeouts_polling(sp) != PM3_SUCCESS) {
++        uart_close(sp);
++        return INVALID_SERIAL_PORT;
++    }
+ 
+     if (!uart_set_speed(sp, speed)) {
+         // try fallback automatically
+@@ -402,6 +398,11 @@
+             PrintAndLogEx(WARNING, "UART error while setting baudrate\n");
+             return INVALID_SERIAL_PORT;
+         }
++    }
++    // Clear only before the communication thread and its first command start.
++    if (!PurgeComm(sp->hPort, PURGE_RXABORT | PURGE_RXCLEAR)) {
++        uart_close(sp);
++        return INVALID_SERIAL_PORT;
+     }
+     g_conn.uart_speed = uart_get_speed(sp);
+     g_conn.send_via_ip = PM3_NONE;
+@@ -453,7 +454,6 @@
+ 
+     spw->dcb.BaudRate = uiPortSpeed;
+     bool result = SetCommState(spw->hPort, &spw->dcb);
+-    PurgeComm(spw->hPort, PURGE_RXABORT | PURGE_RXCLEAR);
+     if (result)
+         g_conn.uart_speed = uiPortSpeed;
+ 
+@@ -461,35 +461,24 @@
+ }
+ 
+ uint32_t uart_get_speed(const serial_port sp) {
+-    const serial_port_windows_t *spw = (serial_port_windows_t *)sp;
+-    if (!GetCommState(spw->hPort, (serial_port) & spw->dcb))
+-        return spw->dcb.BaudRate;
+-
+-    return 0;
++    serial_port_windows_t *spw = (serial_port_windows_t *)sp;
++    return uart_win32_query_speed(spw->hPort, &spw->dcb);
+ }
+ 
+ // Read data from the serial port after it has been reported available (via
+ // ClearCommError or WaitCommEvent). Reuses hIoEvent for the single in-flight
+ // overlapped operation in the comm thread.
+ static int uart_read_serial(const serial_port_windows_t *spw, uint8_t *pbtRx, uint32_t pszMaxRxLen, uint32_t *pszRxLen) {
+-    OVERLAPPED ov;
+-    memset(&ov, 0, sizeof(ov));
+-    ov.hEvent = spw->hIoEvent;
+-    ResetEvent(ov.hEvent);
+-
+     DWORD bytesRead = 0;
+-    BOOL ok = ReadFile(spw->hPort, pbtRx, pszMaxRxLen, &bytesRead, &ov);
+-    if (!ok && GetLastError() == ERROR_IO_PENDING) {
+-        WaitForSingleObject(ov.hEvent, INFINITE);
+-        ok = GetOverlappedResult(spw->hPort, &ov, &bytesRead, FALSE);
+-    }
+-    if (!ok) {
+-        DWORD err = GetLastError();
++    DWORD budget = uart_win32_io_budget(spw->ct.ReadTotalTimeoutMultiplier,
++                                       spw->ct.ReadTotalTimeoutConstant, pszMaxRxLen);
++    DWORD err = uart_win32_read_some(spw->hPort, spw->hIoEvent, pbtRx, pszMaxRxLen, &bytesRead, budget);
++    if (err != ERROR_SUCCESS) {
+         *pszRxLen = 0;
+-        if (err == ERROR_OPERATION_ABORTED) {
++        if (err == ERROR_OPERATION_ABORTED || err == ERROR_NO_DATA) {
+             return PM3_ENODATA;
+         }
+-        if (err == ERROR_FILE_NOT_FOUND) {
++        if (err == ERROR_FILE_NOT_FOUND || err == ERROR_TIMEOUT || err == ERROR_READ_FAULT) {
+             return PM3_EIO;
+         }
+         return PM3_ENOTTY;
+@@ -502,7 +491,10 @@
+     const serial_port_windows_t *spw = (serial_port_windows_t *)sp;
+     if (spw->hSocket == INVALID_SOCKET) {
+         // serial port
+-        uart_reconfigure_timeouts_polling(sp);
++        if (uart_reconfigure_timeouts_polling(sp) != PM3_SUCCESS) {
++            *pszRxLen = 0;
++            return PM3_EIO;
++        }
+ 
+         DWORD rx_timeout_ms = spw->ct.ReadTotalTimeoutConstant;
+         if (rx_timeout_ms == 0) {
+@@ -678,26 +670,14 @@
+ int uart_send(const serial_port sp, const uint8_t *p_tx, const uint32_t len) {
+     const serial_port_windows_t *spw = (serial_port_windows_t *)sp;
+     if (spw->hSocket == INVALID_SOCKET) { // serial port
+-        OVERLAPPED ov;
+-        memset(&ov, 0, sizeof(ov));
+-        ov.hEvent = spw->hIoEvent;
+-        ResetEvent(ov.hEvent);
+-
+         DWORD txlen = 0;
+-        BOOL ok = WriteFile(spw->hPort, p_tx, len, &txlen, &ov);
+-        if (!ok && GetLastError() == ERROR_IO_PENDING) {
+-            WaitForSingleObject(ov.hEvent, INFINITE);
+-            ok = GetOverlappedResult(spw->hPort, &ov, &txlen, FALSE);
+-        }
+-
+-        if (ok)
++        DWORD budget = uart_win32_io_budget(spw->ct.WriteTotalTimeoutMultiplier,
++                                           spw->ct.WriteTotalTimeoutConstant, len);
++        DWORD errorcode = uart_win32_write_exact(spw->hPort, spw->hIoEvent, p_tx, len, &txlen, budget);
++        if (errorcode == ERROR_SUCCESS) {
+             return PM3_SUCCESS;
+-
+-        int errorcode = GetLastError();
+-        if (errorcode == ERROR_FILE_NOT_FOUND) {
+-            return PM3_EIO;
+-        }
+-        return PM3_ENOTTY;
++        }
++        return PM3_EIO;
+     } else { // TCP
+         uint32_t pos = 0;
+         fd_set wfds;
+--- /dev/null
++++ b/client/src/uart/uart_win32_io.h
+@@ -0,0 +1,131 @@
++//-----------------------------------------------------------------------------
++// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
++//
++// This program is free software: you can redistribute it and/or modify
++// it under the terms of the GNU General Public License as published by
++// the Free Software Foundation, either version 3 of the License, or
++// (at your option) any later version.
++//
++// This program is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// See LICENSE.txt for the text of the license.
++//-----------------------------------------------------------------------------
++
++#ifndef UART_WIN32_IO_H_
++#define UART_WIN32_IO_H_
++
++#include <stdint.h>
++#include <windows.h>
++
++static inline DWORD uart_win32_configure_timeouts(HANDLE port, COMMTIMEOUTS *active,
++                                                 DWORD timeout_ms) {
++    if (active == NULL) {
++        return ERROR_INVALID_PARAMETER;
++    }
++    COMMTIMEOUTS candidate = *active;
++    candidate.ReadIntervalTimeout = timeout_ms;
++    candidate.ReadTotalTimeoutMultiplier = 0;
++    candidate.ReadTotalTimeoutConstant = timeout_ms;
++    candidate.WriteTotalTimeoutMultiplier = timeout_ms;
++    candidate.WriteTotalTimeoutConstant = 0;
++    if (!SetCommTimeouts(port, &candidate)) {
++        return GetLastError();
++    }
++    *active = candidate;
++    return ERROR_SUCCESS;
++}
++
++static inline DWORD uart_win32_query_speed(HANDLE port, DCB *dcb) {
++    return dcb != NULL && GetCommState(port, dcb) ? dcb->BaudRate : 0;
++}
++
++static inline DWORD uart_win32_io_budget(DWORD multiplier, DWORD constant, DWORD length) {
++    const uint64_t budget = (uint64_t)multiplier * length + constant + 250;
++    return budget >= INFINITE ? INFINITE - 1 : (DWORD)budget;
++}
++
++// The kernel's bounded wait may race cancellation. Retire this exact operation
++// before releasing its stack OVERLAPPED, even when cancellation loses the race.
++static inline DWORD uart_win32_finish_io(HANDLE port, OVERLAPPED *operation, BOOL immediate,
++                                         DWORD *count, DWORD wait_ms) {
++    if (immediate) {
++        return ERROR_SUCCESS;
++    }
++    DWORD error = GetLastError();
++    if (error != ERROR_IO_PENDING) {
++        return error;
++    }
++    DWORD wait_result = WaitForSingleObject(operation->hEvent, wait_ms == INFINITE ? INFINITE - 1 : wait_ms);
++    if (wait_result == WAIT_OBJECT_0) {
++        if (GetOverlappedResult(port, operation, count, FALSE)) {
++            return ERROR_SUCCESS;
++        }
++        error = GetLastError();
++        if (error != ERROR_IO_INCOMPLETE) {
++            return error;
++        }
++    } else {
++        error = wait_result == WAIT_TIMEOUT ? ERROR_TIMEOUT : GetLastError();
++    }
++    CancelIoEx(port, operation);
++    GetOverlappedResult(port, operation, count, TRUE);
++    return error;
++}
++
++static inline DWORD uart_win32_read_some(HANDLE port, HANDLE event, uint8_t *buffer,
++                                         DWORD maximum, DWORD *count, DWORD wait_ms) {
++    if (count == NULL) {
++        return ERROR_INVALID_PARAMETER;
++    }
++    *count = 0;
++    if (buffer == NULL || maximum == 0) {
++        return ERROR_INVALID_PARAMETER;
++    }
++    DWORD errors;
++    COMSTAT status;
++    if (!ClearCommError(port, &errors, &status)) {
++        return GetLastError();
++    }
++    if (status.cbInQue == 0) {
++        return ERROR_NO_DATA;
++    }
++    DWORD requested = maximum < status.cbInQue ? maximum : status.cbInQue;
++    OVERLAPPED operation = {0};
++    operation.hEvent = event;
++    if (!ResetEvent(event)) {
++        return GetLastError();
++    }
++    BOOL immediate = ReadFile(port, buffer, requested, count, &operation);
++    DWORD result = uart_win32_finish_io(port, &operation, immediate, count, wait_ms);
++    if (result == ERROR_SUCCESS && *count > requested) {
++        return ERROR_READ_FAULT;
++    }
++    return result;
++}
++
++static inline DWORD uart_win32_write_exact(HANDLE port, HANDLE event, const uint8_t *buffer,
++                                           DWORD length, DWORD *count, DWORD wait_ms) {
++    if (count == NULL) {
++        return ERROR_INVALID_PARAMETER;
++    }
++    *count = 0;
++    if (buffer == NULL && length != 0) {
++        return ERROR_INVALID_PARAMETER;
++    }
++    OVERLAPPED operation = {0};
++    operation.hEvent = event;
++    if (!ResetEvent(event)) {
++        return GetLastError();
++    }
++    BOOL immediate = WriteFile(port, buffer, length, count, &operation);
++    DWORD result = uart_win32_finish_io(port, &operation, immediate, count, wait_ms);
++    if (result == ERROR_SUCCESS && *count != length) {
++        return ERROR_WRITE_FAULT;
++    }
++    return result;
++}
++
++#endif
+--- a/common_arm/usb/usb_cdc_at91.c
++++ b/common_arm/usb/usb_cdc_at91.c
+@@ -211,6 +211,23 @@
+ };
+ #endif
+ 
++static void usb_reset_rx_state(void) {
++    btReceiveBank = AT91C_UDP_RX_DATA_BK0;
++#ifndef AS_BOOTROM
++    usb_read_ng_reset();
++#endif
++}
++
++// Keep the hardware FIFO bank selection and the software RX/cache state in
++// the same session. Rewriting CSR alone does not reset a ping-pong FIFO.
++static void usb_reset_endpoint(uint32_t mask) {
++    pUdp->UDP_RSTEP = mask;
++    pUdp->UDP_RSTEP = 0;
++    if (mask & (1u << AT91C_EP_OUT)) {
++        usb_reset_rx_state();
++    }
++}
++
+ /*
+  *----------------------------------------------------------------------------
+  * \fn    usb_disable
+@@ -220,6 +237,9 @@
+ void usb_disable(void) {
+     // Disconnect the USB device
+     AT91C_BASE_PIOA->PIO_ODR = GPIO_USB_PU;
++    btConfiguration = 0;
++    btConnection = 0;
++    usb_reset_rx_state();
+ 
+     // Clear all lingering interrupts
+     if (pUdp->UDP_ISR & AT91C_UDP_ENDBUSRES) {
+@@ -321,9 +341,10 @@
+     // end of bus reset
+     if (isr & AT91C_UDP_ENDBUSRES) {
+         pUdp->UDP_ICR = AT91C_UDP_ENDBUSRES;
++        btConfiguration = 0;
++        btConnection = 0;
+         // reset all endpoints
+-        pUdp->UDP_RSTEP  = (unsigned int) - 1;
+-        pUdp->UDP_RSTEP  = 0;
++        usb_reset_endpoint((uint32_t) -1);
+         // Enable the function
+         pUdp->UDP_FADDR = AT91C_UDP_FEN;
+         // Configure endpoint 0  (enable control endpoint)
+@@ -374,6 +395,10 @@
+     bug.
+ **/
+ bool usb_poll_validate_length(void) {
++    // Process reset/reconfiguration before accepting software-buffered bytes.
++    if (usb_check() == false) {
++        return false;
++    }
+ #ifndef AS_BOOTROM
+     // A previous USB packet may already contain the next command.
+     if (usb_read_ng_has_buffered_data()) {
+@@ -895,7 +920,9 @@
+             *   This device has only one configuration and its Config Number is CONF_NB (= 1).
+             */
+             AT91F_USB_SendZlp(pUdp);
++            usb_reset_endpoint((1u << AT91C_EP_OUT) | (1u << AT91C_EP_IN) | (1u << AT91C_EP_NOTIFY));
+             btConfiguration = wValue;
++            btConnection = 0;
+             pUdp->UDP_GLBSTATE  = (wValue) ? AT91C_UDP_CONFG : AT91C_UDP_FADDEN;
+ 
+             // make sure we are not stalled
+@@ -959,6 +986,8 @@
+             wIndex &= 0x0F;
+             if ((wValue == 0) && (wIndex >= AT91C_EP_OUT) && (wIndex <= AT91C_EP_NOTIFY)) {
+ 
++                usb_reset_endpoint(1u << wIndex);
++
+                 if (wIndex == AT91C_EP_OUT) {
+                     pUdp->UDP_CSR[AT91C_EP_OUT] = (AT91C_UDP_EPEDS | AT91C_UDP_EPTYPE_BULK_OUT);
+                 } else if (wIndex == AT91C_EP_IN) {
+--- a/common_arm/usb/usb_read_ng.c
++++ b/common_arm/usb/usb_read_ng.c
+@@ -4,6 +4,7 @@
+ static const usb_read_ng_config_t *g_config = NULL;
+ static size_t g_buf_len = 0;
+ static size_t g_buf_offset = 0;
++static uint32_t g_reset_generation = 0;
+ 
+ #ifndef MIN
+ #define MIN(a, b) ((a) < (b) ? (a) : (b))
+@@ -16,8 +17,13 @@
+         return;
+     }
+     g_config = config;
++    usb_read_ng_reset();
++}
++
++void usb_read_ng_reset(void) {
+     g_buf_len = 0;
+     g_buf_offset = 0;
++    g_reset_generation++;
+ }
+ 
+ bool usb_read_ng_has_buffered_data(void) {
+@@ -26,6 +32,17 @@
+ 
+ uint32_t usb_read_ng(uint8_t *data, size_t len) {
+     if (!g_config || !data || len == 0) {
++        return 0;
++    }
++
++    // The link callback also services bus reset/reconfiguration. Cached bytes
++    // must not bypass it and execute a command from the previous USB session.
++    const uint32_t generation = g_reset_generation;
++    if (!g_config->is_link_ready()) {
++        usb_read_ng_reset();
++        return 0;
++    }
++    if (generation != g_reset_generation) {
+         return 0;
+     }
+ 
+@@ -52,7 +69,12 @@
+     while (len > 0) {
+         // 1. if usb status is disconnected or unopened, exit read for device side.
+         if (!g_config->is_link_ready()) {
+-            break;
++            usb_read_ng_reset();
++            return 0;
++        }
++        if (generation != g_reset_generation) {
++            // Do not combine a partial old-session command with new bytes.
++            return 0;
+         }
+ 
+         // 2. check if data ready for usb device, if not, skip read and check timeout.
+--- a/common_arm/usb/usb_read_ng.h
++++ b/common_arm/usb/usb_read_ng.h
+@@ -37,6 +37,10 @@
+ // @param: config - the module will use this point on global, so don't instance in function stack!
+ void usb_read_ng_init(const usb_read_ng_config_t *config);
+ 
++// Discard bytes from the previous USB session, preserving the platform config.
++// Call when the endpoint FIFO banks or the USB link are reset.
++void usb_read_ng_reset(void);
++
+ // exported api, not platform related, for check data available of local usb ng buffer(not usb ep buffer)
+ // nonblocking api
+ bool usb_read_ng_has_buffered_data(void);
+--- a/common/default_version_pm3.c
++++ b/common/default_version_pm3.c
+@@ -10,8 +10,8 @@
+     VERSION_INFORMATION_MAGIC,
+     1,
+     1,
+-    0,
+-    "Iceman/codex/GUI-BlueShark/v4.23346-dirty",
+-    "2026-11-08 23:51:06",
+-    "4bc161944"
++    2,
++    "Iceman/codex/gui-usb-stable/v4.23346-dirty",
++    "2026-11-09 22:49:12",
++    "75ed7066f"
+ };
