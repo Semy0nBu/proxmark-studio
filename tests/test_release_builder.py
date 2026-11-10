@@ -24,7 +24,7 @@ class ReleaseBuilderTests(unittest.TestCase):
     def test_public_snapshot_copies_product_and_excludes_private_lab_data(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)/'source';root.mkdir()
-            public = ('README.md','LICENSE','pm3gui/app.py','pm3gui/locales/en.json',
+            public = ('README.md','README.ru.md','LICENSE','pm3gui/app.py','pm3gui/locales/en.json',
                       'tests/test_product.py','tools/release_gui_sources.json',
                       'docs/USER_GUIDE_EN.md','docs/licenses/component/COPYING',
                       'docs/PRIVACY_RU.md','docs/PRIVACY_EN.md',

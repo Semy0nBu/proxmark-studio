@@ -17,7 +17,7 @@ PRIVATE_NAMES = {'library.sqlite3', 'settings.json', 'startup-error.log', 'clien
                  'device-flash-before.bin', 'device-flash-after.bin', 'mf_classic_dict_user.nfc'}
 PRIVATE_PARTS = {'.git', '.venv', '.proxmark3', '__pycache__', '.pytest_cache',
                  'sessions', 'flipper-imports', 'firmware-backups', 'reference'}
-PUBLIC_ROOT = {'README.md', 'README.en.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'START_HERE.txt',
+PUBLIC_ROOT = {'README.md', 'README.en.md', 'README.ru.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'START_HERE.txt',
                'CHANGELOG.md', '.gitattributes',
                'requirements.txt', 'requirements-build.txt', 'run_gui.py',
                'start.ps1', 'launch-gui.vbs', 'auto-write.ps1', '.gitignore', 'SOURCE_SNAPSHOT.json'}

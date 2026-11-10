@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from pm3gui.version import APP_NAME, APP_VERSION, WINDOWS_VERSION
 
-PUBLIC_ROOT_FILES = ('README.md', 'README.en.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
+PUBLIC_ROOT_FILES = ('README.md', 'README.en.md', 'README.ru.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
                      'START_HERE.txt', 'CHANGELOG.md', '.gitattributes',
                      'requirements.txt', 'requirements-build.txt', 'run_gui.py',
                      'start.ps1', 'launch-gui.vbs', 'auto-write.ps1', '.gitignore')
@@ -186,6 +186,9 @@ def reuse_native_bundle(source, destination):
 def stage_public_documents(app):
     for name in ('README.md', 'README.en.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'START_HERE.txt'):
         shutil.copy2(ROOT/name, app/name)
+    # Older release source trees did not have a separate Russian README.
+    if (ROOT/'README.ru.md').is_file():
+        shutil.copy2(ROOT/'README.ru.md', app/'README.ru.md')
     (app/'docs').mkdir(exist_ok=True)
     for name in ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'PRIVACY_RU.md', 'PRIVACY_EN.md'):
         shutil.copy2(ROOT/'docs'/name, app/'docs'/name)
