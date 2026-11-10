@@ -20,7 +20,8 @@ PUBLIC_ROOT_FILES = ('README.md', 'README.en.md', 'LICENSE', 'THIRD_PARTY_NOTICE
                      'START_HERE.txt', 'CHANGELOG.md', '.gitattributes',
                      'requirements.txt', 'requirements-build.txt', 'run_gui.py',
                      'start.ps1', 'launch-gui.vbs', 'auto-write.ps1', '.gitignore')
-PUBLIC_DOCS = ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'BUILDING.md', 'RELEASING.md')
+PUBLIC_DOCS = ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'BUILDING.md', 'RELEASING.md',
+               'PRIVACY_RU.md', 'PRIVACY_EN.md')
 PUBLIC_TOOLS = ('build_release.py', 'release_native.py', 'release_firmware.py',
                 'release_gui_licenses.py', 'release_gui_sources.json', 'release_sources.py',
                 'release_windows_manifest.py', 'verify_release.py',
@@ -186,7 +187,7 @@ def stage_public_documents(app):
     for name in ('README.md', 'README.en.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'START_HERE.txt'):
         shutil.copy2(ROOT/name, app/name)
     (app/'docs').mkdir(exist_ok=True)
-    for name in ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md'):
+    for name in ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'PRIVACY_RU.md', 'PRIVACY_EN.md'):
         shutil.copy2(ROOT/'docs'/name, app/'docs'/name)
     for name in PUBLIC_ASSETS:
         source = ROOT/'docs/assets'/name

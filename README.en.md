@@ -70,6 +70,10 @@ Updating or uninstalling the application preserves it. Setup installs the
 program separately in `%LOCALAPPDATA%\Programs\Proxmark Studio`.
 The portable package uses the same user library.
 
+**The library is not encrypted.** Command history and logs can contain keys and
+passwords. The GUI does not automatically upload the library; individual client
+scripts can contact external services. See [data and privacy](docs/PRIVACY_EN.md).
+
 This is an **unsigned preview release**. Hardware checks on RDV4.01 / Blue Shark
 have covered connections, Classic reads, EM410x identifier reads, writing and
 restoring a test Classic card, large-buffer transfers, and operation cancellation.

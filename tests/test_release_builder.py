@@ -27,6 +27,7 @@ class ReleaseBuilderTests(unittest.TestCase):
             public = ('README.md','LICENSE','pm3gui/app.py','pm3gui/locales/en.json',
                       'tests/test_product.py','tools/release_gui_sources.json',
                       'docs/USER_GUIDE_EN.md','docs/licenses/component/COPYING',
+                      'docs/PRIVACY_RU.md','docs/PRIVACY_EN.md',
                       'installer/proxmark-studio.iss','installer/toolchain.json',
                       'docs/assets/banner.svg','docs/assets/interface-en.png','.gitattributes','CHANGELOG.md',
                       '.github/workflows/ci.yml')
