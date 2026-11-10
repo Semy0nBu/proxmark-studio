@@ -81,13 +81,17 @@ Neither the application installer nor connecting a board flashes firmware automa
 
 ## Data, backup, and updates
 
+**Library…** in the sidebar creates one archive
+of your saved library, with optional password protection. **Restore** creates a
+separate profile. See [Library backup](LIBRARY_BACKUPS.md) for the steps and format.
+
 The EXE stores data in `%LOCALAPPDATA%\Proxmark Studio`: SQLite, settings,
 revisions, imports, and operation logs. Use About → Open library folder.
 
 Before updating or uninstalling, finish operations and close the GUI and Proxmark
 client normally. Allow firmware installation to finish; do not force-stop the
-process to release files. For a backup, copy the entire data folder with the
-application closed.
+process to release files. Use **Library…** to create a backup archive. Copying
+the entire data folder with the application closed is also supported.
 
 To update an installed copy, run the new Setup. For portable updates, extract the
 new release separately and retain the old folder until the update is checked.

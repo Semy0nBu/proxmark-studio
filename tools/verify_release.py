@@ -22,7 +22,7 @@ PUBLIC_ROOT = {'README.md', 'README.en.md', 'README.ru.md', 'LICENSE', 'THIRD_PA
                'requirements.txt', 'requirements-build.txt', 'run_gui.py',
                'start.ps1', 'launch-gui.vbs', 'auto-write.ps1', '.gitignore', 'SOURCE_SNAPSHOT.json'}
 PUBLIC_DOCS = {'USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'BUILDING.md', 'RELEASING.md',
-               'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md'}
+               'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md', 'LIBRARY_BACKUPS.md'}
 PUBLIC_TOOLS = {'build_release.py', 'release_native.py', 'release_firmware.py',
                 'release_gui_licenses.py', 'release_gui_sources.json', 'release_sources.py',
                 'verify_release.py', 'audit_english_catalog.py', 'release_windows_manifest.py',
@@ -136,7 +136,7 @@ def _source_export(path):
             relative=PurePosixPath(*item.parts[1:]);names.add(str(relative))
             if str(relative) in {'tests/test_connection_lab.py','tests/test_live_functional_harness.py'}:
                 raise ValueError('An internal hardware/prototype test reached the GUI source snapshot.')
-            if relative.name.casefold() in PRIVATE_NAMES or relative.suffix.lower() in {'.sqlite','.sqlite3','.db','.keys','.nfc','.trace','.wav'}:
+            if relative.name.casefold() in PRIVATE_NAMES or relative.suffix.lower() in {'.sqlite','.sqlite3','.db','.keys','.nfc','.trace','.wav','.pm3backup'}:
                 raise ValueError('A user-data format reached the GUI source snapshot.')
             parts=relative.parts
             allowed=(len(parts)==1 and parts[0] in PUBLIC_ROOT or
@@ -212,7 +212,7 @@ def verify_release(app_dir, *, require_sources=True):
                 raise ValueError('Private/development artifact: '+relative.as_posix())
             if path.is_file():
                 count+=1
-                if path.suffix.lower() in {'.sqlite','.sqlite3','.db','.keys','.nfc','.trace','.wav'}:
+                if path.suffix.lower() in {'.sqlite','.sqlite3','.db','.keys','.nfc','.trace','.wav','.pm3backup'}:
                     raise ValueError('Unexpected user-data format: '+relative.as_posix())
         return {'files_checked':count}
     check('no-personal-data-or-development-caches',privacy)

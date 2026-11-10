@@ -1,5 +1,14 @@
 # Changelog / История изменений
 
+## 0.3.0-preview.6 — 2026-11-11
+
+- Whole-profile library backup to one archive: cards, all revisions, partial-read
+  metadata, MIFARE keys with provenance and timestamps, settings and profile files.
+- Optional AES-256-GCM password protection with scrypt key derivation. Restore
+  verifies the archive and database before creating a separate profile, with no
+  merge or overwrite. Background workers support cancellation and normal exit.
+- Library profile selection from the sidebar, with English and Russian UI.
+
 ## 0.3.0-preview.5 — 2026-11-10
 
 Changes since the public `preview.1`:

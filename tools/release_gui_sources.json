@@ -91,6 +91,16 @@
       "bytes": 159125,
       "url": "https://files.pythonhosted.org/packages/1e/7d/ae3f0a63f41e4d2f6cb66a5b57197850f919f59e558159a4dd3a818f5082/pyserial-3.5.tar.gz",
       "checksum_source": "https://pypi.org/pypi/pyserial/3.5/json"
+    },
+    {
+      "id": "pycryptodomex",
+      "version": "3.24.2",
+      "file": "pycryptodomex-3.24.2.tar.gz",
+      "bytes": 4963137,
+      "sha256": "e4dbc29e2575365d15e272f769329106277649aea081e2119cf43d66950f8f8f",
+      "url": "https://files.pythonhosted.org/packages/f3/c2/f5855412372e47d635599a97c00cfcf9fc40accac9436a11bf9ded19f859/pycryptodomex-3.24.2.tar.gz",
+      "checksum_source": "https://pypi.org/pypi/pycryptodomex/3.24.2/json"
     }
-  ]
+  ],
+  "pycryptodomex": "3.24.2"
 }

@@ -28,7 +28,7 @@ class ReleaseBuilderTests(unittest.TestCase):
             public = ('README.md','README.ru.md','LICENSE','pm3gui/app.py','pm3gui/locales/en.json',
                       'tests/test_product.py','tools/release_gui_sources.json',
                       'docs/USER_GUIDE_EN.md','docs/licenses/component/COPYING',
-                      'docs/PRIVACY_RU.md','docs/PRIVACY_EN.md','docs/CARD_WORKSPACE.md','docs/STABILITY_AND_MOTION.md',
+                      'docs/PRIVACY_RU.md','docs/PRIVACY_EN.md','docs/CARD_WORKSPACE.md','docs/STABILITY_AND_MOTION.md','docs/LIBRARY_BACKUPS.md',
                       'installer/proxmark-studio.iss','installer/toolchain.json',
                       'docs/assets/banner.svg','docs/assets/interface-en.png','.gitattributes','CHANGELOG.md',
                       '.github/workflows/ci.yml')
@@ -36,7 +36,8 @@ class ReleaseBuilderTests(unittest.TestCase):
                        'outputs/backup.bin','docs/PRIVATE_HARDWARE_REPORT.md',
                        'tools/iphone-connection-lab/secret.py','reference/dump.bin',
                        'tests/test_connection_lab.py','tests/test_live_functional_harness.py',
-                       'pm3gui/__pycache__/app.pyc','docs/assets/private-capture.png')
+                       'pm3gui/__pycache__/app.pyc','docs/assets/private-capture.png',
+                       'pm3gui/private.pm3backup','tests/private.pm3backup')
             for name in (*public,*private):
                 p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('fixture')
             destination=Path(directory)/'publication'

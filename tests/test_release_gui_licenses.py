@@ -35,9 +35,9 @@ class GuiLicenseReleaseTests(unittest.TestCase):
         self.runtime = {'python':'3.12.14','pyside':'6.12.0','qt':'6.12.0','packages':{
             key:{'version':version,'license':'fixture'} for key,version in (
                 ('PySide6-Essentials','6.12.0'),('shiboken6','6.12.0'),
-                ('pyserial','3.5'),('PyInstaller','6.22.3'))}}
+                ('pyserial','3.5'),('PyInstaller','6.22.3'),('pycryptodomex','3.24.2'))}}
         self.lock = {key:self.runtime[key] for key in ('python','pyside','qt')}
-        self.lock.update(pyserial='3.5',pyinstaller='6.22.3',components=[])
+        self.lock.update(pyserial='3.5',pyinstaller='6.22.3',pycryptodomex='3.24.2',components=[])
         for name in ('qtbase','pyside-setup'):
             path = self.cache/(name+'.tar.gz')
             archive(path, {name+'/LICENSES/GPL-3.0-only.txt':'GPL fixture',

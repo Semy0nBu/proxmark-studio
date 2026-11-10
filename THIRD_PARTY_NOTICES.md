@@ -31,6 +31,14 @@ https://doc.qt.io/qt-6/licensing.html · https://doc.qt.io/qtforpython-6/license
 https://pyserial.readthedocs.io/en/latest/appendix.html#license ·
 https://pyinstaller.org/en/stable/license.html
 
+## PyCryptodome
+
+The GUI also includes PyCryptodome (the `pycryptodomex` distribution) for
+optional password-protected library backups: AES-256-GCM and scrypt. Most code
+is public domain; selected components use the BSD license. The complete
+COPYRIGHT notice and matching source archive are retained under `licenses/gui`
+and `sources/gui`. See https://www.pycryptodome.org/src/license.
+
 ## Native Windows runtime
 
 The matching native client has its own MinGW/MSYS2 Qt and Python runtime.

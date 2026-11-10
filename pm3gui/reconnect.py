@@ -28,6 +28,7 @@ class IdleReconnect(QObject):
 
     def _available(self):
         return (not getattr(self.owner,'_closing',False) and self.owner.keep_connection.isChecked()
+                and not getattr(self.owner, 'backup_busy', False)
                 and not self.owner.runner.busy and self.owner.read_job is None
                 and self.owner.antenna_job is None and not self.owner.firmware_busy
                 and not self.owner.runner.rf_lease)

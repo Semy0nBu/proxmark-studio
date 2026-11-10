@@ -45,6 +45,7 @@ from .connection_checks import transport_never_opened, stop_cleanup_version_chec
 from .i18n import LanguageControllerMixin,set_language,LANGUAGES
 from .paths import application_root, default_data_dir, is_frozen
 from .version import APP_NAME, APP_VERSION
+from .library_backup_ui import LibraryBackupMixin
 
 ROOT = application_root()
 
@@ -82,7 +83,7 @@ class FlipperFetchWorker(QThread):
             self.failed.emit(str(exc))
 
 
-class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, StudioControllerMixin, LabControllerMixin, PartialReadControllerMixin, HFWriteControllerMixin, HFToolsControllerMixin, FirmwareControllerMixin, AntennaControllerMixin, QMainWindow):
+class MainWindow(LibraryBackupMixin, PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, StudioControllerMixin, LabControllerMixin, PartialReadControllerMixin, HFWriteControllerMixin, HFToolsControllerMixin, FirmwareControllerMixin, AntennaControllerMixin, QMainWindow):
     def __init__(self, data_dir: Path,language=None):
         super().__init__()
         self.data_dir = data_dir
@@ -963,6 +964,8 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         return directory
 
     def _start_step(self, operation: str | Operation, timeout: int = 90000, *, _reconnect=False):
+        if self.backup_busy:
+            raise ValueError(tr('Дождитесь завершения резервного копирования или восстановления.'))
         if hasattr(self,'reconnector') and not _reconnect:self.reconnector.cancel()
         if self.firmware_busy:
             raise ValueError(tr('Дождитесь завершения прошивки.'))
@@ -1488,7 +1491,7 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
 
     def _busy_changed(self, busy: bool):
         if hasattr(self, 'workspace_bridge'):self.workspace_bridge.result_changed.emit()
-        active = busy or self.read_job is not None or self.antenna_job is not None or self.firmware_busy
+        active = busy or self.read_job is not None or self.antenna_job is not None or self.firmware_busy or self.backup_busy
         if hasattr(self, 'auto_capture_button'):
             self.auto_capture_button.setEnabled(not active or self._auto_owned() and not self.auto_intake['stopping'])
         if getattr(self, 'family_wizard', None) is not None:self.family_wizard.sync()
@@ -1503,7 +1506,7 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
             item.setEnabled(not active)
         self.bluetooth_settings_button.setEnabled(not active and self._transport() == 'blueshark')
         self.detail_stack.setEnabled(self.read_job is None)
-        self.stop_button.setEnabled(active and not self.firmware_busy)
+        self.stop_button.setEnabled(active and not self.firmware_busy and not self.backup_busy)
         for widget in (self.antenna_sweep_button, self.antenna_measure_button, self.antenna_mode,
                        self.antenna_frequency, self.antenna_samples, self.antenna_repeat, self.antenna_note):
             widget.setEnabled(not active)
@@ -1632,6 +1635,11 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         self.auto_intake = None
 
     def closeEvent(self, event: QCloseEvent):
+        if self.backup_busy:
+            self._backup_close_requested = True
+            self._backup_worker.requestInterruption()
+            event.ignore()
+            return
         if self.firmware_busy:
             QMessageBox.information(self, tr('Идёт прошивка'), tr('Дождитесь завершения записи и проверки прошивки.'))
             event.ignore()

@@ -164,6 +164,13 @@ def run_release_check(report_path: Path, *, language='en') -> int:
             window.navigate(index)
             application.processEvents()
         report['checks'].append({'name': 'library-roundtrip-and-all-pages', 'passed': True})
+        from .library_backup import create_backup, restore_backup, validate_profile
+        archive = Path(temporary.name) / 'synthetic.pm3backup'
+        restored = Path(temporary.name) / 'restored'
+        create_backup(profile, archive, password='synthetic release check')
+        restored_report = restore_backup(archive, restored, password='synthetic release check', active_profile=profile)
+        assert restored_report['cards'] == 1 and validate_profile(restored)['revisions'] == 1
+        report['checks'].append({'name': 'encrypted-library-backup-and-separate-profile', 'passed': True})
         original_run, original_typed = window.runner.run, window.runner.run_operation
         def prohibit_device_io(*args, **kwargs):
             raise AssertionError('Frozen workspace checks must not dispatch device commands')

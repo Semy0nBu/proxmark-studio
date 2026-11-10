@@ -19,6 +19,12 @@ The application **does not encrypt its library**. MIFARE keys are stored in an
 ordinary SQLite database; dumps and backups are stored in the database and files.
 Their protection depends on Windows permissions and the security of your computer.
 
+The application can export a password-protected whole-profile
+archive from **Library…**. AES-256-GCM protects the archive, including filenames;
+the password is not saved. Without a password it is an ordinary, unencrypted ZIP.
+Active and restored profiles remain unencrypted. Backups include logs and other
+profile files, which may contain sensitive data. See [Library backup](LIBRARY_BACKUPS.md).
+
 The console keeps the last 100 commands, including their arguments. History,
 dictionaries, reports, and client output can contain UIDs, keys, passwords, and
 card contents. The client's `--incognito` option does not disable the GUI's own

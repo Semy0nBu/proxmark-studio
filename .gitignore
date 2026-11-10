@@ -14,3 +14,4 @@ __pycache__/
 /publication/
 /SOURCE_SNAPSHOT.json
 *.spec
+*.pm3backup

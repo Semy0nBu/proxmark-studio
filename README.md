@@ -12,13 +12,13 @@ library, with RRG/Iceman tools available from the same interface.
 
 ## Download
 
-Current preview: **0.3.0-preview.5**. The matching Proxmark client and runtime
+Current preview: **0.3.0-preview.6**. The matching Proxmark client and runtime
 are included. You do not need to install Python or a separate client.
 
 | Package | Getting started |
 |---|---|
-| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.5/ProxmarkStudio-0.3.0-preview.5-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.5/ProxmarkStudio-0.3.0-preview.5-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
+| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.6/ProxmarkStudio-0.3.0-preview.6-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.6/ProxmarkStudio-0.3.0-preview.6-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
 
 Installation works offline and does not require administrator rights. Connect
 your Proxmark over USB, select **USB → COM port → Connect**, and place a card on
@@ -40,6 +40,7 @@ the next steps.
 | **MIFARE keys** | Track candidate and verified values, sources, and dates; import dictionaries and Flipper Zero files, or fetch supported data over USB. |
 | **Data editor** | Edit HEX, inspect encodings, and compare revisions by new data, changed values, and lost information. |
 | **Writing** | Use the one-card HF wizard for target checks, backup, plan review, and readback; access dedicated LF tools. |
+| **Library backup** | Save the complete profile to one archive, optionally protect it with a password, and restore to a separate profile. |
 | **Laboratory** | Work with Classic / Magic, NDEF, emulation, traces, waveforms / FFT, SPIFFS, and HF/LF antenna measurements with baselines. |
 
 Partial dumps retain a **known-byte map**. Gaps can be filled with zeros while
@@ -51,6 +52,10 @@ The card overview shows what is known for the selected revision. Classic
 comparisons separate data, keys, access conditions, and block 0. Unknown A/B
 values cannot enter a key-change plan. After an interrupted HF write, the result
 view leads through readback and comparison to a new plan that needs approval.
+
+**Library…** creates one archive for cards,
+all versions, keys, settings and profile files, optional password protection, and
+restore to a separate profile. See [Library backup](docs/LIBRARY_BACKUPS.md).
 
 ## Connections and hardware
 
@@ -78,7 +83,7 @@ The library, keys, settings, and backups live in
 Updating or uninstalling the application preserves it. Setup installs the
 program separately in `%LOCALAPPDATA%\Programs\Proxmark Studio`.
 The portable package uses the same user library. To update an installed
-`preview.1`, close the GUI and native client, then run the new installer over
+`preview.5` (or `preview.1`), close the GUI and native client, then run the new installer over
 the existing installation. Keep a separate copy of your data folder before an
 update. Downgrading is not supported.
 

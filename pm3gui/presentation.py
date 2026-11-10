@@ -230,6 +230,9 @@ class PresentationMixin:
         self.language_selector.currentIndexChanged.connect(self.choose_language);side.addWidget(self.language_selector)
         self.language_notice=text('');self.language_notice.hide();side.addWidget(self.language_notice)
         side.addWidget(text('RDV4 / RDV4.01', wrap=False))
+        self.backup_button = command(tr('Библиотека…'), self.show_library_backup)
+        self.backup_button.setToolTip(tr('Резервная копия, восстановление и выбор профиля'))
+        side.addWidget(self.backup_button)
         from .about import AboutDialog
         side.addWidget(command(tr('О программе'), lambda: AboutDialog(self).exec()))
         outer.addWidget(sidebar)

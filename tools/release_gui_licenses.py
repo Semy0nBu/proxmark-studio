@@ -27,7 +27,7 @@ import importlib.metadata as m,json,sys
 import PySide6
 from PySide6.QtCore import qVersion
 packages={}
-for name in ('PySide6-Essentials','shiboken6','pyserial','PyInstaller'):
+for name in ('PySide6-Essentials','shiboken6','pyserial','PyInstaller','pycryptodomex'):
     d=m.distribution(name)
     packages[name]={'version':d.version,'license':d.metadata.get('License-Expression') or d.metadata.get('License','')}
 print(json.dumps({'python':'.'.join(map(str,sys.version_info[:3])),'pyside':PySide6.__version__,'qt':qVersion(),'packages':packages}))
@@ -54,7 +54,7 @@ def _verify_versions(runtime: dict, lock: dict) -> None:
         if runtime.get(key) != version:
             raise ValueError(f'{key} version differs from the reviewed source lock.')
     for package, key in [('PySide6-Essentials', 'pyside'), ('shiboken6', 'pyside'),
-                         ('PyInstaller', 'pyinstaller'), ('pyserial', 'pyserial')]:
+                         ('PyInstaller', 'pyinstaller'), ('pyserial', 'pyserial'), ('pycryptodomex', 'pycryptodomex')]:
         if runtime.get('packages', {}).get(package, {}).get('version') != lock[key]:
             raise ValueError(f'{package} version differs from the reviewed source lock.')
 
