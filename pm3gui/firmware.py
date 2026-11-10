@@ -18,6 +18,7 @@ import struct
 import subprocess
 import sys
 import time
+import threading
 from uuid import uuid4
 
 from PySide6.QtCore import QThread, Signal
@@ -27,6 +28,7 @@ from serial.tools import list_ports
 from .device import _client_environment, parse_connection_status
 from .paths import default_data_dir, firmware_catalog_dir
 from .process_env import external_process_libraries
+from .firmware_output import FlashTranscript, FlashDiagnostics, flash_diagnostics
 
 FLASH_BASE = 0x100000
 OS_START = 0x102000
@@ -37,7 +39,6 @@ BOOTROM_SIZE = OS_START - FLASH_BASE
 MAX_LOG_BYTES = 4 * 1024 * 1024
 _SHA = re.compile(r'[0-9a-f]{64}\Z')
 _READ_FAILURE = re.compile(r'\b(?:error|failed|failure|timeout|timed out|nack)\b', re.I)
-_FLASH_FAILURE = re.compile(r'\b(?:error|failed|failure|timeout|timed out|aborted|nack)\b', re.I)
 _PROFILES = {'usb': ('USB · без Blue Shark', 'gui-cancel', False),
              'blueshark': ('Blue Shark · Bluetooth SPP', 'gui-blueshark', True)}
 
@@ -377,6 +378,10 @@ def read_internal_flash(port: str, *, serial_factory=None, cancelled=None, timeo
 class ClientResult:
     returncode: int
     output: str
+    log_truncated: bool = False
+    output_bytes: int = 0
+    log_error: str = ''
+    flash_diagnostics: FlashDiagnostics | None = None
 
 
 class _SystemFlashIO:
@@ -408,32 +413,63 @@ class _SystemFlashIO:
             native_paths.append(python_bin)
         environment['PATH'] = os.pathsep.join(map(str, (*native_paths, windows/'System32', windows)))
         environment.pop('QT_QPA_PLATFORM', None)
+        transcript = FlashTranscript(MAX_LOG_BYTES,allow_transition='--flash' in arguments)
+        log_errors = [];capture_errors=[]
         with Path(logfile).open('xb', buffering=0) as output:
             with external_process_libraries():
                 process = subprocess.Popen([str(prepared.client_path), *arguments], cwd=cwd, env=environment,
-                                           stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT,
-                                           creationflags=subprocess.CREATE_NO_WINDOW)
+                                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                           bufsize=0, creationflags=subprocess.CREATE_NO_WINDOW)
+            def drain():
+                stored = 0
+                while True:
+                    try:data = process.stdout.read(65536)
+                    except OSError as exc:
+                        capture_errors.append(str(exc));return
+                    if not data:return
+                    transcript.feed(data)
+                    if stored<MAX_LOG_BYTES and not log_errors:
+                        try:
+                            part=data[:MAX_LOG_BYTES-stored];output.write(part);stored+=len(part)
+                        except OSError as exc:log_errors.append(str(exc))
+            reader = threading.Thread(target=drain,name='firmware-log-drain',daemon=True)
+            reader.start()
             deadline = time.monotonic() + timeout
             try:
                 while process.poll() is None:
                     _require(time.monotonic() < deadline, tr('Клиент прошивки превысил время ожидания.'))
-                    _require(Path(logfile).stat().st_size <= MAX_LOG_BYTES, tr('Слишком большой журнал клиента прошивки.'))
                     time.sleep(0.05)
             except BaseException:
                 process.kill()
                 process.wait(timeout=5)
                 raise
-        _require(Path(logfile).stat().st_size <= MAX_LOG_BYTES, tr('Слишком большой журнал клиента прошивки.'))
-        return ClientResult(process.returncode, Path(logfile).read_text(encoding='utf-8', errors='replace'))
+            finally:
+                reader.join(5)
+                if reader.is_alive():
+                    process.stdout.close();reader.join(1)
+                else:process.stdout.close()
+            _require(not reader.is_alive(), tr('Не удалось завершить чтение журнала клиента.'))
+            _require(not capture_errors, tr('Не удалось полностью прочитать вывод клиента прошивки.'))
+        diagnostics = transcript.finish()
+        retained = transcript.retained()
+        if diagnostics.fatal_lines:
+            retained+=b'\n[GUI: retained diagnostic evidence]\n'+'\n'.join(diagnostics.fatal_lines).encode('utf-8','replace')
+        try:Path(logfile).write_bytes(retained)
+        except OSError as exc:log_errors.append(str(exc))
+        return ClientResult(process.returncode, retained.decode('utf-8','replace'),transcript.truncated,
+                            transcript.total_bytes,'; '.join(log_errors)[:1024],diagnostics)
 
     def wait_usb(self, port, serial_number):
         deadline = time.monotonic() + 30
+        candidate=None;since=0
         while time.monotonic() < deadline:
             matches = [p for p in self.ports() if getattr(p, 'vid', None) == 0x9AC4 and getattr(p, 'pid', None) == 0x4B8F
                        and str(getattr(p, 'serial_number', '') or '') == serial_number]
             if len(matches) == 1:
-                time.sleep(0.8)
-                return _port(matches[0].device)
+                found=_port(matches[0].device)
+                if candidate!=found:candidate=found;since=time.monotonic()
+                elif time.monotonic()-since>=0.8:return found
+            else:candidate=None
             time.sleep(0.2)
         raise FirmwareError(tr('Тот же Proxmark3 не появился по USB после записи. Сохранены резервные копии.'))
 
@@ -542,11 +578,15 @@ def execute_flash(prepared: PreparedFlash, *, progress=None, cancelled=None, io=
         progress(tr('Записываем только основную прошивку. Дождитесь завершения проверки…'))
         result = io.run_client(prepared, prepared.flash_argv()[1:], directory, directory/'flash.log', 180)
         state['flash_exit_code'] = result.returncode
+        diagnostics = result.flash_diagnostics or flash_diagnostics(result.output)
+        state.update(flash_log_truncated=result.log_truncated, flash_output_bytes=result.output_bytes,
+                     flash_log_error=result.log_error, bootloader_reconnect_messages=diagnostics.reconnect_lines,
+                     flash_diagnostics=list(diagnostics.fatal_lines))
         save()
         _require(result.returncode == 0, tr('Клиент прошивки сообщил ошибку. Повторная запись не запускается.'))
         # Some pinned RRG failure paths exit0 and can even print All done.
         # Reject negative diagnostics; only actual readback proves installation.
-        _require(not _FLASH_FAILURE.search(result.output) and re.search(r'\bAll done\b', result.output, re.I),
+        _require(not diagnostics.fatal_lines and diagnostics.all_done,
                  tr('Клиент не подтвердил завершение записи или сообщил ошибку. Повторная запись не запускается.'))
         state.update(status='verifying_readback', flash_process_completed=True)
         save()

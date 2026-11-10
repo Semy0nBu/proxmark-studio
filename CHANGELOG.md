@@ -1,4 +1,58 @@
-# История изменений
+# Changelog / История изменений
+
+## 0.3.0-preview.5 — 2026-11-10
+
+Changes since the public `preview.1`:
+
+- Card overview with revision selection, known-byte coverage, gaps and Classic sectors.
+- Revision comparison separates new data, changed values and lost information;
+  Classic keys, access conditions and block 0 have their own categories.
+- Interrupted HF writes have an operation-bound result and a readback/comparison
+  path to a new reviewed plan. Unknown A/B values cannot enter key-change plans.
+- Stop no longer loses the current step's completion or leaves the idle window
+  stuck in Running. Repeated Stop and failed cleanup retain a usable exit path.
+- Bounded USB/Blue Shark idle reconnection without replaying card operations;
+  USB port renumbering follows the confirmed device serial number.
+- Large flasher logs no longer kill the client. Transition-only port errors are
+  distinguished from write failures, while mandatory readback checks remain.
+- Short button animations, reduced-motion support and interruptible smooth scrolling.
+
+По-русски: добавлены паспорт карты, содержательное сравнение версий и результат
+прерванной HF-записи. Неизвестные ключи A/B исключены из плана смены ключей.
+Исправлено зависание после Stop, доработаны переподключение USB/Blue Shark,
+журналы прошивальщика и плавность интерфейса. Повторная запись требует нового
+плана и подтверждения; операции с картами автоматически не повторяются.
+
+## 0.3.0-preview.4 — локальная сборка
+
+- Ограниченный журнал больше не прерывает процесс прошивки; ошибки сохраняются
+  даже при сокращении большого вывода клиента.
+- Временные ошибки COM при переходе в загрузчик отделены от ошибок записи.
+  После записи по-прежнему обязательны проверки ELF, загрузчика, SPI и версии OS.
+- Восстановление соединения в простое: до трёх проверок версии без повтора RF-операций.
+  Смена USB COM отслеживается только по ранее подтверждённому серийному номеру.
+- Устранено влияние запоздалых сигналов старой попытки установки на новую.
+- Короткие анимации кнопок и системный режим уменьшения анимаций; нажатия
+  выполняются сразу, ручная прокрутка прерывает плавную.
+
+## 0.3.0-preview.3 — локальная сборка
+
+- Ошибка открытия COM-порта больше не запускает цикл проверки остановки RF.
+- После неудачной проверки остановки можно закрыть GUI; неопределённое состояние
+  платы сохраняется в статусе выхода и не отмечается успешной остановкой.
+- Проверка несохранённых правок и запрет закрытия при активной прошивке сохранены.
+
+## 0.3.0-preview.2 — локальная сборка
+
+- Защита записи Classic: маскированные и неизвестные A/B не попадают в план
+  смены ключей, в том числе при разрешённой записи нулевых заполнителей.
+- Паспорт выбранной версии карты, нормализованная карта известных байтов и
+  отдельное представление LF-идентификаторов.
+- Сравнение версий с разделением новых данных, изменений и потери сведений;
+  отдельные категории данных, ключей, прав доступа и блока 0 для Classic.
+- Результат прерванной HF-записи с привязкой к операции и безопасным
+  перечитыванием. Повторная запись требует нового плана и подтверждения.
+- Проверки синтетических карт и настоящих Qt-контроллеров без RF.
 
 ## 0.3.0-preview.1
 

@@ -14,6 +14,111 @@ from .paths import application_root, default_data_dir, is_frozen, resource_root
 from .version import APP_VERSION
 
 
+def check_card_workspace(window):
+    """Exercise bundled workspace code with synthetic bytes and zero device I/O."""
+    from dataclasses import replace
+    from .core import DumpData
+    from .card_snapshot import known_byte_mask
+    from .writing import HFWritePlan, WriteOptions
+    from .operation_recovery import (Binding, SourceSelection, WriteSnapshot, ReadbackEvidence,
+        Termination, Dispatch, Link, State, Action, decide_recovery)
+    from .write_readback import readback_flow
+
+    image = bytearray(1024)
+    image[:4] = bytes.fromhex('A1B2C3D4')
+    for sector in range(16):
+        image[(sector*4+3)*16:(sector*4+4)*16] = bytes.fromhex('FFFFFFFFFFFFFF078069FFFFFFFFFFFF')
+    metadata = {'read_validation': {'kind': 'mfc'}}
+    cid = window.library.create_card('Synthetic Classic check', DumpData(bytes(image), 'bin', metadata, 16),
+                                     uid='A1B2C3D4', protocol='MIFARE Classic 1K')
+    window.refresh_library();window.load_card(cid);window.card_workspace.refresh()
+    old = window.loaded_revision
+    source = window.workspace_bridge.current_source()
+    assert len(source.snapshot.known_bytes) == 832
+    assert window.card_tabs.count() == 4 and window.card_workspace.grid.count() == 16
+    memory = window.workspace_bridge.create_memory_map()
+    assert len(memory.dump.metadata['partial_dump']['known_bytes']) == 832
+    memory.close();memory.deleteLater()
+    image[16] = 7
+    new = window.library.save_revision(cid, DumpData(bytes(image), 'bin', metadata, 16), 'Synthetic change')
+    window.load_card(cid);window.card_workspace.refresh()
+    window.card_workspace.left.setCurrentIndex(window.card_workspace.left.findData(old))
+    window.card_workspace.right.setCurrentIndex(window.card_workspace.right.findData(new))
+    window.card_workspace.compare()
+    assert window.card_workspace.diff_table.rowCount() == 1
+    assert window.library.get_dump(cid, old).data[16] == 0
+    window.open_write_dialog()
+    assert window.write_dialog.recovery_panel is not None
+    window.write_dialog.close()
+    plan = HFWritePlan(DumpData(bytes(image), 'bin', metadata, 16),
+        WriteOptions('mfc', include_keys=True, include_unknown=True, first=3, last=3), window.data_dir/'synthetic-plan')
+    assert plan.next_operation() == 'hf search'
+    try:
+        plan.consume('[+] UID: A1 B2 C3 D4\nMIFARE Classic 1K\n', 0)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('Masked keys entered the write plan')
+    assert plan.entries == [] and not plan.approved
+    zero_image = bytearray(image);zero_image[48:54] = bytes(6)
+    known_zero = DumpData(bytes(zero_image), 'bin', {'read_validation': {'kind': 'mfc', 'known_key_slots': [
+        {'sector': 0, 'type': 'A', 'key_hex': '000000000000'}]}}, 16)
+    assert all(known_byte_mask(known_zero)[48:54])
+    binding = Binding('synthetic-operation', 'synthetic-target', 'synthetic-source', 'synthetic-plan')
+    snapshot = WriteSnapshot(binding, SourceSelection('synthetic-revision', 'synthetic-source', True),
+        Termination.FAILED, Dispatch.MAY_HAVE_WRITTEN, Link.READY, frozenset({1, 2}), frozenset({1}),
+        error_present=True)
+    assert decide_recovery(snapshot).state is State.WRITE_UNCERTAIN
+    checked = replace(snapshot, readback=ReadbackEvidence(binding, frozenset({1, 2}), frozenset({1}), True, True))
+    result = decide_recovery(checked)
+    assert result.state is State.DIFFERENCES_CONFIRMED and result.next_action is Action.PREPARE_NEW_PLAN
+    assert not result.auto_execute and snapshot.may_have_written == frozenset({1})
+    assert callable(readback_flow)
+    for index in range(window.card_tabs.count()):
+        window.card_tabs.setCurrentIndex(index)
+        QApplication.processEvents()
+    window.card_tabs.setCurrentIndex(0)
+    return {'name': 'card-workspace-v2-and-unknown-key-write-guard', 'passed': True,
+            'known_classic_bytes': 832, 'synthetic_comparison_changes': 1,
+            'physical_device_access': False}
+
+
+def check_stop_completion(window):
+    """Exercise the real completion signal with a runner that cannot access I/O."""
+    runner=window.runner
+    assert not runner.busy and window.read_job is None
+    original_run,original_cancel=runner.run,runner.cancel
+    commands=[]
+
+    def fake_run(settings,command,**kwargs):
+        assert command in {'hf search','hw version'}
+        commands.append(command);runner._active=object()
+
+    def reply(code):
+        token=runner.completion_token;runner._active=None
+        runner.busy_changed.emit(False)
+        runner.completed.emit(token,code,'Synthetic release check')
+
+    runner.run=fake_run;runner.cancel=lambda:reply(-2)
+    try:
+        window.read_hf_card();window.cancel_operation()
+        assert commands==['hf search','hw version']
+        assert window.read_job['stage']=='cancel_resync'
+        window._log('[+] Communicating with PM3 over USB-CDC\nOS......... Iceman/release-test\n')
+        reply(0)
+        assert window.read_job is None and window.ports.isEnabled()
+        # No client remains to emit a completion in this second scenario.
+        window.read_hf_card();runner._active=None;window.cancel_operation()
+        assert commands==['hf search','hw version']*2
+        assert window.read_job['stage']=='cancel_resync'
+        window._log('[+] Communicating with PM3 over USB-CDC\nOS......... Iceman/release-test\n')
+        reply(0)
+        assert window.read_job is None and not runner.busy
+    finally:
+        runner._active=None;runner.run,runner.cancel=original_run,original_cancel
+    return {'name':'stop-completion-ownership-and-idle-recovery','passed':True,'physical_device_access':False}
+
+
 def run_release_check(report_path: Path, *, language='en') -> int:
     report = {'version': APP_VERSION, 'frozen': is_frozen(), 'checks': [],
               'hardware_commands': 0, 'personal_data_opened': False, 'passed': False}
@@ -30,6 +135,7 @@ def run_release_check(report_path: Path, *, language='en') -> int:
         from .about import AboutDialog
 
         application = QApplication.instance() or QApplication([])
+        report['qt_platform'] = application.platformName()
         apply_theme(application)
         root = application_root()
         report.update(application_root=str(root), resource_root=str(resource_root()),
@@ -58,6 +164,27 @@ def run_release_check(report_path: Path, *, language='en') -> int:
             window.navigate(index)
             application.processEvents()
         report['checks'].append({'name': 'library-roundtrip-and-all-pages', 'passed': True})
+        original_run, original_typed = window.runner.run, window.runner.run_operation
+        def prohibit_device_io(*args, **kwargs):
+            raise AssertionError('Frozen workspace checks must not dispatch device commands')
+        window.runner.run = window.runner.run_operation = prohibit_device_io
+        try:
+            report['checks'].append(check_card_workspace(window))
+        finally:
+            window.runner.run, window.runner.run_operation = original_run, original_typed
+        report['checks'].append(check_stop_completion(window))
+        from PySide6.QtCore import QEventLoop, QTimer
+        window.navigate(1)
+        window.show()
+        settle = QEventLoop()
+        QTimer.singleShot(300, settle.quit)
+        settle.exec()
+        assert window.isVisible() and int(window.winId()) and not window.runner.busy
+        screenshot = Path(report_path).resolve().with_suffix('.png')
+        screenshot.parent.mkdir(parents=True, exist_ok=True)
+        assert window.grab().save(str(screenshot), 'PNG')
+        report['checks'].append({'name': 'native-window-created-and-rendered', 'passed': True,
+                                 'screenshot': str(screenshot)})
         about = AboutDialog(window)
         assert APP_VERSION in ' '.join(label.text() for label in about.findChildren(QLabel))
         about.close()

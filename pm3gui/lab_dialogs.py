@@ -12,6 +12,9 @@ from .theme import mono_font
 from .presentation import configure_table
 
 
+
+from .ui import SoftButton
+
 def caption(text,kind='muted'):
     result=QLabel(text);result.setWordWrap(True);result.setTextFormat(Qt.TextFormat.PlainText);result.setObjectName(kind);return result
 
@@ -23,11 +26,11 @@ class OperationDialog(QDialog):
         self.outer=QVBoxLayout(self);scroll=QScrollArea();scroll.setWidgetResizable(True);content=QWidget();self.layout=QVBoxLayout(content)
         self.layout.setSpacing(14);self.layout.addWidget(caption(title,'title'));scroll.setWidget(content);self.outer.addWidget(scroll,1)
         self.status=caption(tr('Выберите источник.'));self.progress=QProgressBar();self.progress.setTextVisible(False);self.progress.hide()
-        self.stop=QPushButton(tr('Остановить'));self.stop.setEnabled(False);self.stop.clicked.connect(owner.cancel_operation)
-        self.close_button=QPushButton(tr('Закрыть'));self.close_button.clicked.connect(self.reject)
-        self.directory=None;self.files_button=QPushButton(tr('Файлы…'));self.files_button.setEnabled(False)
+        self.stop=SoftButton(tr('Остановить'));self.stop.setEnabled(False);self.stop.clicked.connect(owner.cancel_operation)
+        self.close_button=SoftButton(tr('Закрыть'));self.close_button.clicked.connect(self.reject)
+        self.directory=None;self.files_button=SoftButton(tr('Файлы…'));self.files_button.setEnabled(False)
         self.files_button.clicked.connect(lambda:QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.directory))) if self.directory else None)
-        self.reset_button=QPushButton(tr('Плата обесточена'));self.reset_button.hide()
+        self.reset_button=SoftButton(tr('Плата обесточена'));self.reset_button.hide()
         self.reset_button.setToolTip(tr('После отключения USB и аккумулятора Blue Shark. Снять блокировку, сохранив отсутствие аппаратного подтверждения остановки.'))
         self.reset_button.clicked.connect(lambda:owner.acknowledge_lab_reset(self))
 
@@ -67,7 +70,7 @@ class EmulationDialog(OperationDialog):
         self.duration=QSpinBox();self.duration.setRange(1,20);self.duration.setValue(5);self.duration.setSuffix(tr(' мин'));form.addRow(tr('Автоостановка'),self.duration)
         self.layout.addLayout(form);self.profile=caption('');self.layout.addWidget(self.profile)
         self.partial=QCheckBox(tr('Использовать неполный образ с заполнителями'));self.layout.addWidget(self.partial)
-        self.start=QPushButton(tr('Начать эмуляцию'));self.start.setObjectName('primary');self.start.clicked.connect(lambda:owner.start_emulation(self))
+        self.start=SoftButton(tr('Начать эмуляцию'));self.start.setObjectName('primary');self.start.clicked.connect(lambda:owner.start_emulation(self))
         self.footer([self.start]);self.picker.changed.connect(self.source_changed)
         self.partial.toggled.connect(lambda checked:self.start.setEnabled(self.profile_valid and (not self.picker.dump.metadata.get('partial_dump') or checked)));self.source_changed()
 
@@ -93,8 +96,8 @@ class LFWriteDialog(OperationDialog):
         self.profile=caption(tr('EM410x → T5577 без пароля · резервная копия page 0 и контроль заводской области'));self.layout.addWidget(self.profile)
         row=QHBoxLayout();self.clock=QComboBox();self.clock.addItem('RF/64',64);self.clock.addItem('RF/32',32);row.addWidget(caption(tr('Скорость')));row.addWidget(self.clock);row.addStretch();self.layout.addLayout(row)
         self.table=QTableWidget(0,3);self.table.setHorizontalHeaderLabels([tr('Блок'),tr('Было'),tr('Будет')]);configure_table(self.table,[80,250,250]);self.layout.addWidget(self.table,1)
-        self.prepare=QPushButton(tr('Проверить заготовку'));self.prepare.clicked.connect(lambda:owner.prepare_lf_write(self))
-        self.write=QPushButton(tr('Записать и проверить'));self.write.setObjectName('primary');self.write.setEnabled(False);self.write.clicked.connect(lambda:owner.approve_lf_write(self))
+        self.prepare=SoftButton(tr('Проверить заготовку'));self.prepare.clicked.connect(lambda:owner.prepare_lf_write(self))
+        self.write=SoftButton(tr('Записать и проверить'));self.write.setObjectName('primary');self.write.setEnabled(False);self.write.clicked.connect(lambda:owner.approve_lf_write(self))
         self.footer([self.prepare,self.write]);self.picker.changed.connect(self.source_changed);self.source_changed()
 
     def identifier(self):
@@ -128,9 +131,9 @@ class ResumeDialog(QDialog):
         if self.current:self.sources.addItem(tr('Текущий неполный дамп'),('current',''))
         paths=sorted((owner.data_dir/'sessions').glob('*/partial-draft.json'),key=lambda p:p.stat().st_mtime,reverse=True) if (owner.data_dir/'sessions').is_dir() else []
         for path in paths:self.sources.addItem(path.parent.name,('file',str(path)))
-        row=QHBoxLayout();row.addWidget(self.sources,1);browse=QPushButton(tr('Файл…'));browse.clicked.connect(self.browse);row.addWidget(browse);layout.addLayout(row)
+        row=QHBoxLayout();row.addWidget(self.sources,1);browse=SoftButton(tr('Файл…'));browse.clicked.connect(self.browse);row.addWidget(browse);layout.addLayout(row)
         self.info=caption('');layout.addWidget(self.info);layout.addStretch()
-        self.start=QPushButton(tr('Проверить карту и продолжить'));self.start.setObjectName('primary');self.start.setEnabled(False);self.start.clicked.connect(lambda:owner.start_resume_read(self));layout.addWidget(self.start)
+        self.start=SoftButton(tr('Проверить карту и продолжить'));self.start.setObjectName('primary');self.start.setEnabled(False);self.start.clicked.connect(lambda:owner.start_resume_read(self));layout.addWidget(self.start)
         self.sources.currentIndexChanged.connect(self.selected)
         if self.sources.count()>1:self.sources.setCurrentIndex(1)
 

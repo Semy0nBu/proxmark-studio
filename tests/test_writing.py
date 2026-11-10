@@ -18,6 +18,15 @@ def classic_image():
     return bytes(image)
 
 
+def partial_metadata(known):
+    bitmap=set(known)
+    read=[b for b in range(64) if bitmap & set(range(b*16,(b+1)*16))]
+    return {'partial_dump':{'version':1,'kind':'mfc','classic_size':'1k','uid':UID,
+        'expected_bytes':1024,'block_size':16,'known_bytes':sorted(bitmap),'read_blocks':read,
+        'missing_blocks':sorted(set(range(64))-set(read)),
+        'incomplete_blocks':[b for b in range(64) if not set(range(b*16,(b+1)*16))<=bitmap],'complete':False}}
+
+
 class Card:
     """Independent in-memory RF responder, including masked trailer fields."""
     def __init__(self,data,family='mfc'):
@@ -133,7 +142,7 @@ class WritingTests(unittest.TestCase):
         source=bytearray(classic_image());source[16:32]=bytes(16);source[32]=7
         target=bytearray(classic_image());target[16:32]=b'X'*16
         known=[i for i in range(1024) if not 16<=i<32]
-        self.prepare(bytes(source),metadata={'partial_dump':{'known_bytes':known}},card=Card(target))
+        self.prepare(bytes(source),metadata=partial_metadata(known),card=Card(target))
         self.assertIn(1,self.plan.skipped)
         self.execute()
         self.assertEqual(self.card.data[16:32],b'X'*16)
@@ -153,8 +162,32 @@ class WritingTests(unittest.TestCase):
     def test_unknown_keys_are_never_written_as_zero_placeholders(self):
         source=classic_image()
         options=WriteOptions('mfc',include_keys=True,include_unknown=True,first=3,last=3)
-        plan=HFWritePlan(DumpData(source,'bin',{'partial_dump':{'known_bytes':list(range(48))}},16),options,self.root)
+        plan=HFWritePlan(DumpData(source,'bin',partial_metadata(range(48)),16),options,self.root)
         with self.assertRaisesRegex(ValueError,'нет считанных'):plan.consume(*Card(source).respond(plan.next_operation()))
+
+    def test_full_read_masked_keys_are_skipped_even_with_include_unknown(self):
+        source=bytearray(classic_image());source[16:20]=b'TEST';source[48:54]=bytes(6);source[58:64]=bytes(6)
+        self.prepare(bytes(source),WriteOptions('mfc',include_keys=True,include_unknown=True),
+                     metadata={'read_validation':{'kind':'mfc','all_key_slots_known':True}})
+        self.assertFalse(any(e['trailer'] for e in self.plan.entries))
+        self.execute()
+        self.assertEqual(self.card.data[48:64],TRAILER)
+
+    def test_verified_zero_key_is_a_value_not_an_unknown_filler(self):
+        source=bytearray(classic_image());source[48:54]=bytes(6)
+        metadata={'read_validation':{'kind':'mfc','known_key_slots':[
+            {'sector':0,'type':'A','key_hex':'000000000000'}, {'sector':0,'type':'B','key_hex':'FFFFFFFFFFFF'}]}}
+        self.prepare(bytes(source),WriteOptions('mfc',include_keys=True,first=3,last=3),metadata=metadata)
+        self.execute();self.assertEqual(self.card.data[48:54],bytes(6))
+
+    def test_changed_key_evidence_invalidates_approval_and_failed_plan_cannot_resume(self):
+        source=bytearray(classic_image());source[48:54]=bytes.fromhex('112233445566')
+        self.prepare(bytes(source),WriteOptions('mfc',include_keys=True,first=3,last=3))
+        self.plan.source.metadata['read_validation']={'kind':'mfc'}
+        with self.assertRaises(ValueError):self.plan.approve()
+        self.assertEqual(self.card.writes,[])
+        self.plan.fail('cancelled')
+        with self.assertRaises(ValueError):self.plan.approve()
 
     def test_mfu_writes_only_user_pages_and_reads_them_back(self):
         target=bytearray(180);source=bytearray(180)

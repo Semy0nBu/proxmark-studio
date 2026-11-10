@@ -1,14 +1,55 @@
 """Small native Qt presentation helpers; no device access."""
-from PySide6.QtCore import Qt, QEasingCurve, QPropertyAnimation
+from PySide6.QtCore import Qt, QEasingCurve, QPropertyAnimation, QVariantAnimation, QEvent
 from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (QGraphicsOpacityEffect, QPushButton, QScrollArea,
-                              QStackedWidget, QToolButton, QVBoxLayout, QWidget)
+                              QStackedWidget, QToolButton, QVBoxLayout, QWidget,
+                              QStyle, QStyleOptionButton, QStylePainter, QApplication)
 
 
 class SoftButton(QPushButton):
     def __init__(self, text='', parent=None):
         super().__init__(text, parent)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._tint=QColor(255,255,255,0)
+        self._motion=QVariantAnimation(self)
+        self._motion.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._motion.valueChanged.connect(self._tint_changed)
+        self.pressed.connect(lambda:self._animate_tint(True))
+        self.released.connect(lambda:self._animate_tint(False))
+
+    def _tint_changed(self,value):
+        self._tint=value;self.update()
+
+    def _animate_tint(self,pressed=False):
+        target=(QColor(0,0,0,34) if pressed else QColor(255,255,255,20) if self.underMouse() else QColor(255,255,255,0))
+        self._motion.stop()
+        if not self.isEnabled() or not self.isVisible():
+            self._tint_changed(QColor(255,255,255,0));return
+        app=QApplication.instance()
+        if app is not None and app.property('reducedMotion'):
+            self._tint_changed(target);return
+        self._motion.setDuration(65 if pressed else 120)
+        self._motion.setStartValue(self._tint);self._motion.setEndValue(target);self._motion.start()
+
+    def enterEvent(self,event):
+        super().enterEvent(event);self._animate_tint(self.isDown())
+
+    def leaveEvent(self,event):
+        super().leaveEvent(event);self._animate_tint(self.isDown())
+
+    def changeEvent(self,event):
+        super().changeEvent(event)
+        if event.type()==QEvent.Type.EnabledChange and hasattr(self,'_motion'):
+            self._animate_tint(self.isDown())
+
+    def paintEvent(self,event):
+        option=QStyleOptionButton();self.initStyleOption(option)
+        option.state &= ~(QStyle.StateFlag.State_MouseOver|QStyle.StateFlag.State_Sunken)
+        painter=QStylePainter(self);painter.drawControl(QStyle.ControlElement.CE_PushButton,option)
+        if self.isEnabled() and self._tint.alpha():
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setPen(Qt.PenStyle.NoPen);painter.setBrush(self._tint)
+            painter.drawRoundedRect(self.rect().adjusted(1,1,-1,-1),4,4)
 
 
 class SmoothStack(QStackedWidget):
@@ -31,7 +72,7 @@ class SmoothStack(QStackedWidget):
         self._clear_fade()
         super().setCurrentIndex(index)
         page = self.currentWidget()
-        if not changed or not self.isVisible() or page is None:
+        if not changed or not self.isVisible() or page is None or QApplication.instance().property('reducedMotion'):
             return
         effect = QGraphicsOpacityEffect(page)
         page.setGraphicsEffect(effect)
@@ -51,10 +92,13 @@ class SmoothScrollArea(QScrollArea):
         self._scroll = QPropertyAnimation(self.verticalScrollBar(), b'value', self)
         self._scroll.setDuration(150)
         self._scroll.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.verticalScrollBar().sliderPressed.connect(self._scroll.stop)
+        self.verticalScrollBar().actionTriggered.connect(self._scroll.stop)
 
     def wheelEvent(self, event):
         bar = self.verticalScrollBar()
-        if event.pixelDelta().y() or not event.angleDelta().y() or bar.maximum() == 0:
+        if (QApplication.instance().property('reducedMotion') or event.pixelDelta().y()
+                or not event.angleDelta().y() or bar.maximum() == 0):
             super().wheelEvent(event)
             return
         target = self._scroll.endValue() if self._scroll.state() == QPropertyAnimation.State.Running else bar.value()
@@ -103,7 +147,7 @@ class Disclosure(QWidget):
         self.header.setChecked(expanded)
         self.header.blockSignals(blocked)
         self.header.setArrowType(Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow)
-        if not self.isVisible():
+        if not self.isVisible() or QApplication.instance().property('reducedMotion'):
             self.content.setVisible(expanded)
             self.content.setMaximumHeight(16777215 if expanded else 0)
             return

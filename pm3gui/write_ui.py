@@ -3,6 +3,8 @@ from .i18n import tr
 from .writing import HFWritePlan
 from .card_band import card_band
 from .write_dialog import WriteDialog
+from .operation_recovery import Termination, Link, State
+from .studio_data import say
 
 
 class HFWriteControllerMixin:
@@ -24,7 +26,11 @@ class HFWriteControllerMixin:
         try:
             directory=self._new_session()
             self.current_session=directory
-            plan=HFWritePlan(dialog.dump,dialog.options(),directory,self.key_library.list_card_keys)
+            candidates=getattr(dialog,'recovery_keys',())
+            keys=lambda uid:self.key_library.list_card_keys(uid)+list(candidates)
+            plan=HFWritePlan(dialog.dump,dialog.options(),directory,keys)
+            self.workspace_bridge.invalidate('new_write_preflight')
+            dialog.recovery_panel.hide()
             dialog.plan=plan
             self.read_job={'job_kind':'write','stage':'write_transaction','session':directory,'write_plan':plan,'write_dialog':dialog}
             dialog.set_active(True)
@@ -38,6 +44,8 @@ class HFWriteControllerMixin:
         if self.runner.busy or not job or job.get('write_dialog') is not dialog:
             return
         try:
+            if not self.workspace_bridge.can_approve(job.get('workspace_epoch')):
+                raise ValueError(say('План изменён или уже завершён. Подготовьте новый план.', 'The plan changed or has ended. Prepare a new plan.'))
             dialog.plan.approve()
             dialog.set_active(True)
             self._next_write_step()
@@ -72,6 +80,7 @@ class HFWriteControllerMixin:
             dialog.show_review(plan)
             dialog.status.setText(tr('Проверьте изменения и нажмите «Начать автозапись».'))
             dialog.set_active(True,review=True)
+            job['workspace_epoch'] = self.workspace_bridge.bind_review()
             self._busy_changed(False)
             self.operation_progress.hide()
             self.device_info.setText(tr('План записи подготовлен. Ожидается подтверждение в диалоге.'))
@@ -90,6 +99,10 @@ class HFWriteControllerMixin:
 
     def _end_write(self,success,message):
         job=self.read_job
+        plan=job['write_plan']
+        termination=Termination.COMPLETED if success else Termination.CANCELLED if job.get('write_cancelled') else Termination.FAILED
+        captured=self.workspace_bridge.capture_finished(job.get('workspace_epoch'),plan,
+            termination=termination,link=Link.READY if success else Link.UNCONFIRMED)
         self.read_job=None
         self._busy_changed(self.runner.busy)
         dialog=job['write_dialog']
@@ -98,7 +111,62 @@ class HFWriteControllerMixin:
         dialog.show_review(job['write_plan'])
         dialog.steps.setText(tr('Автозапись завершена') if success else tr('Автозапись остановлена'))
         dialog.status.setText(message)
+        if captured:
+            dialog.recovery_panel.show()
+            self.workspace_bridge.result_changed.emit()
         self.device_info.setText(message)
+
+    def check_interrupted_write(self):
+        bridge=self.workspace_bridge
+        try:
+            self._lab_available()
+            if bridge._capture is None or bridge._snapshot is None:
+                raise ValueError(say('Контекст записи недоступен.', 'Write context is unavailable.'))
+            from .write_evidence import snapshot_from_live_plan
+            if snapshot_from_live_plan(bridge._plan,bridge._capture,termination=bridge._snapshot.termination,
+                    link=Link.UNCONFIRMED).binding != bridge._snapshot.binding:
+                raise ValueError(say('План был изменён.', 'The plan has changed.'))
+            from .write_readback import readback_flow
+            epoch,binding=bridge.epoch,bridge._snapshot.binding
+            def finished(result):
+                if result['status']=='completed' and not result.get('manual_power_reset'):
+                    bridge.accept_postcheck(epoch,binding,result['result'])
+                bridge.result_changed.emit()
+            self.start_studio(readback_flow(bridge._plan,binding,self._device_profile()['transport'],
+                verified_transport=lambda:self.runner.connection_transport),
+                say('Перечитывание результата записи', 'Write result readback'),rf=True,on_finished=finished)
+            bridge.result_changed.emit()
+        except (ValueError,OSError) as exc:self.error(exc)
+
+    def prepare_recovery_write(self):
+        from copy import deepcopy
+        bridge=self.workspace_bridge
+        try:
+            self._lab_available()
+            result=bridge.decision()
+            if not result or result.state not in {State.NOT_WRITTEN,State.CANCELLED_BEFORE_WRITE,State.BACKUP_FAILED,State.DIFFERENCES_CONFIRMED}:
+                raise ValueError(say('Сначала перечитайте карту и сравните с планом.', 'Read and compare the card first.'))
+            source,options,target=deepcopy(bridge._source),deepcopy(bridge._options),bridge._target
+            old=bridge._dialog
+            if old is not None:old.close()
+            self.write_dialog=dialog=WriteDialog(self,source)
+            dialog.family.setCurrentIndex(dialog.family.findData(options.family));dialog._family_changed()
+            dialog.key_a.setText(options.key_a);dialog.key_b.setText(options.key_b);dialog.mfu_key.setText(options.mfu_key)
+            dialog.first.setValue(options.first);dialog.last.setValue(options.last)
+            dialog.selected_blocks.setText(', '.join(map(str,options.blocks)))
+            dialog.target_uid.setText(target.uid)
+            dialog.include_keys.setChecked(options.include_keys);dialog.include_unknown.setChecked(options.include_unknown)
+            dialog.secure.setChecked(options.secure_channel)
+            # These are only candidates. The new preflight authenticates them
+            # afresh; no key-library entry is invented from a write ACK.
+            from .writing import block_sector
+            dialog.recovery_keys=[]
+            for entry in bridge._entries:
+                if entry['trailer']:
+                    dialog.recovery_keys.extend({'sector':block_sector(entry['block']),'type':kind,'key_hex':entry[field][a:b]}
+                        for field in ('new','old') for kind,a,b in [('A',0,12),('B',20,32)])
+            dialog.show()
+        except (ValueError,OSError) as exc:self.error(exc)
 
     def _write_failed(self,message):
         job=self.read_job

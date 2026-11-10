@@ -22,8 +22,13 @@ class CleanupTimerTests(unittest.TestCase):
         self.enterContext(patch('pm3gui.connection_checks.CLEANUP_VERSION_RECHECK_DELAY_MS',5))
         self.addCleanup(lambda:stop_cleanup_version_checks(self.job))
     def schedule(self):return schedule_cleanup_version_check(self.owner,self.job,'cleanup_version',self.failure)
+    def wait_for(self,predicate):
+        # Windows/Qt timer delivery may exceed 20 ms on a busy build host.
+        deadline=time.monotonic()+1
+        while not predicate() and time.monotonic()<deadline:QTest.qWait(10)
+        self.assertTrue(predicate())
     def test_valid_timer_sends_only_version_and_keeps_remaining_deadline(self):
-        self.job['cleanup_version_deadline']-=2;self.assertTrue(self.schedule());QTest.qWait(20)
+        self.job['cleanup_version_deadline']-=2;self.assertTrue(self.schedule());self.wait_for(lambda:self.owner._start_step.called)
         self.owner._start_step.assert_called_once();command,timeout=self.owner._start_step.call_args.args
         self.assertEqual(command,'hw version');self.assertLessEqual(timeout,18000);self.assertGreater(timeout,0)
         self.assertEqual(self.job['cleanup_version_probe_count'],2);self.failure.assert_not_called()
@@ -37,7 +42,7 @@ class CleanupTimerTests(unittest.TestCase):
         self.assertTrue(self.schedule());self.job['stage']='uncertain';QTest.qWait(20)
         self.owner._start_step.assert_not_called();self.failure.assert_not_called();self.assertEqual(self.job['stage'],'uncertain')
     def test_deadline_expiring_while_waiting_retains_failure_without_command(self):
-        self.assertTrue(self.schedule());self.job['cleanup_version_deadline']=time.monotonic()-1;QTest.qWait(20)
+        self.assertTrue(self.schedule());self.job['cleanup_version_deadline']=time.monotonic()-1;self.wait_for(lambda:self.failure.called)
         self.owner._start_step.assert_not_called();self.failure.assert_called_once()
     def test_maximum_and_expired_budget_do_not_even_schedule_another_probe(self):
         self.job['cleanup_version_probe_count']=8;self.assertFalse(self.schedule())
@@ -45,4 +50,4 @@ class CleanupTimerTests(unittest.TestCase):
         self.assertNotIn('cleanup_version_timer',self.job);self.owner._start_step.assert_not_called()
     def test_duplicate_scheduling_cannot_create_parallel_version_probes(self):
         self.assertTrue(self.schedule());timer=self.job['cleanup_version_timer'];self.assertTrue(self.schedule())
-        self.assertIs(self.job['cleanup_version_timer'],timer);QTest.qWait(20);self.owner._start_step.assert_called_once()
+        self.assertIs(self.job['cleanup_version_timer'],timer);self.wait_for(lambda:self.owner._start_step.called);self.owner._start_step.assert_called_once()

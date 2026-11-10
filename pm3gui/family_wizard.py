@@ -36,6 +36,9 @@ OPERATIONS = [
 ] + [('lf:'+name, name+' → T5577',name+' → T5577') for name in LF_READERS]
 
 
+
+from .ui import SoftButton
+
 class FamilyWizard(QDialog):
     def __init__(self, owner, profile='', source=None):
         super().__init__(owner);self.owner=owner;self.gate=None;self.outcome=None;self.closing=False;self.last_session=None
@@ -59,10 +62,10 @@ class FamilyWizard(QDialog):
         self.save_result=QCheckBox(say('Сохранить проверенный результат в библиотеку','Save the verified result to the library'));self.save_result.setChecked(True);outer.addWidget(self.save_result)
         self.status=QLabel(say('Выберите операцию и нажмите «Подготовить».','Choose an operation and select Prepare.'));self.status.setWordWrap(True);outer.addWidget(self.status)
         buttons=QHBoxLayout();outer.addLayout(buttons)
-        self.prepare=QPushButton(say('Подготовить','Prepare'));self.commit=QPushButton(say('Записать по плану','Write prepared plan'));self.commit.setObjectName('primary');self.commit.setEnabled(False)
-        self.stop=QPushButton(say('Остановить','Stop'));self.stop.setEnabled(False)
-        self.files=QPushButton(say('Файлы…','Files…'));self.close_button=QPushButton(say('Закрыть','Close'))
-        self.reset=QPushButton(say('Питание сброшено…','Power was reset…'));self.reset.hide()
+        self.prepare=SoftButton(say('Подготовить','Prepare'));self.commit=SoftButton(say('Записать по плану','Write prepared plan'));self.commit.setObjectName('primary');self.commit.setEnabled(False)
+        self.stop=SoftButton(say('Остановить','Stop'));self.stop.setEnabled(False)
+        self.files=SoftButton(say('Файлы…','Files…'));self.close_button=SoftButton(say('Закрыть','Close'))
+        self.reset=SoftButton(say('Питание сброшено…','Power was reset…'));self.reset.hide()
         for b in (self.prepare,self.commit,self.stop,self.files,self.close_button):buttons.addWidget(b)
         outer.addWidget(self.reset)
         self.prepare.clicked.connect(lambda:self.guard(self.prepare_operation));self.commit.clicked.connect(lambda:self.guard(self.approve))
@@ -150,8 +153,8 @@ class FamilyWizard(QDialog):
             row=QHBoxLayout();layout.addLayout(row)
             self.source_unit=QSpinBox();self.source_unit.setRange(0,255);self.source_unit.setValue(2 if family=='Topaz' else 1)
             if op!='desfire':row.addWidget(QLabel(say('Блок источника','Source block')));row.addWidget(self.source_unit)
-            copy=QPushButton(say('Данные из снимка','Data from snapshot'));copy.clicked.connect(lambda:self.guard(self.copy_source));row.addWidget(copy)
-            load=QPushButton(say('Данные из BIN…','Data from BIN…'));load.clicked.connect(lambda:self.guard(self.load_payload));row.addWidget(load);row.addStretch()
+            copy=SoftButton(say('Данные из снимка','Data from snapshot'));copy.clicked.connect(lambda:self.guard(self.copy_source));row.addWidget(copy)
+            load=SoftButton(say('Данные из BIN…','Data from BIN…'));load.clicked.connect(lambda:self.guard(self.load_payload));row.addWidget(load);row.addStretch()
             hints={
                 'MIFARE Plus':say('Нужен текущий AES-ключ. UID, ключи и условия доступа назначения сохраняются.','The current AES key is required. Destination UID, keys and access conditions are preserved.'),
                 'Topaz':say('Пользовательские блоки 2–12 по 8 байт. UID, CC, lock и OTP сохраняются.','User blocks 2–12, 8 bytes each. UID, CC, lock and OTP are preserved.'),
@@ -171,7 +174,7 @@ class FamilyWizard(QDialog):
             self.payload=QPlainTextEdit();self.payload.setFont(mono_font());self.payload.setMaximumHeight(120);layout.addWidget(self.payload)
             raw=getattr(self.owner.studio,'ndef',b'')
             if raw:self.payload.setPlainText(raw.hex(' ').upper())
-            load=QPushButton(say('Сообщение из BIN…','Message from BIN…'));load.clicked.connect(lambda:self.guard(self.load_payload));layout.addWidget(load)
+            load=SoftButton(say('Сообщение из BIN…','Message from BIN…'));load.clicked.connect(lambda:self.guard(self.load_payload));layout.addWidget(load)
             hint=say('Копия и проверка NDEF-сообщения, не всей памяти чипа. Защищённые страницы требуют подходящего ключа.','Backup/readback covers the NDEF message, not the entire chip. Protected pages require an appropriate key.')
         else:
             if op=='lf:EM410x':self.combo(form,'clock',say('Тактовый делитель','Clock divisor'),['64','32'])

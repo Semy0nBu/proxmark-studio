@@ -142,6 +142,22 @@ class PresentationTests(unittest.TestCase):
         self.assertIn('Readback mismatch', self.dialog.status.text())
         self.assertTrue(self.window.read_button.isEnabled())
 
+    def test_stale_firmware_worker_signals_cannot_finish_a_new_install(self):
+        previous=self.start_fake_install()
+        previous.failed.emit('First attempt failed');previous.finished.emit()
+        current=self.start_fake_install()
+        previous.failed.emit('Stale failure');previous.finished.emit()
+        self.assertIs(self.window.firmware_worker,current)
+        self.assertTrue(self.window.firmware_busy)
+        self.assertEqual(self.window._firmware_error,'')
+
+    def test_queued_release_after_finish_cannot_start_a_second_flasher(self):
+        worker=self.start_fake_install()
+        worker.failed.emit('Failed');worker.finished.emit()
+        before=len(FakeWorker.instances)
+        self.window._firmware_wait_for_release()
+        self.assertEqual(len(FakeWorker.instances),before)
+
     def test_only_verified_install_updates_client_and_usb_profile(self):
         worker = self.start_fake_install()
         worker.completed.emit({'verified':True,'profile':'usb','label':'USB без Blue Shark','version':'GUI-test',

@@ -10,6 +10,18 @@ CLEANUP_VERSION_MAX_PROBES = 8
 CLEANUP_VERSION_RECHECK_DELAY_MS = 250
 
 
+def transport_never_opened(output):
+    """Positive open failure without evidence of an established PM3 link.
+
+    Generic timeouts and disconnects are insufficient. This is not proof that
+    a device stopped when a separate cleanup probe has failed.
+    """
+    text = _StreamCleaner().feed(output.replace('\r\n','\n').replace('\r','\n'))
+    opened = re.search(r'Communicating with PM3 over\b|^\s*(?:\[[=+!]\]\s*)?'
+                       r'(?:OS\.{2,}\s+\S+|(?:UID|IDm|CSN|ATQA|SAK)\s*[.:])', text, re.I|re.M)
+    return not opened and bool(re.search(r'^\s*\[!+\]\s*UART\s+CreateFile\s+failed\b', text, re.I|re.M))
+
+
 _PROBE_ERROR = re.compile(
     r'(?:OFFLINE\s+mode|UART\s+CreateFile\s+failed|'
     r'invalid serial port|No response from Proxmark3|cannot communicate|'

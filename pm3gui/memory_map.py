@@ -17,6 +17,9 @@ DATA_ACCESS={0:'Чтение A/B · запись A/B',1:'Чтение A/B · з�
              6:'Чтение A/B · запись B',7:'Доступ запрещён'}
 
 
+
+from .ui import SoftButton
+
 def sector_info(dump,sector):
     count=next((s for s,size in CLASSIC_GEOMETRIES.values() if size==len(dump.data)),None)
     if dump.block_size!=16 or count is None or not 0<=sector<count:raise ValueError(tr('Нужен образ MIFARE Classic Mini/1K/2K/4K.'))
@@ -59,7 +62,7 @@ class MemoryMapDialog(QDialog):
         for sector in range(count):
             info=sector_info(dump,sector);bg,fg=COLOURS[info['state']]
             a='●' if info['keys']['A'] else '○';b='●' if info['keys']['B'] else '○'
-            tile=QPushButton(tr('СЕКТОР {0}\n{1}/{2} блоков\nA {3}    B {4}', f'{sector:02d}', f"{info['present']}", f"{info['count']}", f'{a}', f'{b}'))
+            tile=SoftButton(tr('СЕКТОР {0}\n{1}/{2} блоков\nA {3}    B {4}', f'{sector:02d}', f"{info['present']}", f"{info['count']}", f'{a}', f'{b}'))
             tile.setCheckable(True);tile.setMinimumSize(105,68)
             tile.setStyleSheet(f'QPushButton {{background:{bg};color:{fg};border:1px solid {bg};border-radius:10px;padding:9px;text-align:left;}} '
                               f'QPushButton:checked {{border:2px solid {fg};}} QPushButton:hover {{border:1px solid {fg};}}')

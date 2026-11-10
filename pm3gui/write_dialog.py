@@ -15,6 +15,9 @@ from .ui import Disclosure
 from .presentation import configure_table,install_table_copy
 
 
+
+from .ui import SoftButton
+
 class WriteDialog(QDialog):
     def __init__(self,owner,dump=None):
         super().__init__(owner)
@@ -37,14 +40,14 @@ class WriteDialog(QDialog):
             self.sources.addItem(card['name'],('card',card['id']))
             self.sources.setItemData(self.sources.count()-1,card['name']+' · '+card['uid'],Qt.ItemDataRole.ToolTipRole)
         row.addWidget(self.sources,1)
-        self.file_button=QPushButton(tr('Открыть файл…'));self.file_button.clicked.connect(self.choose_file);row.addWidget(self.file_button)
+        self.file_button=SoftButton(tr('Открыть файл…'));self.file_button.clicked.connect(self.choose_file);row.addWidget(self.file_button)
         layout.addLayout(row)
         row=QHBoxLayout();row.addWidget(QLabel(tr('Версия')))
         self.source_versions=QComboBox();self.source_versions.setMinimumContentsLength(12)
         self.source_versions.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         row.addWidget(self.source_versions,1)
-        self.load_button=QPushButton(tr('Открыть сценарий…'));self.load_button.clicked.connect(self.choose_scenario);row.addWidget(self.load_button)
-        self.save_scenario_button=QPushButton(tr('Сохранить сценарий…'));self.save_scenario_button.clicked.connect(self.export_scenario);row.addWidget(self.save_scenario_button)
+        self.load_button=SoftButton(tr('Открыть сценарий…'));self.load_button.clicked.connect(self.choose_scenario);row.addWidget(self.load_button)
+        self.save_scenario_button=SoftButton(tr('Сохранить сценарий…'));self.save_scenario_button.clicked.connect(self.export_scenario);row.addWidget(self.save_scenario_button)
         layout.addLayout(row)
         self.source_info=QLabel(tr('Выберите дамп. Затем положите карту назначения на HF-антенну.'))
         self.source_info.setWordWrap(True);self.source_info.setObjectName('muted');layout.addWidget(self.source_info)
@@ -83,15 +86,18 @@ class WriteDialog(QDialog):
         self.details=Disclosure(tr('Отчёт и подробности'))
         self.summary=QPlainTextEdit();self.summary.setReadOnly(True);self.summary.setFont(mono_font());self.summary.setMaximumHeight(150)
         self.details.body.addWidget(self.summary);layout.addWidget(self.details)
+        from .card_workspace import RecoveryPanel
+        self.recovery_panel=RecoveryPanel(owner,owner.workspace_bridge)
+        self.recovery_panel.hide();layout.addWidget(self.recovery_panel)
         self.progress=QProgressBar();self.progress.setTextVisible(False);self.progress.hide();outer.addWidget(self.progress)
         self.status=QLabel(tr('Выберите источник и нажмите «Проверить карту».'))
         self.status.setWordWrap(True);outer.addWidget(self.status)
         row=QHBoxLayout()
-        self.prepare_button=QPushButton(tr('Проверить карту'));self.prepare_button.clicked.connect(lambda:owner.prepare_card_write(self))
-        self.write_button=QPushButton(tr('Начать автозапись'));self.write_button.setObjectName('primary');self.write_button.setEnabled(False)
+        self.prepare_button=SoftButton(tr('Проверить карту'));self.prepare_button.clicked.connect(lambda:owner.prepare_card_write(self))
+        self.write_button=SoftButton(tr('Начать автозапись'));self.write_button.setObjectName('primary');self.write_button.setEnabled(False)
         self.write_button.clicked.connect(lambda:owner.approve_card_write(self))
-        self.stop=QPushButton(tr('Остановить'));self.stop.clicked.connect(owner.cancel_operation);self.stop.setEnabled(False)
-        self.close_button=QPushButton(tr('Закрыть'));self.close_button.clicked.connect(self.reject)
+        self.stop=SoftButton(tr('Остановить'));self.stop.clicked.connect(owner.cancel_operation);self.stop.setEnabled(False)
+        self.close_button=SoftButton(tr('Закрыть'));self.close_button.clicked.connect(self.reject)
         for widget in (self.prepare_button,self.write_button,self.stop,self.close_button):row.addWidget(widget)
         row.addStretch();outer.addLayout(row)
         for widget in (self.steps,self.source_info,self.review_heading,self.status):widget.setTextFormat(Qt.TextFormat.PlainText)

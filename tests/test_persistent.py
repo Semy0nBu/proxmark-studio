@@ -593,6 +593,21 @@ class PersistentTests(unittest.TestCase):
         self.assertFalse(self.runner.session_open)
         self.assertTrue(any('не поддерживает' in message for _, message in self.sessions))
 
+    def test_idle_link_loss_notification_never_replays_user_commands(self):
+        lost=[];self.runner.idle_link_lost.connect(lost.append)
+        self.configure(idle_exit=True)
+        self.assertEqual(self.run_command('hf search'),0)
+        self.wait(lambda:bool(lost))
+        self.assertEqual(len(lost),1)
+        self.assertEqual([row[1] for row in self.trace()],['hw version','hf search'])
+        self.assertFalse(self.runner.session_open)
+
+    def test_active_command_failure_does_not_request_idle_reconnect(self):
+        lost=[];self.runner.idle_link_lost.connect(lost.append)
+        self.configure(die_command='hf search')
+        self.assertEqual(self.run_command('hf search'),-5)
+        self.assertEqual(lost,[])
+
     def test_invalid_wire_field_is_rejected_before_opening_any_client(self):
         self.settings.working_dir = str(self.root / ('x' * 8200))
         with self.assertRaises((ValueError, OSError)):

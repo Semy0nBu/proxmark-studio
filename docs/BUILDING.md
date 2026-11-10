@@ -89,7 +89,7 @@ compiling; a different compiler requires a reviewed toolchain-lock update.
 ```
 
 The default output directory is `dist`. It contains
-`ProxmarkStudio-0.3.0-preview.1-Setup-x64.exe`, `installer-manifest.json`, and the
+`ProxmarkStudio-0.3.0-preview.5-Setup-x64.exe`, `installer-manifest.json`, and the
 updated `SHA256SUMS.txt`. Use `--output-root` to choose a different output folder.
 The installer script and toolchain lock are included in the public source export.
 The unmodified Inno Setup runtime retains its own

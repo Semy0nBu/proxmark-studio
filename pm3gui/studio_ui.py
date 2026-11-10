@@ -31,6 +31,9 @@ from .classic_ui import ClassicSplit, ClassicHexDelegate, BYTE_COLORS, key_slots
 from .i18n import display_key_source
 
 
+
+from .ui import SoftButton
+
 def label(ru, en):
     w = QLabel(say(ru, en));w.setWordWrap(True);w.setTextFormat(Qt.TextFormat.PlainText)
     return w
@@ -135,7 +138,7 @@ class StudioPage(QWidget):
         layout=QVBoxLayout(self);layout.setContentsMargins(0,0,0,0)
         toolbar=row(layout)
         self.status=label('Выберите инструмент. Просмотр работает без подключения.','Choose a tool. Browsing works offline.');toolbar.addWidget(self.status,1)
-        self.reset_button=QPushButton(say('После сброса питания','After power reset'));self.reset_button.clicked.connect(owner.acknowledge_studio_reset);self.reset_button.hide();toolbar.addWidget(self.reset_button)
+        self.reset_button=SoftButton(say('После сброса питания','After power reset'));self.reset_button.clicked.connect(owner.acknowledge_studio_reset);self.reset_button.hide();toolbar.addWidget(self.reset_button)
         self.button(toolbar,'Файлы сеанса…','Session files…',self.open_session,hardware=False)
         split=QSplitter(Qt.Orientation.Horizontal);layout.addWidget(split,1)
         self.sections=QListWidget();self.sections.setMinimumWidth(125);self.sections.setMaximumWidth(170)
@@ -153,7 +156,7 @@ class StudioPage(QWidget):
         self.output_disclosure=Disclosure(say('Технический вывод','Technical output'));self.output_disclosure.body.addWidget(self.output);layout.addWidget(self.output_disclosure)
 
     def button(self,layout,ru,en,callback,hardware=True):
-        button=QPushButton(say(ru,en));button.clicked.connect(lambda checked=False:self.guard(callback));layout.addWidget(button)
+        button=SoftButton(say(ru,en));button.clicked.connect(lambda checked=False:self.guard(callback));layout.addWidget(button)
         if hardware:self.buttons.append(button)
         return button
 

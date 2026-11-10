@@ -14,6 +14,9 @@ READ_ACTIONS={'hf search','hf 14a reader','hf 14a info','hf mf rdbl','hf mf rdsc
               'hf iclass rdbl','hf 15 read','hf 15 rdbl','hf 15 info','hf mfdes info','hf mfdes read'}
 
 
+
+from .ui import SoftButton
+
 class ParameterForm(QWidget):
     def __init__(self,command,changed,parent=None):
         super().__init__(parent)
@@ -68,7 +71,7 @@ class ParameterForm(QWidget):
                 title.setMinimumWidth(min(190,title.fontMetrics().horizontalAdvance(title.text())+4))
                 if field.kind=='file':
                     row=QHBoxLayout();row.addWidget(control,1)
-                    browse=QPushButton(tr('Выбрать…'));browse.clicked.connect(lambda _,f=field,w=control:self.browse(f,w))
+                    browse=SoftButton(tr('Выбрать…'));browse.clicked.connect(lambda _,f=field,w=control:self.browse(f,w))
                     self.file_buttons[field.name]=browse
                     row.addWidget(browse);form.addRow(title,row)
                 else:form.addRow(title,control)
@@ -113,7 +116,7 @@ class HFToolsDialog(QDialog):
         screen=owner.screen().availableGeometry();self.resize(min(1080,screen.width()-40),min(760,screen.height()-60))
         layout=QVBoxLayout(self);layout.setSpacing(12)
         quick=QHBoxLayout();title=QLabel(tr('Действия с ')+band.upper()+tr('-картой'));title.setObjectName('section');quick.addWidget(title,1)
-        self.auto_write_button=QPushButton(tr('Автозапись дампа…'));self.auto_write_button.setIcon(line_icon('cards'))
+        self.auto_write_button=SoftButton(tr('Автозапись дампа…'));self.auto_write_button.setIcon(line_icon('cards'))
         self.auto_write_button.clicked.connect(self.open_autowrite);quick.addWidget(self.auto_write_button);layout.addLayout(quick)
         self.auto_write_button.setVisible(band=='hf')
         row=QHBoxLayout();self.group=QComboBox();self.group.addItem(tr('Все семейства'),'')
@@ -138,8 +141,8 @@ class HFToolsDialog(QDialog):
         for widget in (self.action_heading,self.action_context,self.status):widget.setTextFormat(Qt.TextFormat.PlainText)
         row=QHBoxLayout();self.timeout=QSpinBox();self.timeout.setRange(5,1800);self.timeout.setValue(120);self.timeout.setSuffix(tr(' с'))
         self.timeout.setToolTip(tr('Предельное время выполнения'));row.addWidget(QLabel(tr('Тайм-аут')));row.addWidget(self.timeout);row.addStretch()
-        self.run_button=QPushButton(tr('Выполнить'));self.run_button.setObjectName('primary');self.run_button.clicked.connect(self.run_command)
-        self.stop_button=QPushButton(tr('Остановить'));self.stop_button.clicked.connect(owner.cancel_operation);self.stop_button.setEnabled(False)
+        self.run_button=SoftButton(tr('Выполнить'));self.run_button.setObjectName('primary');self.run_button.clicked.connect(self.run_command)
+        self.stop_button=SoftButton(tr('Остановить'));self.stop_button.clicked.connect(owner.cancel_operation);self.stop_button.setEnabled(False)
         row.addWidget(self.run_button);row.addWidget(self.stop_button);body.addLayout(row)
         splitter.addWidget(right);splitter.setSizes([315,720]);layout.addWidget(splitter,1)
         self.group.currentIndexChanged.connect(self.filter_commands);self.search.textChanged.connect(self.filter_commands)

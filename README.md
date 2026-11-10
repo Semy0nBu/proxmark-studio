@@ -12,13 +12,13 @@ library, with RRG/Iceman tools available from the same interface.
 
 ## Download
 
-Current release: **0.3.0-preview.1**. The matching Proxmark client and runtime
+Current preview: **0.3.0-preview.5**. The matching Proxmark client and runtime
 are included. You do not need to install Python or a separate client.
 
 | Package | Getting started |
 |---|---|
-| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.1/ProxmarkStudio-0.3.0-preview.1-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.1/ProxmarkStudio-0.3.0-preview.1-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
+| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.5/ProxmarkStudio-0.3.0-preview.5-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.5/ProxmarkStudio-0.3.0-preview.5-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
 
 Installation works offline and does not require administrator rights. Connect
 your Proxmark over USB, select **USB → COM port → Connect**, and place a card on
@@ -36,9 +36,9 @@ the next steps.
 | Area | What you can do |
 |---|---|
 | **HF / LF reading** | Detect and identify cards, work in either band, or use automatic intake with duplicate suppression. |
-| **Card library** | Add names and notes, search, keep revision history, save complete or partial dumps, and resume Classic reads. |
+| **Card library** | Track revisions and memory coverage, inspect gaps, save complete or partial dumps, and resume Classic reads. |
 | **MIFARE keys** | Track candidate and verified values, sources, and dates; import dictionaries and Flipper Zero files, or fetch supported data over USB. |
-| **Data editor** | Edit HEX, inspect encodings and printable strings, and view Classic memory and access conditions. |
+| **Data editor** | Edit HEX, inspect encodings, and compare revisions by new data, changed values, and lost information. |
 | **Writing** | Use the one-card HF wizard for target checks, backup, plan review, and readback; access dedicated LF tools. |
 | **Laboratory** | Work with Classic / Magic, NDEF, emulation, traces, waveforms / FFT, SPIFFS, and HF/LF antenna measurements with baselines. |
 
@@ -46,6 +46,11 @@ Partial dumps retain a **known-byte map**. Gaps can be filled with zeros while
 remaining marked as unread. The write wizard presents a plan before changing
 the card and checks written data through readback. An EM410x library record
 stores an identifier rather than an image of the chip's entire memory.
+
+The card overview shows what is known for the selected revision. Classic
+comparisons separate data, keys, access conditions, and block 0. Unknown A/B
+values cannot enter a key-change plan. After an interrupted HF write, the result
+view leads through readback and comparison to a new plan that needs approval.
 
 ## Connections and hardware
 
@@ -56,6 +61,10 @@ The project's hardware test setup is a **Proxmark3 RDV4.01 with Blue Shark**.
 | **USB** | A cable and the Proxmark COM port in Windows. |
 | **Blue Shark** | Bluetooth **Classic SPP**: pair the module in Windows and select its COM port. |
 | **TCP** | A separately configured compatible network bridge and a `tcp:host:port` address. The application does not host the bridge. |
+
+With **Keep connection** enabled, an idle disconnect triggers a bounded version
+check. Card operations are never replayed automatically. Stop waits for client
+completion and checks the board; a failed check does not trap an idle GUI.
 
 The bundle includes RDV4 firmware profiles with and without Blue Shark.
 Flashing is a separate operation with plan review and a backup; installing the
@@ -68,7 +77,10 @@ The library, keys, settings, and backups live in
 `%LOCALAPPDATA%\Proxmark Studio`. Open this folder through **About**.
 Updating or uninstalling the application preserves it. Setup installs the
 program separately in `%LOCALAPPDATA%\Programs\Proxmark Studio`.
-The portable package uses the same user library.
+The portable package uses the same user library. To update an installed
+`preview.1`, close the GUI and native client, then run the new installer over
+the existing installation. Keep a separate copy of your data folder before an
+update. Downgrading is not supported.
 
 **The library is not encrypted.** Command history and logs can contain keys and
 passwords. The GUI does not automatically upload the library; individual client

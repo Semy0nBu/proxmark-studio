@@ -8,6 +8,9 @@ from .paths import application_root
 from .version import APP_NAME, APP_VERSION
 
 
+
+from .ui import SoftButton
+
 class AboutDialog(QDialog):
     def __init__(self, owner):
         super().__init__(owner)
@@ -24,11 +27,11 @@ class AboutDialog(QDialog):
         data = QLabel(tr('Библиотека: {0}', str(owner.data_dir)))
         data.setWordWrap(True)
         layout.addWidget(data)
-        data_button = QPushButton(tr('Открыть папку библиотеки'))
+        data_button = SoftButton(tr('Открыть папку библиотеки'))
         data_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(owner.data_dir))))
         layout.addWidget(data_button)
         notices = application_root() / 'THIRD_PARTY_NOTICES.md'
-        license_button = QPushButton(tr('Лицензии компонентов'))
+        license_button = SoftButton(tr('Лицензии компонентов'))
         license_button.setEnabled(notices.is_file())
         license_button.clicked.connect(lambda: self.show_licenses(notices))
         layout.addWidget(license_button)

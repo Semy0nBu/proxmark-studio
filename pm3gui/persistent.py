@@ -38,6 +38,7 @@ class PersistentSession(QObject):
         self.owner = owner
         self.process = None
         self.connected = False
+        self.idle_loss = False
         self.transport = None
         self.signature = None
         self.token = ''
@@ -85,6 +86,7 @@ class PersistentSession(QObject):
         signature = (*key, settings.port.upper(), settings.transport)
         run = _Run(executable, arguments, cwd, environment, key,
                    preserve_tail=preserve_tail, bulk_cancel=bulk_cancel)
+        run.completion_token = self.owner.completion_token
         run.require_session = settings.require_session
         self.owner._active = run
         run.timeout = QTimer(self.owner)
@@ -395,6 +397,8 @@ class PersistentSession(QObject):
             self.process.kill()
 
     def _lost(self, message):
+        self.idle_loss = (self.connected and self.owner._active is None and not self.owner.rf_lease
+                          and not self.owner._shutting_down and self.transport != 'offline')
         self._set_closed(message)
         self.pending = None
         self.frame = None
@@ -406,6 +410,8 @@ class PersistentSession(QObject):
             self.process.kill()
         elif run:
             self.owner._complete(run, -5, message)
+        elif self.idle_loss:
+            self.idle_loss=False;self.owner.idle_link_lost.emit(message)
 
     def _set_closed(self, message):
         self.connected = False
@@ -418,6 +424,7 @@ class PersistentSession(QObject):
         self.owner.session_changed.emit(False, message)
 
     def disconnect(self):
+        self.idle_loss=False
         self.pending = None
         self._close(tr('Постоянное соединение отключено.'))
 
@@ -466,6 +473,9 @@ class PersistentSession(QObject):
             return
         self._read(process)
         phase = self.phase
+        idle_loss = self.idle_loss or (phase=='idle' and self.connected and self.owner._active is None
+                                      and not self.owner.rf_lease and self.transport!='offline')
+        self.idle_loss=False
         self.process = None
         self.close_timer.stop()
         process.close()
@@ -508,8 +518,11 @@ class PersistentSession(QObject):
                 self.owner._complete(run, *self.owner._stop_result(run.stop_reason))
             else:
                 self.owner._complete(run, -5, message)
+        elif idle_loss and not self.owner._shutting_down:
+            self.owner.idle_link_lost.emit(message)
 
     def shutdown(self):
+        self.idle_loss=False
         self.pending = None
         self.frame = None
         self.close_timer.stop()

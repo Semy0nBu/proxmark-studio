@@ -129,6 +129,18 @@ class DeviceTests(unittest.TestCase):
         self.assertEqual(modern_env.value("QT_QPA_PLATFORM_PLUGIN_PATH"), str(self.root / "libs" / "platforms"))
         self.assertEqual(dict(os.environ), before)
 
+    def test_completion_carries_token_of_run_even_after_next_token_changes(self):
+        received=[]
+        self.runner.completed.connect(lambda token,code,message:received.append((token,code)))
+        first,second=object(),object()
+        self.runner.completion_token=first
+        self.runner.run(self.settings,'hw version')
+        self.runner.completion_token=second
+        self.wait_for(lambda:bool(received))
+        self.assertIs(received[0][0],first)
+        self.run_and_wait()
+        self.assertIs(received[1][0],second)
+
     def test_command_and_port_validation(self):
         for command in ("hw version; hf mf restore", "hw version\nquit", "hw version | x",
                         "hw version\x00", "hf mf restore", "hw version ", "hw\tversion"):

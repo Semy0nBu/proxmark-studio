@@ -1,5 +1,6 @@
 """Firmware checks use synthetic ELF, memory streams and fake subprocess I/O."""
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -415,7 +416,7 @@ class FirmwareTests(unittest.TestCase):
         scripts = prepared.client_path.parent / 'pyscripts'
         scripts.mkdir()
         foreign = str(self.root / 'foreign runtime')
-        process = SimpleNamespace(poll=lambda: 0, returncode=0)
+        process = SimpleNamespace(poll=lambda: 0, returncode=0,stdout=io.BytesIO())
         events = []
         with patch.dict(os.environ, {'PATH': foreign, 'PYTHONHOME': foreign, 'PYTHONPATH': foreign,
                                      'QT_PLUGIN_PATH': foreign, 'QT_QPA_PLATFORM_PLUGIN_PATH': foreign,

@@ -19,7 +19,7 @@ class LabControllerMixin:
             raise ValueError(tr('Завершите текущую операцию устройства.'))
 
     def open_memory_map(self):
-        try:self.memory_dialog=MemoryMapDialog(self,deepcopy(self._working_dump()));self.memory_dialog.show()
+        try:self.memory_dialog=self.workspace_bridge.create_memory_map();self.memory_dialog.show()
         except (ValueError,OSError) as exc:self.error(exc)
 
     def open_emulation(self):

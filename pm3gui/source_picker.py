@@ -9,6 +9,9 @@ from .keys import format_key_timestamp
 from .card_band import card_band
 
 
+
+from .ui import SoftButton
+
 class SourcePicker(QWidget):
     changed=Signal()
     def __init__(self,owner,band=None,parser=parse_dump):
@@ -23,7 +26,7 @@ class SourcePicker(QWidget):
         for card in owner.library.list_cards():
             if band and card['rf_band']!=band:continue
             self.cards.addItem(card['name'],('card',card['id']))
-        row.addWidget(self.cards,1);button=QPushButton(tr('Файл…'));button.clicked.connect(self.open_file);row.addWidget(button);layout.addLayout(row)
+        row.addWidget(self.cards,1);button=SoftButton(tr('Файл…'));button.clicked.connect(self.open_file);row.addWidget(button);layout.addLayout(row)
         self.versions=QComboBox();self.versions.setMinimumContentsLength(14)
         self.versions.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon);layout.addWidget(self.versions)
         self.info=QLabel(tr('Выберите карту и версию либо откройте файл.'));self.info.setWordWrap(True);self.info.setTextFormat(Qt.TextFormat.PlainText);self.info.setObjectName('muted');layout.addWidget(self.info)

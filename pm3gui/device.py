@@ -88,7 +88,8 @@ def available_ports() -> list[dict[str, str]]:
                       or re.search(r"\b(?:VID[:=_]?)?9AC4[:&+_ ](?:PID[:=_]?)?4B8F\b", hwid, re.I))
         is_bluetooth = re.search(r"bluetooth|bthenum|bthmodem|rfcomm|блютуз", identity, re.I)
         kind = "usb" if is_pm3_usb else "bluetooth" if is_bluetooth else "other"
-        ports.append({"device": item.device, "description": description, "hwid": hwid, "kind": kind})
+        ports.append({"device": item.device, "description": description, "hwid": hwid, "kind": kind,
+                      "serial_number":str(getattr(item,'serial_number','') or '')})
     return ports
 
 
@@ -321,13 +322,16 @@ class _Run:
     guard_line_buffer: str = ""
     auth2_errors: int = 0
     last_nonce_count: int = 0
+    completion_token: object = None
 
 
 class ClientRunner(QObject):
     output = Signal(str)
     finished = Signal(int, str)
+    completed = Signal(object, int, str)
     busy_changed = Signal(bool)
     session_changed = Signal(bool, str)
+    idle_link_lost = Signal(str)
 
     def __init__(self, parent: QObject | None = None, *, argument_prefix: Sequence[str] = ()) -> None:
         super().__init__(parent)
@@ -335,6 +339,7 @@ class ClientRunner(QObject):
         # This is argv, never a shell command.
         self._argument_prefix = list(argument_prefix)
         self._active: _Run | None = None
+        self.completion_token = None
         self._capabilities: dict[tuple[str, int, int], bool] = {}
         self._pipe_capabilities: dict[tuple[str, int, int], bool] = {}
         self._cancel_capabilities: dict[tuple[str, int, int], bool] = {}
@@ -435,6 +440,7 @@ class ClientRunner(QObject):
         stat = Path(executable).stat()
         key = (executable, stat.st_mtime_ns, stat.st_size)
         run = _Run(executable, arguments, cwd, environment, key, preserve_tail=preserve_tail)
+        run.completion_token = self.completion_token
         self._active = run
         run.timeout = QTimer(self)
         run.timeout.setSingleShot(True)
@@ -610,4 +616,5 @@ class ClientRunner(QObject):
             run.process.deleteLater()
         self._active = None
         self.busy_changed.emit(False)
+        self.completed.emit(run.completion_token, code, message)
         self.finished.emit(code, message)

@@ -45,7 +45,7 @@ from personal dictionaries by the native allowlist.
 
 The included GitHub workflow runs tests and catalog auditing only. It does not
 publish. Before creating a release, run the local build/review steps and attach
-the portable archive, `ProxmarkStudio-0.3.0-preview.1-Setup-x64.exe`, and their
+the portable archive, `ProxmarkStudio-<version>-Setup-x64.exe`, and their
 checksums. Keep source archives and dependency notices available with the
 corresponding binary version. Include the installer script, builder, toolchain
 lock, tests, and Inno Setup notice in the explicit publication allowlist.

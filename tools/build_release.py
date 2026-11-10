@@ -21,7 +21,7 @@ PUBLIC_ROOT_FILES = ('README.md', 'README.en.md', 'README.ru.md', 'LICENSE', 'TH
                      'requirements.txt', 'requirements-build.txt', 'run_gui.py',
                      'start.ps1', 'launch-gui.vbs', 'auto-write.ps1', '.gitignore')
 PUBLIC_DOCS = ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'BUILDING.md', 'RELEASING.md',
-               'PRIVACY_RU.md', 'PRIVACY_EN.md')
+               'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md')
 PUBLIC_TOOLS = ('build_release.py', 'release_native.py', 'release_firmware.py',
                 'release_gui_licenses.py', 'release_gui_sources.json', 'release_sources.py',
                 'release_windows_manifest.py', 'verify_release.py',
@@ -176,7 +176,7 @@ def reuse_native_bundle(source, destination):
     result = verify_release(source)
     if not result['passed'] or json.loads((source/'release.json').read_text())['bundle_kind'] != 'complete':
         raise ValueError('The base must be a complete verified release: '+json.dumps(result['errors']))
-    for name in ('client', 'firmware', 'licenses/native-runtime', 'sources/native-runtime'):
+    for name in ('client', 'firmware', 'licenses/proxmark3', 'licenses/native-runtime', 'sources/native-runtime'):
         shutil.copytree(source/name, destination/name)
     for name in ('native-manifest.json', 'sources/proxmark3-corresponding-source.zip'):
         (destination/name).parent.mkdir(parents=True, exist_ok=True)
@@ -190,7 +190,7 @@ def stage_public_documents(app):
     if (ROOT/'README.ru.md').is_file():
         shutil.copy2(ROOT/'README.ru.md', app/'README.ru.md')
     (app/'docs').mkdir(exist_ok=True)
-    for name in ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'PRIVACY_RU.md', 'PRIVACY_EN.md'):
+    for name in ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md'):
         shutil.copy2(ROOT/'docs'/name, app/'docs'/name)
     for name in PUBLIC_ASSETS:
         source = ROOT/'docs/assets'/name
@@ -222,7 +222,9 @@ def stage(args, app):
     write_json(app/'release.json', {'application': APP_NAME, 'version': APP_VERSION,
                'platform': 'windows-x64', 'bundle_kind': 'gui-only' if args.gui_only else 'complete',
                'built_utc': datetime.now(timezone.utc).isoformat(), 'signed': False,
-               'native_client_sha256': digest(app/'client/proxmark3.exe') if native else None})
+               'native_client_sha256': digest(app/'client/proxmark3.exe') if native else None,
+               'native_client_original_sha256': json.loads((app/'native-manifest.json').read_text(encoding='utf-8')).get(
+                   'original_client_sha256') if native else None})
 
 
 def stage_native_inputs(args, app):
@@ -258,6 +260,7 @@ def main():
     parser.add_argument('--native-python-prefix', type=Path)
     parser.add_argument('--gui-only', action='store_true')
     parser.add_argument('--phase', choices=('all', 'freeze', 'stage', 'archive'), default='all')
+    parser.add_argument('--offscreen-checks', action='store_true', help='Run frozen GUI diagnostics without showing desktop windows')
     args = parser.parse_args()
     output = args.output_root.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -293,8 +296,10 @@ def main():
         before = {p.relative_to(app).as_posix(): digest(p) for p in app.rglob('*') if p.is_file()}
         for language in ('en', 'ru'):
             report = output/('frozen-check-'+language+'.json')
+            check_environment = build_environment()
+            if args.offscreen_checks:check_environment['QT_QPA_PLATFORM'] = 'offscreen'
             subprocess.run([str(app/'ProxmarkStudio.exe'), '--self-test', str(report), '--language', language],
-                           cwd=output, env=build_environment(), timeout=90, check=True)
+                           cwd=output, env=check_environment, timeout=90, check=True)
             result = json.loads(report.read_text(encoding='utf-8'))
             if not result.get('passed') or result.get('hardware_commands') != 0:
                 raise RuntimeError('Offline frozen application checks failed')

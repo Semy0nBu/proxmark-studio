@@ -18,6 +18,9 @@ BYTE_COLORS = {'uid': '#f2bc78', 'data': '#d8e1ec', 'a': '#77d7bf',
                'acl': '#bfacf4', 'b': '#87baff', 'unknown': '#a3a9b5'}
 
 
+
+from .ui import SoftButton
+
 class ClassicSplit(QSplitter):
     def resizeEvent(self, event):
         wanted = Qt.Orientation.Horizontal if self.width() >= 790 else Qt.Orientation.Vertical
@@ -74,7 +77,7 @@ class ClassicAttackDialog(QDialog):
         title = QLabel(say('Поиск ключа', 'Recover a key'));title.setObjectName('title');layout.addWidget(title)
         methods = QHBoxLayout();self.methods = {};self.group = QButtonGroup(self)
         for name in METHODS:
-            button = QPushButton(name);button.setCheckable(True);button.setProperty('classicAction', 'attack')
+            button = SoftButton(name);button.setCheckable(True);button.setProperty('classicAction', 'attack')
             self.group.addButton(button);self.methods[name] = button;methods.addWidget(button)
         self.group.buttonClicked.connect(self.method_changed);layout.addLayout(methods)
         self.hint = QLabel();self.hint.setWordWrap(True);self.hint.setObjectName('muted');layout.addWidget(self.hint)
@@ -101,12 +104,12 @@ class ClassicAttackDialog(QDialog):
         self.status = QLabel(say('Параметры работают без подключения. Поиск начинается кнопкой внизу.',
                                 'Parameters work offline. Start recovery using the button below.'))
         self.status.setWordWrap(True);self.status.setTextFormat(Qt.TextFormat.PlainText);layout.addWidget(self.status)
-        self.reset = QPushButton(say('После сброса питания…', 'After power reset…'));self.reset.clicked.connect(owner.acknowledge_studio_reset);self.reset.hide();layout.addWidget(self.reset)
+        self.reset = SoftButton(say('После сброса питания…', 'After power reset…'));self.reset.clicked.connect(owner.acknowledge_studio_reset);self.reset.hide();layout.addWidget(self.reset)
         footer = QHBoxLayout();layout.addLayout(footer)
-        self.probe = QPushButton(say('Определить карту', 'Identify card'));self.probe.clicked.connect(lambda:self.guard(self.identify));footer.addWidget(self.probe)
-        self.start = QPushButton();self.start.setObjectName('primary');self.start.clicked.connect(lambda:self.guard(self.begin));footer.addWidget(self.start)
-        self.stop = QPushButton(say('Остановить', 'Stop'));self.stop.clicked.connect(owner.cancel_operation);footer.addWidget(self.stop)
-        self.close_button = QPushButton(say('Закрыть', 'Close'));self.close_button.clicked.connect(self.reject);footer.addWidget(self.close_button)
+        self.probe = SoftButton(say('Определить карту', 'Identify card'));self.probe.clicked.connect(lambda:self.guard(self.identify));footer.addWidget(self.probe)
+        self.start = SoftButton();self.start.setObjectName('primary');self.start.clicked.connect(lambda:self.guard(self.begin));footer.addWidget(self.start)
+        self.stop = SoftButton(say('Остановить', 'Stop'));self.stop.clicked.connect(owner.cancel_operation);footer.addWidget(self.stop)
+        self.close_button = SoftButton(say('Закрыть', 'Close'));self.close_button.clicked.connect(self.reject);footer.addWidget(self.close_button)
         self.geometry.currentIndexChanged.connect(self.geometry_changed);self.uid.editingFinished.connect(self.load_seeds)
         self.seeds.currentIndexChanged.connect(self.seed_changed)
         self.methods[method].setChecked(True);self.geometry_changed();self.method_changed();self.sync()

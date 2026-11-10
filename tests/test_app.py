@@ -93,12 +93,10 @@ class AppTests(unittest.TestCase):
         self.window.read_card()
         self.finish_step('[!!] UART CreateFile failed for COM5 (Win32 error 1168)\n'
                          '[!] ERROR: invalid serial port COM5\n', code=-5)
-        self.assertEqual(self.window.read_job['stage'],'cancel_resync')
+        self.assertIsNone(self.window.read_job)
         self.assertIn('связь с платой', self.warning.call_args.args[2])
         self.assertNotIn('тип карты', self.warning.call_args.args[2])
-        self.assertEqual([c.args[1] for c in self.run_client.call_args_list],['hf search','hw version'])
-        self.finish_step('[+] Communicating with PM3 over USB-CDC\nOS......... Iceman/test-build\n')
-        self.assertIsNone(self.window.read_job)
+        self.assertEqual([c.args[1] for c in self.run_client.call_args_list],['hf search'])
         self.run_operation.assert_not_called()
 
     def test_explicit_hf_absence_is_not_reported_as_a_connection_failure(self):
@@ -1336,7 +1334,8 @@ class AppTests(unittest.TestCase):
             if operation.kind == 'mfc_hardnested_target':
                 break
             self.finish_step('[+] Prng detection..... hard\n' if operation.kind == 'mfc_nonce_probe' else '[-] No valid key found\n')
-        self.window.cancel_operation()
+        with patch.object(type(self.window.runner),'busy',new_callable=PropertyMock,return_value=True):
+            self.window.cancel_operation()
         self.finish_step('', code=-2)
         self.assertEqual(self.window.read_job['stage'], 'cancel_resync')
         self.finish_step('[+] Communicating with PM3 over USB-CDC\n[ ARM ]\n  OS......... Iceman/master/v4.23346\n')
@@ -1348,7 +1347,8 @@ class AppTests(unittest.TestCase):
         missing = {(sector, 'B') for sector in range(32, 40)}
         uid = self.prepare_classic_keys(classic_size='4k', missing_key_slots=missing)
         self.assertEqual(self.window.read_job['stage'], 'recover')
-        self.window.cancel_operation()
+        with patch.object(type(self.window.runner),'busy',new_callable=PropertyMock,return_value=True):
+            self.window.cancel_operation()
         self.cancel_client.assert_called_once()
         _, output = self.recovered_key_artifact(uid)
         self.finish_step(output, code=-2)
@@ -1436,7 +1436,8 @@ class AppTests(unittest.TestCase):
 
     def test_cancel_read_schedules_only_a_fresh_version_fence(self):
         self.window.read_card()
-        self.window.cancel_operation()
+        with patch.object(type(self.window.runner),'busy',new_callable=PropertyMock,return_value=True):
+            self.window.cancel_operation()
         self.cancel_client.assert_called_once()
         self.finish_step('[+] UID: A1 B2 C3 D4\n[+] MIFARE Classic 1K\n', code=-2)
         self.assertEqual(self.window.read_job['stage'],'cancel_resync')

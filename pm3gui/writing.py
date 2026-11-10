@@ -150,7 +150,9 @@ class HFWritePlan:
         self.expected_keys=[]
         self.index=0
         self.deadline=monotonic()+1200
-        self._known=set(dump.metadata.get('partial_dump',{}).get('known_bytes',range(len(dump.data))))
+        from .card_snapshot import known_byte_mask
+        mask = known_byte_mask(self.source, protocol='MIFARE Classic' if options.family == 'mfc' else 'Ultralight/NTAG')
+        self._known = {i for i, known in enumerate(mask) if known}
 
     def _issue(self, op):
         self.pending=op
@@ -366,8 +368,13 @@ class HFWritePlan:
         self.phase='preflight_identity'
 
     def approve(self):
-        if not self.ready or self.approved or self.pending is not None:
+        if not self.ready or self.approved or self.pending is not None or self.done or self.error:
             raise ValueError(tr('Сначала подготовьте и проверьте план записи.'))
+        from .card_snapshot import known_byte_mask
+        mask = known_byte_mask(self.source, protocol='MIFARE Classic' if self.options.family == 'mfc' else 'Ultralight/NTAG')
+        for entry in self.entries:
+            if entry['trailer'] and not all(mask[i] and i in self._known for i in range(entry['block']*16, (entry['block']+1)*16)):
+                raise ValueError(tr('Нельзя записывать неизвестные ключи A/B. Подготовьте новый план.'))
         self.approved=True
         self.phase='guard' if self.entries else 'final_identity'
         self.save_report('approved')

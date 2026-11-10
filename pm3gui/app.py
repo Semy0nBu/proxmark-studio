@@ -41,6 +41,7 @@ from .lab_ui import LabControllerMixin
 from .studio_controller import StudioControllerMixin
 from .auto_capture_ui import AutoCaptureMixin
 from .auto_capture import transport_failed as search_transport_failed
+from .connection_checks import transport_never_opened, stop_cleanup_version_checks
 from .i18n import LanguageControllerMixin,set_language,LANGUAGES
 from .paths import application_root, default_data_dir, is_frozen
 from .version import APP_NAME, APP_VERSION
@@ -123,10 +124,21 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         self.resize(1440, 930)
         self.setMinimumSize(920, 480)
         self._build()
+        from .workspace_bridge import StudioAdapterBridge
+        from .card_workspace import CardWorkspace
+        self.workspace_bridge = StudioAdapterBridge(self)
+        self.card_workspace = CardWorkspace(self, self.workspace_bridge)
+        self.card_tabs.insertTab(0, self.card_workspace.passport, tr('Паспорт'))
+        self.card_tabs.insertTab(1, self.card_workspace.changes, tr('Изменения'))
+        self.card_tabs.addTab(self.card_workspace.result, tr('Результат операции'))
+        self.card_tabs.setCurrentIndex(0)
         self.runner.output.connect(self._log)
         self.runner.busy_changed.connect(self._busy_changed)
-        self.runner.finished.connect(self._finished)
+        self.runner.completed.connect(self._step_completed)
         self.runner.session_changed.connect(self._session_changed)
+        from .reconnect import IdleReconnect
+        self.reconnector=IdleReconnect(self)
+        self.runner.idle_link_lost.connect(self.reconnector.lost)
         self.refresh_ports()
         self.refresh_library()
         self.refresh_keys()
@@ -383,6 +395,7 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         if not self.loading and self.card_id:
             self.dirty = True
             self.save_button.setEnabled(True)
+            if hasattr(self, 'card_workspace'):self.card_workspace.schedule()
 
     def _discard_allowed(self) -> bool:
         if not self.dirty:
@@ -485,6 +498,7 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         self.save_button.setEnabled(False)
         for widget in (self.write_card_button,self.device_write_button):
             widget.setEnabled(not self.runner.busy and self.read_job is None and self.antenna_job is None and not self.firmware_busy)
+        if hasattr(self, 'card_workspace'):self.card_workspace.schedule()
 
     def _load_revision(self, revision_id: str):
         self.loaded_revision = revision_id
@@ -528,6 +542,8 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         self.loading = False
         self.dirty = False
         self.save_button.setEnabled(False)
+
+        if hasattr(self, 'card_workspace'):self.card_workspace.schedule()
 
     def _hex_changed(self):
         self._mark_dirty()
@@ -821,6 +837,7 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
             self.transport_combo.setCurrentIndex(self.transport_combo.findData(self._active_transport))
             self.transport_combo.blockSignals(blocked)
             return
+        if hasattr(self,'reconnector'):self.reconnector.cancel()
         self._close_idle_session()
         self.port_profiles[self._active_transport] = self._port()
         self._active_transport = self.transport_combo.currentData()
@@ -833,6 +850,7 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         self._reset_connection_status()
 
     def _connection_input_changed(self):
+        if hasattr(self,'reconnector'):self.reconnector.cancel()
         self._close_idle_session()
         self.port_profiles[self._active_transport] = self._port()
         self._reset_connection_status()
@@ -843,6 +861,7 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
 
     def _keep_connection_changed(self, checked):
         if not checked:
+            if hasattr(self,'reconnector'):self.reconnector.cancel()
             self._close_idle_session()
 
     def toggle_connection(self):
@@ -853,16 +872,31 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
             self.run_command('hw version', 45000)
 
     def _session_changed(self, connected, message):
+        if connected and self._transport()=='usb':
+            matches=[p for p in available_ports() if p['device'].upper()==self._port().upper()
+                     and p.get('kind')=='usb' and p.get('serial_number')]
+            self._connected_usb_identity=matches[0]['serial_number'] if len(matches)==1 else None
         self.session_button.setText(tr('Отключить') if connected else tr('Подключить'))
-        self.session_button.setObjectName('' if connected else 'primary')
-        self.session_button.style().unpolish(self.session_button)
-        self.session_button.style().polish(self.session_button)
+        role='' if connected else 'primary'
+        if self.session_button.objectName()!=role:
+            self.session_button.setObjectName(role)
+            self.session_button.style().unpolish(self.session_button)
+            self.session_button.style().polish(self.session_button)
         self.connection_status.setText(message)
         self._sync_connection_view()
         if not connected and self.read_job and self.read_job.get('job_kind')=='emulation' and self.read_job.get('active_notified') and self.read_job['stage'] in {'emulating','emu_start'}:
             self._lab_uncertain(tr('Связь потеряна. Состояние эмуляции неизвестно; восстановите связь и нажмите «Остановить».'))
         if not self.runner.busy and self.read_job is None and self.antenna_job is None:
             self.device_info.setText(message)
+
+    def _resolve_reconnect_usb(self, profile, serial_number):
+        matches=[p for p in available_ports() if p.get('kind')=='usb' and p.get('serial_number')==serial_number]
+        if len(matches)!=1:return None
+        profile=dict(profile);profile['port']=matches[0]['device']
+        blocked=self.ports.blockSignals(True)
+        self.ports.setEditText(profile['port']);self.ports.blockSignals(blocked)
+        self.port_profiles['usb']=profile['port']
+        return profile
 
     def _reset_connection_status(self):
         self.connection_status.setText(tr('Соединение ещё не проверено.'))
@@ -928,7 +962,8 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         directory.mkdir(parents=True)
         return directory
 
-    def _start_step(self, operation: str | Operation, timeout: int = 90000):
+    def _start_step(self, operation: str | Operation, timeout: int = 90000, *, _reconnect=False):
+        if hasattr(self,'reconnector') and not _reconnect:self.reconnector.cancel()
         if self.firmware_busy:
             raise ValueError(tr('Дождитесь завершения прошивки.'))
         self.operation_output = ''
@@ -939,6 +974,9 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         self.current_step_requires_resync = (operation in {'hf search','lf search'} if isinstance(operation, str)
                                              else operation_requires_resync(operation))
         active_job = self.read_job if self.read_job is not None else self.antenna_job
+        self._step_token = object()
+        self._step_job = active_job
+        self.runner.completion_token = self._step_token
         if active_job is not None:
             active_job['step_number'] = active_job.get('step_number', 0) + 1
             self.current_log_name = f"{active_job['step_number']:03d}-{self.current_command.replace(' ', '-')}.log"
@@ -996,8 +1034,14 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
             self._card_job_failed(exc)
 
     def cancel_operation(self):
-        if self.read_job and self.read_job.get('stage') == 'cancel_resync_failed':
-            if self.runner.busy:return
+        if hasattr(self,'reconnector'):self.reconnector.cancel()
+        if self.read_job and self.read_job.get('stage') in {'cancel_wait','cancel_resync','cancel_resync_failed'}:
+            if self.runner.busy:
+                # Keep the same job/token while its cancellation is pending.
+                self.runner.cancel()
+                return
+            # There can be no later completion when the client is already idle.
+            self.resync_after_cancel = False
             self.read_job['stage'] = 'cancel_resync'
             try:self._start_step('hw version', 20000)
             except (OSError, ValueError) as exc:self._hold_cancel_resync(exc)
@@ -1033,7 +1077,7 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         operation = self.read_job.get('recovery_operation') if self.read_job else None
         self.resync_after_cancel = (getattr(self, 'resync_after_cancel', False)
                                    or bool(operation and operation_requires_resync(operation))
-                                   or bool(self.runner.busy and
+                                   or bool((self.runner.busy or self.read_job is not None) and
                                            getattr(self, 'current_step_requires_resync', False)))
         if self.read_job and 'recovery_plan' in self.read_job:
             try:
@@ -1043,7 +1087,19 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         self.read_job = ({'stage':'cancel_wait','session':self.current_session,
                           'device_profile':dict(self.current_step_profile)}
                          if self.resync_after_cancel else None)
-        self.runner.cancel()
+        if self.runner.busy:
+            # This is an intentional ownership transfer of this exact step,
+            # not a new operation. Its matching completion must reach cleanup.
+            self._step_job = self.read_job
+            self.runner.cancel()
+        elif self.resync_after_cancel:
+            self.resync_after_cancel = False
+            self.read_job['stage'] = 'cancel_resync'
+            try:self._start_step('hw version', 20000)
+            except (OSError, ValueError) as exc:self._hold_cancel_resync(exc)
+        else:
+            self._step_token = None
+            self._step_job = None
         self._busy_changed(self.runner.busy)
 
     def _card_job_failed(self, exc):
@@ -1431,6 +1487,7 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         self.log.ensureCursorVisible()
 
     def _busy_changed(self, busy: bool):
+        if hasattr(self, 'workspace_bridge'):self.workspace_bridge.result_changed.emit()
         active = busy or self.read_job is not None or self.antenna_job is not None or self.firmware_busy
         if hasattr(self, 'auto_capture_button'):
             self.auto_capture_button.setEnabled(not active or self._auto_owned() and not self.auto_intake['stopping'])
@@ -1461,6 +1518,16 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
         if getattr(self,'lf_tools_dialog',None) is not None:
             self.lf_tools_dialog.set_busy(active)
 
+    def _step_completed(self, token, code: int, status: str):
+        current = self.read_job if self.read_job is not None else self.antenna_job
+        if token is None or token is not getattr(self, '_step_token', None) or current is not self._step_job:
+            return
+        self._step_token = None
+        reconnect_probe=hasattr(self,'reconnector') and self.reconnector.probing and self.reconnector.token is token
+        output=self.operation_output
+        self._finished(code, status)
+        if reconnect_probe:self.reconnector.completed(output,code)
+
     def _finished(self, code: int, status: str):
         output = self.operation_output
         try:
@@ -1477,11 +1544,13 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
             explicit_search_absence = (self.current_command in {'hf search','lf search'} and code in {0,-10}
                 and not search_transport_failed(output,code)
                 and re.search(r'No known(?:/supported)?\s+'+absence_frequency+r'\s+tags found',output,re.I))
+            open_failed = transport_never_opened(output)
             bulk_failure = ((code != 0 or search_transport_failed(output,code))
-                            and getattr(self,'current_step_bulk',False) and not explicit_search_absence)
+                            and getattr(self,'current_step_bulk',False) and not explicit_search_absence and not open_failed)
             self.current_step_bulk_failed = bulk_failure
             manual_rf_abort = ((code in {-3, -4} or bulk_failure) and self.read_job is None
                                and self.antenna_job is None and not self.firmware_busy
+                               and not open_failed
                                and getattr(self, 'current_step_requires_resync', False))
             if getattr(self, 'resync_after_cancel', False) or manual_rf_abort:
                 self.resync_after_cancel = False
@@ -1540,6 +1609,28 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
             except OSError as exc:
                 self.error(exc)
 
+    def _close_unconfirmed_operation(self, jobs):
+        """Exit an idle failed cleanup without claiming the hardware stopped."""
+        record = {'version': 1, 'created_at': datetime.now(timezone.utc).isoformat(),
+                  'reason': 'application-exit-with-unconfirmed-device-state',
+                  'device_stop_confirmed': False, 'client_busy': False,
+                  'jobs': [{'kind': job.get('job_kind', 'card'), 'stage': job.get('stage', '')} for job in jobs]}
+        try:
+            path = self.data_dir/'last-exit-status.json'
+            temporary = path.with_suffix('.tmp')
+            temporary.write_text(json.dumps(record, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+            temporary.replace(path)
+        except OSError as exc:
+            self._log(tr('Не удалось сохранить статус выхода: {0}\n', str(exc)))
+        for job in jobs:stop_cleanup_version_checks(job)
+        for name in ('antenna_timer', 'studio_timer', 'studio_deadline', 'emulation_timer',
+                     'auto_poll_timer', 'auto_card_timer'):
+            timer = getattr(self, name, None)
+            if timer is not None:timer.stop()
+        self._step_token = None
+        self.read_job = self.antenna_job = None
+        self.auto_intake = None
+
     def closeEvent(self, event: QCloseEvent):
         if self.firmware_busy:
             QMessageBox.information(self, tr('Идёт прошивка'), tr('Дождитесь завершения записи и проверки прошивки.'))
@@ -1549,6 +1640,13 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
             QMessageBox.information(self, tr('Идёт загрузка Flipper'), tr('Остановите загрузку ключей и дождитесь завершения USB-сеанса.'))
             event.ignore()
             return
+        jobs = [job for job in (self.read_job, self.antenna_job) if job is not None]
+        failed_cleanup = (not self.runner.busy and bool(jobs)
+                          and all(job.get('stage') in {'cancel_resync_failed', 'uncertain'} for job in jobs))
+        if failed_cleanup:
+            if not self._discard_allowed():
+                event.ignore();return
+            self._close_unconfirmed_operation(jobs)
         if self._auto_owned():
             self.auto_intake['close_requested'] = True
             self._stop_auto_capture();event.ignore();return
@@ -1560,6 +1658,9 @@ class MainWindow(PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, S
             event.ignore()
             return
         self._key_fill_timer.stop()
+        self._closing=True
+        self.reconnector.cancel()
+        self.card_workspace.timer.stop()
         self._save_presentation()
         self.runner.shutdown()
         self.library.close()

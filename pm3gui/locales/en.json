@@ -1235,5 +1235,12 @@
   "Windows x64 · интерфейс для клиента RRG/Iceman Proxmark3": "Windows x64 · interface for the RRG/Iceman Proxmark3 client",
   "Библиотека: {0}": "Library: {0}",
   "Открыть папку библиотеки": "Open library folder",
-  "Лицензии компонентов": "Component licenses"
+  "Лицензии компонентов": "Component licenses",
+  "Паспорт": "Overview",
+  "Изменения": "Changes",
+  "Редактор": "Editor",
+  "Нельзя записывать неизвестные ключи A/B. Подготовьте новый план.": "Unknown A/B keys cannot be written. Prepare a new plan.",
+  "Не удалось сохранить статус выхода: {0}\n": "Could not save exit status: {0}\n",
+  "Не удалось завершить чтение журнала клиента.": "Could not finish reading the client log.",
+  "Не удалось полностью прочитать вывод клиента прошивки.": "Could not completely read the firmware client's output."
 }

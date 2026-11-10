@@ -12,6 +12,7 @@ from .ui import Disclosure, SoftButton
 from .theme import mono_font
 
 
+
 class FirmwareDialog(QDialog):
     def __init__(self, owner, profile_key):
         super().__init__(owner)
@@ -170,8 +171,9 @@ class FirmwareControllerMixin:
         self.firmware_dialog.exec()
 
     def start_firmware_install(self, dialog):
-        if dialog.prepared is None or self.firmware_busy or self.runner.busy or self.read_job is not None or self.antenna_job is not None:
+        if dialog is not self.firmware_dialog or dialog.prepared is None or self.firmware_busy or self.runner.busy or self.read_job is not None or self.antenna_job is not None:
             return
+        self.reconnector.cancel()
         self._firmware_waiting = True
         self._firmware_result = None
         self._firmware_error = ''
@@ -182,11 +184,14 @@ class FirmwareControllerMixin:
         self._busy_changed(False)
         self._firmware_release_started = monotonic()
         self._firmware_release_timer = QTimer(self)
+        release_timer=self._firmware_release_timer
         self._firmware_release_timer.setInterval(100)
-        self._firmware_release_timer.timeout.connect(self._firmware_wait_for_release)
+        self._firmware_release_timer.timeout.connect(lambda:self._firmware_wait_for_release()
+            if self._firmware_release_timer is release_timer else None)
         self._firmware_release_timer.start()
 
     def _firmware_wait_for_release(self):
+        if not self._firmware_waiting or self.firmware_worker is not None:return
         if self.runner._session.has_process:
             if monotonic() - self._firmware_release_started < 8:
                 return
@@ -200,11 +205,12 @@ class FirmwareControllerMixin:
         try:
             from .firmware import FirmwareWorker
             self.firmware_worker = FirmwareWorker(self._firmware_prepared, self)
+            worker=self.firmware_worker
             self._firmware_waiting = False
-            self.firmware_worker.progress.connect(self._firmware_progress)
-            self.firmware_worker.completed.connect(lambda result: setattr(self, '_firmware_result', result))
-            self.firmware_worker.failed.connect(lambda message: setattr(self, '_firmware_error', message))
-            self.firmware_worker.finished.connect(self._firmware_finished)
+            worker.progress.connect(lambda message:self._firmware_progress(message) if self.firmware_worker is worker else None)
+            worker.completed.connect(lambda result: setattr(self, '_firmware_result', result) if self.firmware_worker is worker else None)
+            worker.failed.connect(lambda message: setattr(self, '_firmware_error', message) if self.firmware_worker is worker else None)
+            worker.finished.connect(lambda:self._firmware_finished() if self.firmware_worker is worker else None)
             self.firmware_worker.start()
         except (ImportError, OSError, ValueError, RuntimeError) as exc:
             if self.firmware_worker is not None:

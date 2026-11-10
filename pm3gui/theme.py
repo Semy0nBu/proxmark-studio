@@ -106,6 +106,14 @@ STYLE = stylesheet()
 
 
 def apply_theme(application):
+    # Keep wrappers alive: accessibility hints belong to QStyleHints in Qt.
+    if not hasattr(application,'_motion_hints'):
+        application._motion_style_hints=application.styleHints()
+        application._motion_hints=application._motion_style_hints.accessibility()
+        def motion_changed(preference):
+            application.setProperty('reducedMotion',preference.name=='ReducedMotion')
+        application._motion_hints.motionPreferenceChanged.connect(motion_changed)
+        motion_changed(application._motion_hints.motionPreference())
     # Read the platform palette before switching to Fusion; all controls then use
     # the same accent. A light variant retains contrast on dark backgrounds.
     accent = application.palette().color(QPalette.ColorRole.Accent)

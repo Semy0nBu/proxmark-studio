@@ -9,10 +9,10 @@
   #error SetupIcon must identify the Windows setup icon
 #endif
 #ifndef AppVersion
-  #define AppVersion "0.3.0-preview.1"
+  #define AppVersion "0.3.0-preview.5"
 #endif
 #ifndef NumericVersion
-  #define NumericVersion "0.3.0.1"
+  #define NumericVersion "0.3.0.5"
 #endif
 
 [Setup]
