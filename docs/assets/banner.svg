@@ -1,36 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="240" viewBox="0 0 1120 240" role="img" aria-labelledby="title description">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="280" viewBox="0 0 1200 280" role="img" aria-labelledby="title description">
   <title id="title">Proxmark Studio</title>
-  <desc id="description">An HF and LF workspace for Windows, using the RRG and Iceman client.</desc>
-  <rect width="1120" height="240" rx="22" fill="#20252d"/>
-  <path d="M765 0v240" stroke="#354151" stroke-width="1"/>
-  <g transform="translate(30 32) scale(.6875)">
-    <rect x="8" y="8" width="240" height="240" rx="48" fill="#20252d" stroke="#3c495b" stroke-width="2"/>
-    <rect x="48" y="64" width="112" height="144" rx="16" fill="none" stroke="#79b8ff" stroke-width="12"/>
-    <path d="M77 99h32c31 0 31 42 0 42H77v36m0-36V99" fill="none" stroke="#f0f0f0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M181 57c22 17 35 42 35 71m-49-48c15 11 23 28 23 48" fill="none" stroke="#79b8ff" stroke-width="12" stroke-linecap="round"/>
+  <desc id="description">A bold compact two-line wordmark paired with blue and turquoise contactless cards.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#13243a"/><stop offset="1" stop-color="#111b29"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#477ab2"/><stop offset="1" stop-color="#245287"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="1198" height="278" rx="24" fill="url(#background)" stroke="#2b3d55" stroke-width="2"/>
+  <path d="M0 232C218 216 224 35 500 0H24C11 0 0 11 0 24Z" fill="#223c61" opacity=".26"/>
+  <rect x="85" y="61" width="228" height="146" rx="20" transform="rotate(-9 199 134)" fill="#143d43" stroke="#65d9c0" stroke-width="2"/>
+  <rect x="96" y="81" width="228" height="146" rx="20" transform="rotate(5 210 154)" fill="#0d1523" opacity=".5"/>
+  <rect x="98" y="73" width="228" height="146" rx="20" transform="rotate(5 212 146)" fill="url(#card)" stroke="#8bc2ff" stroke-width="2"/>
+  <g transform="rotate(5 212 146)" fill="none" stroke="#eef6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M137 180v-68h24c28 0 28 36 0 36h-24"/>
+    <path d="M265 113c18 15 28 35 28 59m-28-36c10 9 16 22 16 36"/>
   </g>
+  <g font-family="Segoe UI, Arial, sans-serif" font-weight="600" letter-spacing="-1.5">
+    <text x="412" y="122" fill="#f2f7ff" font-size="66">Proxmark</text>
+    <text x="412" y="193" fill="#f2f7ff" font-size="66">Studio</text>
+  </g>
+  <path d="M840 70v140" stroke="#38516e" stroke-width="1"/>
   <g font-family="Segoe UI, Arial, sans-serif">
-    <text x="238" y="67" fill="#9cb1cc" font-size="12" font-weight="600" letter-spacing="2.5">HF / LF WORKSPACE</text>
-    <text x="234" y="122" fill="#f3f6fa" font-size="47" font-weight="600" letter-spacing="-1">Proxmark Studio</text>
-    <text x="237" y="158" fill="#bdc9d9" font-size="19">Windows · RRG / Iceman</text>
-    <text x="237" y="191" fill="#98a8bc" font-size="13">Cards, keys and tools in one place.</text>
-  </g>
-  <g stroke-width="1.5">
-    <rect x="812" y="108" width="226" height="99" rx="12" fill="#252d38" stroke="#4a5e77"/>
-    <rect x="850" y="35" width="226" height="128" rx="12" fill="#293443" stroke="#79b8ff"/>
-    <g fill="#3d526c" stroke="none">
-      <rect x="870" y="86" width="58" height="6" rx="3"/>
-      <rect x="939" y="86" width="40" height="6" rx="3"/>
-      <rect x="870" y="103" width="93" height="6" rx="3"/>
-      <rect x="975" y="103" width="40" height="6" rx="3"/>
-      <rect x="870" y="120" width="71" height="6" rx="3"/>
-    </g>
-    <path d="M1035 76c7 5 11 13 11 22m-19-16c5 4 7 9 7 16" fill="none" stroke="#79b8ff" stroke-linecap="round"/>
-    <g font-family="Segoe UI, Arial, sans-serif" stroke="none">
-      <text x="871" y="65" fill="#e8f2ff" font-size="14" font-weight="600" letter-spacing="1">HF</text>
-      <text x="906" y="65" fill="#b1c3dc" font-size="12">13.56 MHz</text>
-      <text x="832" y="187" fill="#ccd9eb" font-size="13" font-weight="600" letter-spacing="1">LF</text>
-      <text x="863" y="187" fill="#a7b8cf" font-size="12">125 / 134 kHz</text>
-    </g>
+    <text x="892" y="131" fill="#83e1cd" font-size="27" font-weight="600" letter-spacing="2">HF · LF</text>
+    <text x="892" y="168" fill="#a5b7cb" font-size="17">Windows</text>
+    <text x="892" y="195" fill="#7e98b5" font-size="15">RRG · Iceman</text>
   </g>
 </svg>
