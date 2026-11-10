@@ -143,7 +143,9 @@ class LibraryBackupUiTests(unittest.TestCase):
         self.window.dirty=False
         self.assertTrue(self.window._switch_library_profile(target))
         new=self.app._profile_windows[-1];self.windows.append(new)
-        self.assertEqual(new.data_dir,target);self.assertEqual(len(new.library.list_cards()),1)
+        # Windows CI may supply TEMP through an 8.3 alias (RUNNER~1).
+        # Profile switching canonicalizes it; verify filesystem identity.
+        self.assertTrue(new.data_dir.samefile(target));self.assertEqual(len(new.library.list_cards()),1)
         new.library.create_card('Only in restored',DumpData(bytes(16),'bin',{},16))
         import sqlite3
         from contextlib import closing
@@ -166,4 +168,4 @@ class LibraryBackupUiTests(unittest.TestCase):
         dialog._open_profile(target)
         self.assertEqual(self.question.call_count,1)
         self.assertEqual(dialog.result(),dialog.DialogCode.Accepted)
-        self.assertEqual(self.app._profile_windows[-1].data_dir,target)
+        self.assertTrue(self.app._profile_windows[-1].data_dir.samefile(target))
