@@ -344,6 +344,7 @@ class ClientRunner(QObject):
         self._pipe_capabilities: dict[tuple[str, int, int], bool] = {}
         self._cancel_capabilities: dict[tuple[str, int, int], bool] = {}
         self._bulk_cancel_capabilities: dict[tuple[str, int, int], bool] = {}
+        self._rfcomm_capabilities: dict[tuple[str, int, int], bool] = {}
         from .persistent import PersistentSession
         self._session = PersistentSession(self)
         self.rf_lease=False

@@ -21,7 +21,8 @@ NATIVE_TRACE = r'''
 import json,pathlib,sys,time
 root=pathlib.Path(__file__).parent
 event='native-help' if '--help' in sys.argv else 'native-open'
-with (root/'lifecycle.jsonl').open('a') as f:f.write(json.dumps({'event':event,'time':time.monotonic()})+'\n')
+with (root/'lifecycle.jsonl').open('a') as f:f.write(json.dumps({'event':event,'time':time.monotonic(),'port':sys.argv[sys.argv.index('-p')+1] if '-p' in sys.argv else None})+'\n')
+if '--help' in sys.argv and json.loads((root/'config.json').read_text()).get('rfcomm',True):print('--gui-pipe-rfcomm',flush=True)
 '''
 
 HELPER = r'''
@@ -36,12 +37,12 @@ time.sleep(config.get('delay',0))
 mode=config.get('mode','ready')
 if mode=='missing':sys.exit(0)
 if mode=='stdout-only':
- print(json.dumps({'proto':1,'port':port,'status':'ready','queries':1,'elapsed_ms':1,'last_error':None,'channel':1}),flush=True);sys.exit(0)
+ print(json.dumps({'proto':2,'port':port,'status':'resolved','queries':0,'elapsed_ms':1,'last_error':None,'channel':1,'endpoint':'bt:112233445566'}),flush=True);sys.exit(0)
 if mode=='oversized-output':
  print('PRIVATE-MARKER-'+'x'*9000,flush=True);time.sleep(1);sys.exit(0)
-result={'proto':1,'port':port,'status':'ready','queries':1,'elapsed_ms':1,'last_error':None,'channel':1}
+result={'proto':2,'port':port,'status':'resolved','queries':0,'elapsed_ms':1,'last_error':None,'channel':1,'endpoint':'bt:112233445566'}
 if mode in ('unavailable','not_bluetooth','error'):
- result.update(status=mode,channel=None,last_error=None if mode=='not_bluetooth' else 121,queries=0 if mode=='not_bluetooth' else 1)
+ result.update(status=mode,channel=None,endpoint=None,last_error=None if mode=='not_bluetooth' else 121,queries=0)
 if mode=='wrong-port':result['port']='COM77'
 if mode=='extra-field':result['address']='PRIVATE-MARKER'
 payload=(b'not JSON PRIVATE-MARKER' if mode=='invalid-json' else b'x'*8193 if mode=='oversized-file' else json.dumps(result).encode())
@@ -63,13 +64,16 @@ class BluetoothPreparationTests(unittest.TestCase):
         self.configure();self.helper_config()
         self.runner=ClientRunner(argument_prefix=[str(self.native)])
         self.settings=DeviceSettings(getattr(sys,'_base_executable',sys.executable),'COM5',str(self.root),'blueshark',True)
-        self.results=[];self.outputs=[];self.completed=[];self.invocations=[];self.result_paths=[]
+        self.results=[];self.outputs=[];self.completed=[];self.invocations=[];self.result_paths=[];self.statuses=[]
         self.runner.finished.connect(lambda code,message:self.results.append((code,message)))
         self.runner.completed.connect(lambda token,code,message:self.completed.append((token,code)))
         self.runner.output.connect(self.outputs.append)
+        self.runner.session_changed.connect(lambda connected,message:self.statuses.append(message))
         self.default_gate=self.runner._session._should_prepare_bluetooth
         def needed(run):
-            return self.runner._session.transport=='blueshark' and not getattr(run,'bluetooth_prepared',False)
+            return (self.runner._session.transport=='blueshark'
+                    and self.runner._rfcomm_capabilities.get(run.cache_key,False)
+                    and not getattr(run,'bluetooth_prepared',False))
         self.enterContext(patch.object(self.runner._session,'_should_prepare_bluetooth',side_effect=needed))
         def invocation(port,budget_ms=7000,result_path=None):
             self.invocations.append((port,budget_ms));self.result_paths.append(Path(result_path))
@@ -118,13 +122,18 @@ class BluetoothPreparationTests(unittest.TestCase):
         self.assertTrue(self.result_paths)
         self.assertTrue(all(not path.parent.exists() for path in self.result_paths))
 
-    def test_fresh_service_preparation_precedes_first_native_open_and_requires_fpc_bootstrap(self):
+    def test_private_endpoint_resolution_precedes_first_native_open_and_requires_fpc_bootstrap(self):
         self.assertEqual(self.run_command('hf search'),0)
         events=[x['event'] for x in self.rows('lifecycle.jsonl')]
         self.assertEqual(events,['native-help','helper-start','helper-end','native-open'])
         self.assertEqual([x[1] for x in self.rows('trace.jsonl')],['hw version','hf search'])
         self.assertEqual(len(self.results),1);self.assertEqual(len(self.completed),1)
         self.assertTrue(self.runner.session_open);self.assert_temp_clean()
+        opened=[row for row in self.rows('lifecycle.jsonl') if row['event']=='native-open']
+        self.assertEqual([row['port'] for row in opened],['bt:112233445566'])
+        self.assertEqual(self.settings.port,'COM5');self.assertEqual(self.runner._session.signature[-2],'COM5')
+        visible=''.join(self.outputs+self.statuses)+''.join(message for _,message in self.results)
+        self.assertNotIn('bt:112233445566',visible);self.assertNotIn('112233445566',visible)
 
     def test_helper_ready_is_not_a_device_connection_without_correct_fresh_channel(self):
         self.configure(channel='USB-CDC')
@@ -153,6 +162,7 @@ class BluetoothPreparationTests(unittest.TestCase):
                 self.assert_no_native_open();self.assert_temp_clean()
         text=''.join(self.outputs)+' '.join(message for _,message in self.results)
         self.assertNotIn('PRIVATE-MARKER',text);self.assertNotIn('"proto"',text)
+        self.assertNotIn('bt:112233445566',text)
         self.assertEqual(len(self.results),11);self.assertEqual(len(self.completed),11)
 
     def test_helper_has_clean_environment_and_file_ipc_without_stdout(self):
@@ -272,8 +282,9 @@ class BluetoothPreparationTests(unittest.TestCase):
         self.configure(legacy=True);self.settings.require_session=True
         self.assertEqual(self.run_command('hf search'),-5);self.assertEqual(self.factory.call_count,0)
         self.configure();self.settings.require_session=False
-        # Use a different executable fingerprint to invalidate cached legacy help.
-        self.native.write_text(NATIVE_TRACE+FAKE+'\n#new fingerprint\n',encoding='utf8')
+        # The fake executable is the same Python interpreter; clear its cached
+        # legacy help to inspect the fixture's newly configured capabilities.
+        self.runner._pipe_capabilities.clear();self.runner._rfcomm_capabilities.clear()
         for transport,channel in (('usb','USB-CDC'),('tcp','FPC UART over TCP'),('offline','FPC UART')):
             self.settings.transport=transport;self.settings.port='tcp:localhost:1234' if transport=='tcp' else 'COM5'
             self.configure(channel=channel)
@@ -281,14 +292,28 @@ class BluetoothPreparationTests(unittest.TestCase):
             self.runner.disconnect();self.wait(lambda:not self.runner._session.has_process)
         self.assertEqual(self.factory.call_count,0)
 
-    def test_default_preparation_gate_is_only_windows_blueshark_without_test_wrappers(self):
-        run=SimpleNamespace(bluetooth_prepared=False);session=self.runner._session
-        session.transport='blueshark'
+    def test_client_without_rfcomm_capability_retains_serial_path_and_skips_resolver(self):
+        self.configure(rfcomm=False)
+        self.assertEqual(self.run_command('hf search'),0)
+        self.assertEqual(self.factory.call_count,0)
+        opened=[row for row in self.rows('lifecycle.jsonl') if row['event']=='native-open']
+        self.assertEqual([row['port'] for row in opened],['COM5'])
+        self.assertEqual([row[1] for row in self.rows('trace.jsonl')],['hw version','hf search'])
+        self.assertTrue(self.runner.session_open)
+
+    def test_default_gate_requires_windows_blueshark_rfcomm_capability_and_no_wrapper(self):
+        key=('synthetic-client',123,456);other=('different-client',123,456)
+        run=SimpleNamespace(bluetooth_prepared=False,cache_key=key);session=self.runner._session
+        session.transport='blueshark';self.runner._rfcomm_capabilities[key]=True
         with patch('pm3gui.persistent.sys.platform','win32'):
             self.assertFalse(self.default_gate(run))
             self.runner._argument_prefix=[]
             self.assertTrue(self.default_gate(run))
             run.bluetooth_prepared=True;self.assertFalse(self.default_gate(run));run.bluetooth_prepared=False
+            self.runner._rfcomm_capabilities[key]=False;self.assertFalse(self.default_gate(run))
+            self.runner._rfcomm_capabilities.pop(key);self.assertFalse(self.default_gate(run))
+            self.runner._rfcomm_capabilities[other]=True;self.assertFalse(self.default_gate(run))
+            self.runner._rfcomm_capabilities[key]=True
             for transport in ('usb','tcp','offline'):
                 session.transport=transport;self.assertFalse(self.default_gate(run))
         session.transport='blueshark'

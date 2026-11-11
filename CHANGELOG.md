@@ -2,18 +2,21 @@
 
 ## 0.3.0-preview.10 — 2026-11-11
 
-- On Windows, Blue Shark checks the selected paired SPP service before a fresh
-  native COM-port open. Existing connected sessions keep their current client.
-- Bluetooth preparation runs in a separate process with a bounded deadline.
-  Stop, timeout and close release that process and prevent a delayed command.
-- The worker uses file-based results in the windowless EXE. Source launches own
-  the real Python process directly, preserving cancellation in virtual environments.
-- Service discovery does not pair devices, reset drivers or change board settings.
-  Fresh Proxmark OS verification is still required before the link is connected;
-  bounded recovery remains available for a real outage.
+- On Windows, the selected Blue Shark COM entry identifies the remembered paired
+  device locally. The bundled client opens one direct RFCOMM connection on channel
+  1, bypassing the virtual COM port and SDP service discovery.
+- Device lookup and connection setup have bounded deadlines and can be cancelled
+  with Stop or by closing the app. A fresh Proxmark OS reply is still required
+  before the app reports a connected link. Existing connected sessions are reused.
+- Bluetooth receives available data immediately and wakes for queued commands,
+  avoiding the extra polling delay during segmented transfers.
+- Custom clients without `--gui-pipe-rfcomm` retain the existing COM-port path.
+  Paired-device addresses stay private during setup. Drivers, pairing, board
+  settings and firmware are not changed by this connection update.
 
-По-русски: готовность службы Blue Shark проверяется перед открытием COM-порта.
-Подготовка отменяется и не блокирует интерфейс. Прошивка платы не меняется.
+По-русски: выбранный COM-порт помогает найти уже сопряжённый Blue Shark, затем
+комплектный клиент подключается к нему напрямую по Bluetooth. Поиск устройства
+и подключение можно отменить. Старые клиенты сохраняют прежний путь через COM.
 
 ## 0.3.0-preview.9 — 2026-11-11
 

@@ -100,6 +100,7 @@ class PersistentSession(QObject):
         run.completion_token = self.owner.completion_token
         run.require_session = settings.require_session
         run.bluetooth_prepared = False
+        run.bluetooth_endpoint = None
         self.owner._active = run
         run.timeout = QTimer(self.owner)
         run.timeout.setSingleShot(True)
@@ -163,7 +164,8 @@ class PersistentSession(QObject):
             self.phase = 'starting'
             run.probing = False
             run.environment.insert('QT_QPA_PLATFORM', 'offscreen')
-            args = (['-p', port] if transport != 'offline' else []) + ['-f', '--gui-pipe', self.token]
+            endpoint = getattr(run, 'bluetooth_endpoint', None) if transport == 'blueshark' else None
+            args = (['-p', endpoint or port] if transport != 'offline' else []) + ['-f', '--gui-pipe', self.token]
             if self.owner._capabilities.get(run.cache_key):
                 args.insert(0, '--incognito')
             self._spawn(run, args)
@@ -171,6 +173,7 @@ class PersistentSession(QObject):
     def _should_prepare_bluetooth(self, run):
         return (sys.platform == 'win32' and self.transport == 'blueshark'
                 and not self.owner._argument_prefix
+                and self.owner._rfcomm_capabilities.get(getattr(run, 'cache_key', None), False)
                 and not getattr(run, 'bluetooth_prepared', False))
 
     @staticmethod
@@ -212,7 +215,7 @@ class PersistentSession(QObject):
         self.preparation_directory = directory
         self.preparation_result = result_path
         self.preparation_output.clear()
-        message = tr('Проверяем доступность Blue Shark перед открытием порта…')
+        message = tr('Готовим подключение Blue Shark…')
         self.owner.session_changed.emit(False, message)
         if self.owner._active is not run or run.stop_reason or self.owner._shutting_down:
             self._abandon_preparation_before_spawn(run, directory)
@@ -646,6 +649,7 @@ class PersistentSession(QObject):
         if open_error:
             self.open_retry_count += 1
             run.bluetooth_prepared = False
+            run.bluetooth_endpoint = None
             run.process = None
             self.open_retry_run = run
             self.phase = 'retry_wait'
@@ -660,20 +664,21 @@ class PersistentSession(QObject):
             from .bluetooth_ready import parse_probe_result
             try:
                 result = parse_probe_result(preparation_output, self.pending[2])
-                if result['status'] == 'ready' and (code != 0 or status != QProcess.ExitStatus.NormalExit):
+                if result['status'] == 'resolved' and (code != 0 or status != QProcess.ExitStatus.NormalExit):
                     raise ValueError('Preparation did not exit normally')
             except (ValueError, TypeError, KeyError, IndexError):
                 result = {'status': 'error'}
-            if (result['status'] == 'ready' and self.pending is not None
+            if (result['status'] == 'resolved' and self.pending is not None
                     and self.pending[0] is run and self.owner._active is run
                     and not self.owner._shutting_down):
                 run.process = None
                 run.bluetooth_prepared = True
+                run.bluetooth_endpoint = result['endpoint']
                 self._start_pending()
                 return
             messages = {
                 'not_bluetooth': tr('Выбранный порт не связан с устройством Bluetooth. Выберите порт Blue Shark.'),
-                'unavailable': tr('Служба Blue Shark пока недоступна. Проверьте питание и Bluetooth, затем подключитесь снова.'),
+                'unavailable': tr('Не удалось определить сопряжённую плату Blue Shark. Проверьте Bluetooth-порт и сопряжение Windows.'),
             }
             run.session_error = messages.get(result['status'],
                 tr('Не удалось проверить службу Bluetooth. Подключение к порту не выполнялось.'))
@@ -682,6 +687,7 @@ class PersistentSession(QObject):
             self.owner._pipe_capabilities[run.cache_key] = _help_has_option(run.probe, b'--gui-pipe')
             self.owner._cancel_capabilities[run.cache_key] = _help_has_option(run.probe, b'--gui-pipe-cancel')
             self.owner._bulk_cancel_capabilities[run.cache_key] = _help_has_option(run.probe, b'--gui-pipe-bulk-cancel')
+            self.owner._rfcomm_capabilities[run.cache_key] = _help_has_option(run.probe, b'--gui-pipe-rfcomm')
             run.process = None
             self._start_pending()
             return

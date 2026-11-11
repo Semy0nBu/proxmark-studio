@@ -1435,5 +1435,7 @@
   "Проверка службы Bluetooth вернула некорректный ответ.": "The Bluetooth service check returned an invalid response.",
   "Выбранный порт не связан с устройством Bluetooth. Выберите порт Blue Shark.": "The selected port is not associated with a Bluetooth device. Choose the Blue Shark port.",
   "Служба Blue Shark пока недоступна. Проверьте питание и Bluetooth, затем подключитесь снова.": "The Blue Shark service is not available yet. Check power and Bluetooth, then connect again.",
-  "Не удалось проверить службу Bluetooth. Подключение к порту не выполнялось.": "Could not check the Bluetooth service. The COM port was not opened."
+  "Не удалось проверить службу Bluetooth. Подключение к порту не выполнялось.": "Could not check the Bluetooth service. The COM port was not opened.",
+  "Готовим подключение Blue Shark…": "Preparing the Blue Shark connection…",
+  "Не удалось определить сопряжённую плату Blue Shark. Проверьте Bluetooth-порт и сопряжение Windows.": "Could not resolve the paired Blue Shark. Check the Bluetooth port and Windows pairing."
 }

@@ -241,9 +241,9 @@ def check_bluetooth_worker(directory):
     assert process.exitStatus()==QProcess.ExitStatus.NormalExit and process.exitCode()==1
     assert result.is_file() and result.stat().st_size<=8192
     value=json.loads(result.read_text(encoding='utf8'))
-    assert set(value)=={'proto','port','status','queries','elapsed_ms','last_error','channel'}
-    assert value['proto']==1 and value['status']=='error' and value['queries']==0
-    assert value['last_error']==87 and value['channel'] is None
+    assert set(value)=={'proto','port','status','queries','elapsed_ms','last_error','channel','endpoint'}
+    assert value['proto']==2 and value['status']=='error' and value['queries']==0
+    assert value['last_error']==87 and value['channel'] is None and value['endpoint'] is None
     return {'name':'windowless-bluetooth-worker-file-ipc-no-device','passed':True,
             'radio_queries':0,'physical_device_access':False}
 

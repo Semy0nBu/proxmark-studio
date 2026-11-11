@@ -41,9 +41,19 @@ the cable and Windows Device Manager → Ports. Close another client using that 
 and choose its outgoing SPP COM port. This is Bluetooth Classic SPP. Matching
 BTADDON firmware and a compatible client are required.
 
-Connect first checks whether the selected Bluetooth service is ready. You can
-cancel this step with Stop. If it remains unavailable, check BTpower and the
-selected outgoing Bluetooth port, then connect again.
+Click **Connect** to use direct Bluetooth with the bundled client. Leave
+**Keep connection** enabled; disabling it uses the legacy COM path for individual commands.
+
+With the bundled client, the selected COM entry identifies your already paired
+Blue Shark from Windows' saved pairing data. The client then opens one Bluetooth
+connection directly. A fresh reply from the Proxmark confirms the connection;
+finding a paired device alone does not establish a working link.
+
+Device lookup and connection setup have time limits and can be cancelled with
+Stop. If connection fails, check BTpower, Windows pairing and the selected outgoing
+Bluetooth port, then connect again. This update does not require changes to
+pairing, drivers or firmware. Older custom clients without direct Bluetooth
+support continue to use the selected COM port.
 
 **TCP:** enter `tcp:host:port` for an existing compatible network bridge.
 The stock Blue Shark does not host that server.
@@ -188,7 +198,7 @@ a separate raw export and can include card data and keys.
 | --- | --- |
 | `Win32 error 2` opening a COM port | The selected port no longer exists. Refresh ports, check the USB data cable and select the currently enumerated Proxmark. |
 | `Win32 error 5` / access denied | Another client or app may hold the port. Disconnect that client, then reconnect from one application. |
-| `Win32 error 1168` on Blue Shark | Windows could not open the paired SPP service. Check Battery/BTpower and Windows pairing; a remembered COM number alone is not a working radio link. |
+| `Win32 error 1168` on Blue Shark | On the legacy COM path, Windows could not open the SPP port. Check Battery/BTpower and Windows pairing. Older custom clients still use this path; the bundled client supports a direct Bluetooth connection. |
 | `Win32 error 121` | The Windows operation timed out. Check power, radio range or the cable, then request a fresh connection check. This does not establish a card-authentication failure. |
 | CRC or truncated bulk transfer | The received data is not confirmed. Stop, wait for cleanup and a fresh connection check, then retry a read. Do not automatically repeat an uncertain write. |
 | `AcquireEncryptedNonces: Auth2 error` | A nested authentication step was rejected. Check the antenna position, selected card profile and known keys. This is a card/RF step; it does not by itself establish a Bluetooth disconnect. |
