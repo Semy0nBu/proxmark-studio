@@ -5,3 +5,4 @@
 *.exe binary
 tools/client-patches/windows-blueshark-rfcomm.patch -text
 tools/client-patches/usb-hardnested-v4.23346.patch -text
+tools/client-patches/blueshark-stability-v4.23346.patch -text
