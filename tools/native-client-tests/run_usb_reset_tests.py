@@ -37,7 +37,7 @@ def function(text, signature):
 def control_case(text, name, following, signature):
     body = text.split('case '+name+':', 1)[1].split('case '+following+':', 1)[0]
     body = body.rsplit('break;', 1)[0]
-    return signature+' {\n'+body+'\n}'
+    return signature+' {\n do {\n'+body+'\n } while (0);\n}'
 
 
 def main():

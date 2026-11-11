@@ -5,8 +5,12 @@ import re
 from .device import _StreamCleaner
 
 _FAILURE = re.compile(r'\b(?:error|failed|failure|timeout|timed out|aborted|nack)\b', re.I)
-_OPEN = re.compile(r'^\s*(?:\[[^\]\n]+\]\s*)?UART\s+CreateFile\s+failed\b[^\n]*\(Win32 error (?:2|1168|121)\)\s*$', re.I)
-_INVALID_PORT = re.compile(r'^\s*\[!+\]\s*ERROR:\s*invalid serial port COM[1-9][0-9]*\s*$', re.I)
+_OPEN = re.compile(r'^\s*(?:\[!+\]\s*)?UART\s+CreateFile\s+failed\s+for\s+(?:\\\\\.\\)?(?P<port>COM[1-9][0-9]*)\s*\(Win32 error (?:2|1167)\)\s*$', re.I)
+_INVALID_PORT = re.compile(r'^\s*\[!+\]\s*ERROR:\s*invalid serial port (?P<port>COM[1-9][0-9]*)\s*$', re.I)
+_RESTART = re.compile(r'^\s*\[\+\]\s*(?:Entering bootloader|Trigger restart)\.\.\.\s*$', re.I)
+_WAIT = re.compile(r'^\s*\[\+\]\s*Waiting for Proxmark3 to appear on (?P<port>COM[1-9][0-9]*)\s*$', re.I)
+_COUNTDOWN = re.compile(r'^\s*\[[/|\\-]\]\s*[0-9]{1,3}(?=\s*\[!+\])')
+_FOUND = re.compile(r'^\s*(?:\[[/|\\-]\]\s*[0-9]{1,3}\s+)?found\s*$', re.I)
 
 
 @dataclass(frozen=True)
@@ -30,6 +34,9 @@ class FlashTranscript:
         self.fatal = []
         self.reconnect_lines = 0
         self.allow_transition=allow_transition
+        self.wait_port = self.retry_port = None
+        self.pending_reconnect = []
+        self.pending_reconnect_count = 0
 
     def feed(self, data):
         self.total_bytes += len(data)
@@ -47,18 +54,56 @@ class FlashTranscript:
 
     def _line(self, line):
         if not line.strip():return
-        if re.search(r'\bEntering bootloader\b|\bTrigger restart\b',line,re.I):self.transition=True
-        if re.search(r'\bWriting segments for file\b|\bWriting flash\b',line,re.I):self.writing=True
-        if re.search(r'\bAll done\b',line,re.I):self.all_done=True
-        if not _FAILURE.search(line):return
-        transient = self.allow_transition and self.transition and not self.writing and not self.all_done and (_OPEN.fullmatch(line) or _INVALID_PORT.fullmatch(line))
-        if transient:self.reconnect_lines+=1
-        elif len(self.fatal)<32 and line[:512] not in self.fatal:self.fatal.append(line[:512])
+        if _RESTART.fullmatch(line) and not self.writing and not self.all_done:
+            self._end_wait(False)
+            self.transition=True
+        wait=_WAIT.fullmatch(line)
+        if wait and self.allow_transition and self.transition and not self.writing and not self.all_done:
+            self._end_wait(False)
+            self.wait_port=wait['port'].upper()
+            return
+        if self.wait_port and _FOUND.fullmatch(line):
+            self._end_wait(True)
+            return
+        if re.search(r'\bWriting segments for file\b|\bWriting flash\b|^\s*\[\+\]\s*Flashing\.\.\.',line,re.I):
+            self._end_wait(False)
+            self.writing=True
+        if re.search(r'\bAll done\b',line,re.I):
+            self._end_wait(False)
+            self.all_done=True
+        if not _FAILURE.search(line):
+            self.retry_port=None
+            return
+        diagnostic=_COUNTDOWN.sub('',line,count=1)
+        opened=_OPEN.fullmatch(diagnostic)
+        invalid=_INVALID_PORT.fullmatch(diagnostic)
+        transient = (self.allow_transition and self.wait_port and not self.writing and not self.all_done and
+                     (opened and opened['port'].upper()==self.wait_port or
+                      invalid and invalid['port'].upper()==self.wait_port==self.retry_port))
+        if transient:
+            self.pending_reconnect_count+=1
+            if len(self.pending_reconnect)<32:self.pending_reconnect.append(line[:512])
+            self.retry_port=opened['port'].upper() if opened else None
+        else:
+            self.retry_port=None
+            self._fatal(line)
+
+    def _fatal(self, line):
+        if len(self.fatal)<32 and line[:512] not in self.fatal:self.fatal.append(line[:512])
+
+    def _end_wait(self, found):
+        if found:self.reconnect_lines+=self.pending_reconnect_count
+        else:
+            for line in self.pending_reconnect:self._fatal(line)
+        self.wait_port=self.retry_port=None
+        self.pending_reconnect=[]
+        self.pending_reconnect_count=0
 
     def finish(self):
         self.line += self.cleaner.feed(self.decoder.decode(b'',final=True))
         if self.line:self._line(self.line)
         self.line=''
+        self._end_wait(False)
         return FlashDiagnostics(self.all_done,tuple(self.fatal),self.reconnect_lines)
 
     @property

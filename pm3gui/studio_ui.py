@@ -27,7 +27,8 @@ from .studio_flows import (Request, one_command, classic_selected, magic_uid, em
     traces, LF_READERS, HF_DUMP_PROFILES, read_lf_profile, read_hf_profile, ndef_read, ndef_write,
     capture_signal, download_spiffs, spiffs_file)
 from .theme import mono_font
-from .ui import Disclosure, line_icon
+from .ui import Disclosure, SmoothStack, line_icon
+from .motion_tabs import SmoothTabs
 from .classic_ui import ClassicSplit, ClassicHexDelegate, BYTE_COLORS, key_slots
 from .i18n import display_key_source
 
@@ -148,7 +149,7 @@ class StudioPage(QWidget):
         split=QSplitter(Qt.Orientation.Horizontal);layout.addWidget(split,1)
         self.sections=QListWidget();self.sections.setMinimumWidth(125);self.sections.setMaximumWidth(170)
         self.sections.setWordWrap(True);self.sections.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff);split.addWidget(self.sections)
-        self.pages=QStackedWidget();split.addWidget(self.pages);split.setSizes([160,920])
+        self.pages=SmoothStack();split.addWidget(self.pages);split.setSizes([160,920])
         for ru,en,builder in [('Classic','Classic',self.classic_page),('NDEF','NDEF',self.ndef_page),
                 ('Семейства карт','Card families',self.profiles_page),('Трассы','Traces',self.traces_page),
                 ('Сигнал LF','LF signal',self.signal_page),('Память платы','Board memory',self.files_page),
@@ -190,7 +191,7 @@ class StudioPage(QWidget):
         self.button(toolbar,'Выбрать снимок…','Choose snapshot…',self.choose_snapshot,False)
         self.button(toolbar,'Определить карту','Identify card',lambda:self.run(one_command('hf 14a info'),say('Информация Classic','Classic information'),True))
         self.classic_info=label('Выберите снимок Classic.','Choose a Classic snapshot.');layout.addWidget(self.classic_info)
-        self.classic_tabs=tabs=QTabWidget();tabs.setObjectName('classicTabs');layout.addWidget(tabs,1)
+        self.classic_tabs=tabs=SmoothTabs();tabs.setObjectName('classicTabs');layout.addWidget(tabs,1)
         for ru,en,builder in [('Блоки','Blocks',self.blocks_page),('Права доступа','Access rights',self.access_page),
                 ('Ключи','Keys',self.key_page),('Magic','Magic',self.magic_page),('RAM эмулятора','Emulator RAM',self.emulator_page),('Сравнение','Compare',self.diff_page)]:
             tabs.addTab(builder(),say(ru,en))

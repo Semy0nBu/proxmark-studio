@@ -29,7 +29,9 @@ class ButtonMotionTests(unittest.TestCase):
         button.click()
         self.assertEqual(clicks,[])
         self.assertEqual(button._motion.state(),QAbstractAnimation.State.Stopped)
-        self.assertEqual(button._tint.alpha(),0)
+        disabled=button.grab().toImage()
+        QTest.qWait(180)
+        self.assertEqual(button.grab().toImage(),disabled)
 
     def test_reduced_motion_keeps_immediate_buttons(self):
         self.app.setProperty('reducedMotion',True);self.addCleanup(lambda:self.app.setProperty('reducedMotion',False))

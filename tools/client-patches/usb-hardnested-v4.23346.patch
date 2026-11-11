@@ -1,0 +1,1677 @@
+diff --git a/armsrc/version_pm3.c b/armsrc/version_pm3.c
+index 2f4716e..89a50e2 100644
+--- a/armsrc/version_pm3.c
++++ b/armsrc/version_pm3.c
+@@ -10,8 +10,8 @@ const struct version_information_t SECTVERSINFO g_version_information = {
+     VERSION_INFORMATION_MAGIC,
+     1,
+     1,
+-    2,
+-    "Iceman/codex/gui-usb-stable/v4.23346-dirty",
+-    "2026-11-09 22:49:12",
+-    "75ed7066f"
++    0,
++    "Iceman/ProxmarkStudio/v4.23346-usb-cpu-fix",
++    "2026-11-11 22:44:55",
++    "c3f8ba2a1"
+ };
+diff --git a/client/deps/hardnested/hardnested_bf_core.c b/client/deps/hardnested/hardnested_bf_core.c
+index 22a4769..42c5468 100644
+--- a/client/deps/hardnested/hardnested_bf_core.c
++++ b/client/deps/hardnested/hardnested_bf_core.c
+@@ -217,6 +217,7 @@ void BITSLICE_TEST_NONCES(uint32_t nonces_to_bruteforce, const uint32_t *bf_test
+ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statelist_t *p, uint32_t *keys_found,
+                                 uint64_t *num_keys_tested, uint32_t nonces_to_bruteforce,
+                                 const uint8_t *bf_test_nonce_2nd_byte, noncelist_t *nonces) {
++    if (hardnested_bruteforce_stopped()) return UINT64_MAX;
+ 
+     // Unlike aczid's implementation this doesn't roll back at all when performing bitsliced bruteforce.
+     // We know that the best first byte is already shifted in. Testing with the remaining three bytes of
+@@ -227,6 +228,8 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
+     bitslice_t *restrict state_p;
+     uint64_t key = -1;
+     uint64_t bucket_states_tested = 0;
++    bool search_noted = false;
++    bool search_aborted = false;
+     uint32_t bucket_size[(p->len[EVEN_STATE] - 1) / MAX_BITSLICES + 1];
+     uint32_t bitsliced_blocks = 0;
+     uint32_t const *restrict p_even_end = p->states[EVEN_STATE] + p->len[EVEN_STATE];
+@@ -257,6 +260,7 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
+         exit(4);
+     }
+     for (uint32_t *restrict p_even = p->states[EVEN_STATE]; p_even < p_even_end; p_even += MAX_BITSLICES) {
++        if (hardnested_bruteforce_stopped()) goto out;
+         bitslice_t *restrict lstate_p = malloc_bitslice(STATE_SIZE / 2 * sizeof(bitslice_t));
+         if (lstate_p == NULL) {
+             PrintAndLogEx(WARNING, "Out of memory error in brute_force. Aborting... \n");
+@@ -306,7 +310,11 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
+     // bitslice every odd state to every block of even states
+     for (uint32_t const *restrict p_odd = p->states[ODD_STATE]; p_odd < p->states[ODD_STATE] + p->len[ODD_STATE]; ++p_odd) {
+         // early abort
+-        if (*keys_found) {
++        if (__atomic_load_n(keys_found, __ATOMIC_ACQUIRE)) {
++            goto out;
++        }
++        if (hardnested_bruteforce_stopped()) {
++            search_aborted = hardnested_bruteforce_cancelled();
+             goto out;
+         }
+ 
+@@ -343,6 +351,11 @@ uint64_t CRACK_STATES_BITSLICED(uint32_t cuid, uint8_t *best_first_bytes, statel
+ 
+         uint32_t *restrict p_even = p->states[EVEN_STATE];
+         for (uint32_t block_idx = 0; block_idx < bitsliced_blocks; ++block_idx, p_even += MAX_BITSLICES) {
++            if (__atomic_load_n(keys_found, __ATOMIC_ACQUIRE)) goto out;
++            if (hardnested_bruteforce_stopped()) {
++                search_aborted = hardnested_bruteforce_cancelled();
++                goto out;
++            }
+ 
+ #ifdef DEBUG_KEY_ELIMINATION
+             // if (known_target_key != -1 && bucket_contains_test_key[block_idx] && *p_odd == test_state[ODD_STATE]) {
+@@ -534,11 +547,16 @@ stop_tests:
+             elimination_step = 0;
+ #endif
+             bucket_states_tested += bucket_size[block_idx];
++            if (!search_noted) {
++                hardnested_bruteforce_note_search();
++                search_noted = true;
++            }
+             // prepare to set new states
+             state_p = &states[KEYSTREAM_SIZE];
+         }
+     }
+ out:
++    if (search_noted && search_aborted) hardnested_bruteforce_note_cancel();
+     for (uint32_t block_idx = 0; block_idx < bitsliced_blocks; ++block_idx) {
+         free_bitslice(bitsliced_even_states[block_idx]);
+     }
+@@ -657,30 +675,37 @@ void bitslice_test_nonces_dispatch(uint32_t nonces_to_bruteforce, const uint32_t
+ #if defined(COMPILER_HAS_SIMD_AVX512)
+         case SIMD_AVX512:
+             bitslice_test_nonces_function_p = &bitslice_test_nonces_AVX512;
++            crack_states_bitsliced_function_p = &crack_states_bitsliced_AVX512;
+             break;
+ #endif
+ #if defined(COMPILER_HAS_SIMD_X86)
+         case SIMD_AVX2:
+             bitslice_test_nonces_function_p = &bitslice_test_nonces_AVX2;
++            crack_states_bitsliced_function_p = &crack_states_bitsliced_AVX2;
+             break;
+         case SIMD_AVX:
+             bitslice_test_nonces_function_p = &bitslice_test_nonces_AVX;
++            crack_states_bitsliced_function_p = &crack_states_bitsliced_AVX;
+             break;
+         case SIMD_SSE2:
+             bitslice_test_nonces_function_p = &bitslice_test_nonces_SSE2;
++            crack_states_bitsliced_function_p = &crack_states_bitsliced_SSE2;
+             break;
+         case SIMD_MMX:
+             bitslice_test_nonces_function_p = &bitslice_test_nonces_MMX;
++            crack_states_bitsliced_function_p = &crack_states_bitsliced_MMX;
+             break;
+ #endif
+ #if defined(COMPILER_HAS_SIMD_NEON)
+         case SIMD_NEON:
+             bitslice_test_nonces_function_p = &bitslice_test_nonces_NEON;
++            crack_states_bitsliced_function_p = &crack_states_bitsliced_NEON;
+             break;
+ #endif
+         case SIMD_AUTO:
+         case SIMD_NONE:
+             bitslice_test_nonces_function_p = &bitslice_test_nonces_NOSIMD;
++            crack_states_bitsliced_function_p = &crack_states_bitsliced_NOSIMD;
+             break;
+     }
+ 
+diff --git a/client/deps/hardnested/hardnested_bruteforce.c b/client/deps/hardnested/hardnested_bruteforce.c
+index e30627b..d5e175a 100644
+--- a/client/deps/hardnested/hardnested_bruteforce.c
++++ b/client/deps/hardnested/hardnested_bruteforce.c
+@@ -95,6 +95,87 @@ static statelist_t **buckets = NULL;
+ static uint32_t keys_found = 0;
+ static uint64_t num_keys_tested;
+ static uint64_t found_bs_key = 0;
++static bool computation_cancelled = false;
++static bool computation_failed = false;
++static uint32_t workers_active = 0;
++static hardnested_cancel_poll_t cancel_poll = NULL;
++static uint32_t workers_at_cancel = 0;
++static uint32_t search_workers_stopped = 0;
++static uint32_t search_workers_started = 0;
++static bool report_cpu_search = false;
++static bool cpu_search_announced = false;
++static uint32_t cpu_search_nonces = 0;
++static uint64_t cpu_search_states = 0;
++
++void hardnested_bruteforce_begin(hardnested_cancel_poll_t poll_cancel) {
++    cancel_poll = poll_cancel;
++    __atomic_store_n(&computation_cancelled, false, __ATOMIC_RELEASE);
++    __atomic_store_n(&computation_failed, false, __ATOMIC_RELEASE);
++    __atomic_store_n(&workers_at_cancel, 0, __ATOMIC_RELAXED);
++    __atomic_store_n(&search_workers_stopped, 0, __ATOMIC_RELAXED);
++    __atomic_store_n(&search_workers_started, 0, __ATOMIC_RELAXED);
++    report_cpu_search = false;
++}
++
++bool hardnested_bruteforce_cancelled(void) {
++    return __atomic_load_n(&computation_cancelled, __ATOMIC_ACQUIRE);
++}
++
++bool hardnested_bruteforce_failed(void) {
++    return __atomic_load_n(&computation_failed, __ATOMIC_ACQUIRE);
++}
++
++bool hardnested_bruteforce_stopped(void) {
++    return hardnested_bruteforce_cancelled() || hardnested_bruteforce_failed();
++}
++
++bool hardnested_bruteforce_poll_cancel(void) {
++    if (!hardnested_bruteforce_cancelled() && cancel_poll && cancel_poll()) {
++        __atomic_store_n(&workers_at_cancel, __atomic_load_n(&workers_active, __ATOMIC_ACQUIRE), __ATOMIC_RELAXED);
++        __atomic_store_n(&computation_cancelled, true, __ATOMIC_RELEASE);
++    }
++    return hardnested_bruteforce_cancelled();
++}
++
++void hardnested_bruteforce_abort(void) {
++    __atomic_store_n(&computation_failed, true, __ATOMIC_RELEASE);
++}
++
++void hardnested_worker_begin(void) {
++    __atomic_fetch_add(&workers_active, 1, __ATOMIC_RELEASE);
++}
++
++void hardnested_worker_end(void) {
++    __atomic_fetch_sub(&workers_active, 1, __ATOMIC_RELEASE);
++}
++
++void hardnested_wait_for_workers(void) {
++    while (__atomic_load_n(&workers_active, __ATOMIC_ACQUIRE)) {
++        if (report_cpu_search && !cpu_search_announced && __atomic_load_n(&search_workers_started, __ATOMIC_ACQUIRE)) {
++            hardnested_print_progress(cpu_search_nonces, "Hardnested CPU search started", cpu_search_states, 0);
++            cpu_search_announced = true;
++        }
++        hardnested_bruteforce_poll_cancel();
++        msleep(5);
++    }
++    hardnested_bruteforce_poll_cancel();
++}
++
++void hardnested_bruteforce_note_search(void) {
++    __atomic_fetch_add(&search_workers_started, 1, __ATOMIC_RELEASE);
++}
++
++void hardnested_bruteforce_note_cancel(void) {
++    __atomic_fetch_add(&search_workers_stopped, 1, __ATOMIC_RELAXED);
++}
++
++uint32_t hardnested_bruteforce_workers_at_cancel(void) {
++    return __atomic_load_n(&workers_at_cancel, __ATOMIC_RELAXED);
++}
++
++uint32_t hardnested_bruteforce_workers_stopped(void) {
++    return __atomic_load_n(&search_workers_stopped, __ATOMIC_RELAXED);
++}
+ 
+ uint8_t trailing_zeros(uint8_t byte) {
+     static const uint8_t trailing_zeros_LUT[256] = {
+@@ -123,6 +204,7 @@ uint8_t trailing_zeros(uint8_t byte) {
+ bool verify_key(uint32_t cuid, noncelist_t *nonces, const uint8_t *best_first_bytes, uint32_t odd, uint32_t even) {
+     struct Crypto1State pcs;
+     for (uint16_t test_first_byte = 1; test_first_byte < 256; test_first_byte++) {
++        if (hardnested_bruteforce_stopped()) return false;
+         noncelistentry_t *test_nonce = nonces[best_first_bytes[test_first_byte]].first;
+         while (test_nonce != NULL) {
+             pcs.odd = odd;
+@@ -164,35 +246,34 @@ crack_states_thread(void *x) {
+     thread_arg = (struct arg *)x;
+     const int thread_id = thread_arg->thread_ID;
+     uint32_t current_bucket = thread_id;
+-    while (current_bucket < bucket_count) {
++    while (current_bucket < bucket_count && !hardnested_bruteforce_stopped()) {
+         statelist_t *bucket = buckets[current_bucket];
+         if (bucket) {
+ #if defined (DEBUG_BRUTE_FORCE)
+             PrintAndLogEx(INFO, "Thread " _YELLOW_("%u") " starts working on bucket " _YELLOW_("%u") "\n", thread_id, current_bucket);
+ #endif
+             const uint64_t key = crack_states_bitsliced(thread_arg->cuid, thread_arg->best_first_bytes, bucket, &keys_found, &num_keys_tested, nonces_to_bruteforce, bf_test_nonce_2nd_byte, thread_arg->nonces);
+-            if (key != -1) {
+-                __atomic_fetch_add(&keys_found, 1, __ATOMIC_SEQ_CST);
+-                __atomic_fetch_add(&found_bs_key, key, __ATOMIC_SEQ_CST);
+-
+-                char keystr[19];
+-                snprintf(keystr, sizeof(keystr), "%012" PRIX64, key);
+-                hardnested_print_key_found_progress(thread_arg->num_acquired_nonces, keystr);
+-                PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
++            if (key != UINT64_MAX && !hardnested_bruteforce_stopped()) {
++                uint32_t expected = 0;
++                if (__atomic_compare_exchange_n(&keys_found, &expected, 1, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)) {
++                    found_bs_key = key;
++                }
+                 break;
+-            } else if (keys_found) {
++            } else if (__atomic_load_n(&keys_found, __ATOMIC_ACQUIRE) || hardnested_bruteforce_stopped()) {
+                 break;
+             } else {
+                 if (thread_arg->silent == false) {
+                     char progress_text[80];
+-                    snprintf(progress_text, sizeof(progress_text), "Brute force phase: %6.02f%%  ", 100.0 * (float)num_keys_tested / (float)(thread_arg->maximum_states));
+-                    float remaining_bruteforce = thread_arg->nonces[thread_arg->best_first_bytes[0]].expected_num_brute_force - (float)num_keys_tested / 2;
++                    uint64_t tested = __atomic_load_n(&num_keys_tested, __ATOMIC_RELAXED);
++                    snprintf(progress_text, sizeof(progress_text), "Brute force phase: %6.02f%%  ", 100.0 * (float)tested / (float)(thread_arg->maximum_states));
++                    float remaining_bruteforce = thread_arg->nonces[thread_arg->best_first_bytes[0]].expected_num_brute_force - (float)tested / 2;
+                     hardnested_print_progress(thread_arg->num_acquired_nonces, progress_text, remaining_bruteforce, 5000);
+                 }
+             }
+         }
+         current_bucket += num_brute_force_threads;
+     }
++    hardnested_worker_end();
+     return NULL;
+ }
+ 
+@@ -221,6 +302,7 @@ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte) {
+     int sum_best = -1;
+     for (uint32_t n1 = 0; n1 < nonces_to_bruteforce; n1++) {
+         for (uint32_t n2 = 0; n2 < nonces_to_bruteforce; n2++) {
++            if ((n2 & 15) == 0 && hardnested_bruteforce_poll_cancel()) return;
+             if (n2 != n1) {
+                 for (uint32_t n3 = 0; n3 < nonces_to_bruteforce; n3++) {
+                     if ((n3 != n2 && n3 != n1) || nonces_to_bruteforce < 3
+@@ -306,6 +388,7 @@ static bool ensure_buckets_alloc(size_t need_buckets) {
+         statelist_t **new_buckets = realloc(buckets, sizeof(statelist_t *) * alloc_sz);
+         if (new_buckets == NULL) {
+             free(buckets);
++            buckets = NULL;
+             buckets_allocated = 0;
+             return false;
+         }
+@@ -323,12 +406,22 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
+     write_benchfile(candidates);
+ #endif
+     bool silent = (bf_rate != NULL);
++    if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) return false;
+ 
+     const int num_brute_force_threads = NUM_BRUTE_FORCE_THREADS;
++    if (num_brute_force_threads < 1) {
++        hardnested_bruteforce_abort();
++        return false;
++    }
+ 
+     keys_found = 0;
+     num_keys_tested = 0;
+     found_bs_key = 0;
++    __atomic_store_n(&search_workers_started, 0, __ATOMIC_RELAXED);
++    report_cpu_search = !silent;
++    cpu_search_announced = false;
++    cpu_search_nonces = num_acquired_nonces;
++    cpu_search_states = maximum_states;
+ 
+     bitslice_test_nonces(nonces_to_bruteforce, bf_test_nonce, bf_test_nonce_par);
+ 
+@@ -338,6 +431,7 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
+         if (p->states[ODD_STATE] != NULL && p->states[EVEN_STATE] != NULL) {
+             if (ensure_buckets_alloc(bucket_count + 1) == false) {
+                 PrintAndLogEx(ERR, "Can't allocate buckets, abort!");
++                hardnested_bruteforce_abort();
+                 return false;
+             }
+ 
+@@ -348,11 +442,6 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
+ 
+     uint64_t start_time = msclock();
+ 
+-#if defined(__linux__) ||  defined(__APPLE__)
+-    if (NUM_BRUTE_FORCE_THREADS < 0)
+-        return false;
+-#endif
+-
+     pthread_t threads[num_brute_force_threads];
+     struct args {
+         bool silent;
+@@ -364,7 +453,8 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
+         uint8_t *best_first_bytes;
+     } thread_args[num_brute_force_threads];
+ 
+-    for (uint32_t i = 0; i < num_brute_force_threads; i++) {
++    uint32_t threads_created = 0;
++    for (int i = 0; i < num_brute_force_threads; i++) {
+         thread_args[i].thread_ID = i;
+         thread_args[i].silent = silent;
+         thread_args[i].cuid = cuid;
+@@ -372,12 +462,25 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
+         thread_args[i].maximum_states = maximum_states;
+         thread_args[i].nonces = nonces;
+         thread_args[i].best_first_bytes = best_first_bytes;
+-        pthread_create(&threads[i], NULL, crack_states_thread, (void *)&thread_args[i]);
++        hardnested_worker_begin();
++        if (pthread_create(&threads[i], NULL, crack_states_thread, (void *)&thread_args[i]) != 0) {
++            hardnested_worker_end();
++            hardnested_bruteforce_abort();
++            PrintAndLogEx(ERR, "Can't create Hardnested computation worker, aborting...");
++            break;
++        }
++        threads_created++;
+     }
+ 
+-    for (uint32_t i = 0; i < num_brute_force_threads; i++) {
++    if (!silent && !hardnested_bruteforce_stopped()) {
++        hardnested_print_progress(num_acquired_nonces, "Brute force phase: workers started", maximum_states, 0);
++    }
++    hardnested_wait_for_workers();
++    for (uint32_t i = 0; i < threads_created; i++) {
+         pthread_join(threads[i], 0);
+     }
++    hardnested_bruteforce_poll_cancel();
++    report_cpu_search = false;
+ 
+     free(buckets);
+     buckets = NULL;
+@@ -386,14 +489,20 @@ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint
+     uint64_t elapsed_time = msclock() - start_time;
+ 
+     if (bf_rate != NULL) {
+-        *bf_rate = (float)num_keys_tested / ((float)elapsed_time / 1000.0);
++        *bf_rate = elapsed_time ? (float)num_keys_tested / ((float)elapsed_time / 1000.0) : DEFAULT_BRUTE_FORCE_RATE;
+     }
+ 
+-    if (keys_found > 0) {
++    if (keys_found > 0 && !hardnested_bruteforce_stopped()) {
+         *found_key = found_bs_key;
++        if (!silent) {
++            char keystr[19];
++            snprintf(keystr, sizeof(keystr), "%012" PRIX64, found_bs_key);
++            hardnested_print_key_found_progress(num_acquired_nonces, keystr);
++            PrintAndLogEx(INFO, "---------+---------+---------------------------------------------------------+---------------------------+---------------");
++        }
+     }
+ 
+-    return (keys_found != 0);
++    return keys_found != 0 && !hardnested_bruteforce_stopped();
+ }
+ 
+ 
+@@ -482,11 +591,15 @@ static bool read_bench_data(statelist_t *test_candidates) {
+ 
+ float brute_force_benchmark(void) {
+     const int num_brute_force_threads = NUM_BRUTE_FORCE_THREADS;
++    if (num_brute_force_threads < 1) {
++        hardnested_bruteforce_abort();
++        return DEFAULT_BRUTE_FORCE_RATE;
++    }
+     statelist_t test_candidates[num_brute_force_threads];
+ 
+     test_candidates[0].states[ODD_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
+     test_candidates[0].states[EVEN_STATE] = calloc(1, (TEST_BENCH_SIZE + 1) * sizeof(uint32_t));
+-    for (uint32_t i = 0; i < num_brute_force_threads - 1; i++) {
++    for (int i = 0; i < num_brute_force_threads - 1; i++) {
+         test_candidates[i].next = test_candidates + i + 1;
+         test_candidates[i + 1].states[ODD_STATE] = test_candidates[0].states[ODD_STATE];
+         test_candidates[i + 1].states[EVEN_STATE] = test_candidates[0].states[EVEN_STATE];
+@@ -500,7 +613,7 @@ float brute_force_benchmark(void) {
+         return DEFAULT_BRUTE_FORCE_RATE;
+     }
+ 
+-    for (uint32_t i = 0; i < num_brute_force_threads; i++) {
++    for (int i = 0; i < num_brute_force_threads; i++) {
+         test_candidates[i].len[ODD_STATE] = TEST_BENCH_SIZE;
+         test_candidates[i].len[EVEN_STATE] = TEST_BENCH_SIZE;
+         test_candidates[i].states[ODD_STATE][TEST_BENCH_SIZE] = -1;
+@@ -509,7 +622,7 @@ float brute_force_benchmark(void) {
+ 
+     uint64_t maximum_states = TEST_BENCH_SIZE * TEST_BENCH_SIZE * (uint64_t)num_brute_force_threads;
+ 
+-    float bf_rate;
++    float bf_rate = DEFAULT_BRUTE_FORCE_RATE;
+     uint64_t found_key = 0;
+     brute_force_bs(&bf_rate, test_candidates, 0, 0, maximum_states, NULL, 0, &found_key);
+ 
+diff --git a/client/deps/hardnested/hardnested_bruteforce.h b/client/deps/hardnested/hardnested_bruteforce.h
+index 8fe420a..b876c9f 100644
+--- a/client/deps/hardnested/hardnested_bruteforce.h
++++ b/client/deps/hardnested/hardnested_bruteforce.h
+@@ -53,6 +53,22 @@ typedef struct {
+     void *next;
+ } statelist_t;
+ 
++typedef bool (*hardnested_cancel_poll_t)(void);
++
++void hardnested_bruteforce_begin(hardnested_cancel_poll_t poll_cancel);
++bool hardnested_bruteforce_poll_cancel(void);
++bool hardnested_bruteforce_cancelled(void);
++bool hardnested_bruteforce_stopped(void);
++bool hardnested_bruteforce_failed(void);
++void hardnested_bruteforce_abort(void);
++void hardnested_worker_begin(void);
++void hardnested_worker_end(void);
++void hardnested_wait_for_workers(void);
++void hardnested_bruteforce_note_search(void);
++void hardnested_bruteforce_note_cancel(void);
++uint32_t hardnested_bruteforce_workers_at_cancel(void);
++uint32_t hardnested_bruteforce_workers_stopped(void);
++
+ void prepare_bf_test_nonces(noncelist_t *nonces, uint8_t best_first_byte);
+ bool brute_force_bs(float *bf_rate, statelist_t *candidates, uint32_t cuid, uint32_t num_acquired_nonces, uint64_t maximum_states, noncelist_t *nonces, uint8_t *best_first_bytes, uint64_t *found_key);
+ float brute_force_benchmark(void);
+diff --git a/client/src/cmdhfmfhard.c b/client/src/cmdhfmfhard.c
+index 405f255..ea7b560 100644
+--- a/client/src/cmdhfmfhard.c
++++ b/client/src/cmdhfmfhard.c
+@@ -318,6 +318,7 @@ static void init_bitflip_bitarrays(void) {
+     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
+         num_effective_bitflips[odd_even] = 0;
+         for (uint16_t bitflip = 0x001; bitflip < 0x400; bitflip++) {
++            if (hardnested_bruteforce_poll_cancel()) return;
+             bool open_uncompressed = false;
+             bool open_lz4compressed = false;
+             bool open_bz2compressed = false;
+@@ -592,9 +593,11 @@ static void init_bitflip_bitarrays(void) {
+ static void free_bitflip_bitarrays(void) {
+     for (int16_t bitflip = 0x3ff; bitflip > 0x000; bitflip--) {
+         free_bitarray(bitflip_bitarrays[ODD_STATE][bitflip]);
++        bitflip_bitarrays[ODD_STATE][bitflip] = NULL;
+     }
+     for (int16_t bitflip = 0x3ff; bitflip > 0x000; bitflip--) {
+         free_bitarray(bitflip_bitarrays[EVEN_STATE][bitflip]);
++        bitflip_bitarrays[EVEN_STATE][bitflip] = NULL;
+     }
+ }
+ 
+@@ -642,6 +645,7 @@ static void init_part_sum_bitarrays(void) {
+     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
+         //PrintAndLogEx(INFO, "(%d, %" PRIu16 ")...", odd_even, part_sum_a0);
+         for (uint32_t state = 0; state < (1 << 20); state++) {
++            if ((state & 4095) == 0 && hardnested_bruteforce_poll_cancel()) return;
+             uint16_t part_sum_a0 = PartialSumProperty(state, odd_even) / 2;
+             for (uint16_t low_bits = 0; low_bits < 1 << 4; low_bits++) {
+                 set_bit24(part_sum_a0_bitarrays[odd_even][part_sum_a0], state << 4 | low_bits);
+@@ -662,6 +666,7 @@ static void init_part_sum_bitarrays(void) {
+     for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
+         //PrintAndLogEx(INFO, "(%d, %" PRIu16 ")...", odd_even, part_sum_a8);
+         for (uint32_t state = 0; state < (1 << 20); state++) {
++            if ((state & 4095) == 0 && hardnested_bruteforce_poll_cancel()) return;
+             uint16_t part_sum_a8 = PartialSumProperty(state, odd_even) / 2;
+             for (uint16_t high_bits = 0; high_bits < 1 << 4; high_bits++) {
+                 set_bit24(part_sum_a8_bitarrays[odd_even][part_sum_a8], state | high_bits << 20);
+@@ -673,15 +678,19 @@ static void init_part_sum_bitarrays(void) {
+ static void free_part_sum_bitarrays(void) {
+     for (int16_t part_sum_a8 = (NUM_PART_SUMS - 1); part_sum_a8 >= 0; part_sum_a8--) {
+         free_bitarray(part_sum_a8_bitarrays[ODD_STATE][part_sum_a8]);
++        part_sum_a8_bitarrays[ODD_STATE][part_sum_a8] = NULL;
+     }
+     for (int16_t part_sum_a8 = (NUM_PART_SUMS - 1); part_sum_a8 >= 0; part_sum_a8--) {
+         free_bitarray(part_sum_a8_bitarrays[EVEN_STATE][part_sum_a8]);
++        part_sum_a8_bitarrays[EVEN_STATE][part_sum_a8] = NULL;
+     }
+     for (int16_t part_sum_a0 = (NUM_PART_SUMS - 1); part_sum_a0 >= 0; part_sum_a0--) {
+         free_bitarray(part_sum_a0_bitarrays[ODD_STATE][part_sum_a0]);
++        part_sum_a0_bitarrays[ODD_STATE][part_sum_a0] = NULL;
+     }
+     for (int16_t part_sum_a0 = (NUM_PART_SUMS - 1); part_sum_a0 >= 0; part_sum_a0--) {
+         free_bitarray(part_sum_a0_bitarrays[EVEN_STATE][part_sum_a0]);
++        part_sum_a0_bitarrays[EVEN_STATE][part_sum_a0] = NULL;
+     }
+ }
+ 
+@@ -697,6 +706,7 @@ static void init_sum_bitarrays(void) {
+         }
+     }
+     for (uint8_t p = 0; p < NUM_PART_SUMS; p++) {
++        if (hardnested_bruteforce_poll_cancel()) return;
+         for (uint8_t q = 0; q < NUM_PART_SUMS; q++) {
+             uint16_t sum_a0 = 2 * p * (16 - 2 * q) + (16 - 2 * p) * 2 * q;
+             uint16_t sum_a0_idx = 0;
+@@ -711,7 +721,9 @@ static void init_sum_bitarrays(void) {
+ static void free_sum_bitarrays(void) {
+     for (int8_t sum_a0 = NUM_SUMS - 1; sum_a0 >= 0; sum_a0--) {
+         free_bitarray(sum_a0_bitarrays[ODD_STATE][sum_a0]);
++        sum_a0_bitarrays[ODD_STATE][sum_a0] = NULL;
+         free_bitarray(sum_a0_bitarrays[EVEN_STATE][sum_a0]);
++        sum_a0_bitarrays[EVEN_STATE][sum_a0] = NULL;
+     }
+ }
+ 
+@@ -809,6 +821,7 @@ static int add_nonce(uint32_t nonce_enc, uint8_t par_enc) {
+ 
+ static void init_nonce_memory(void) {
+     for (uint16_t i = 0; i < 256; i++) {
++        if (hardnested_bruteforce_poll_cancel()) return;
+         nonces[i].num = 0;
+         nonces[i].Sum = 0;
+         nonces[i].first = NULL;
+@@ -853,10 +866,13 @@ static void free_nonce_list(noncelistentry_t *p) {
+ static void free_nonces_memory(void) {
+     for (uint16_t i = 0; i < 256; i++) {
+         free_nonce_list(nonces[i].first);
++        nonces[i].first = NULL;
+     }
+     for (int i = 255; i >= 0; i--) {
+         free_bitarray(nonces[i].states_bitarray[ODD_STATE]);
++        nonces[i].states_bitarray[ODD_STATE] = NULL;
+         free_bitarray(nonces[i].states_bitarray[EVEN_STATE]);
++        nonces[i].states_bitarray[EVEN_STATE] = NULL;
+     }
+ }
+ 
+@@ -940,6 +956,7 @@ static void init_allbitflips_array(void) {
+ static void update_allbitflips_array(void) {
+     if (hardnested_stage & CHECK_2ND_BYTES) {
+         for (uint16_t i = 0; i < 256; i++) {
++            if (hardnested_bruteforce_poll_cancel()) return;
+             for (odd_even_t odd_even = EVEN_STATE; odd_even <= ODD_STATE; odd_even++) {
+                 if (nonces[i].all_bitflips_dirty[odd_even]) {
+ 
+@@ -1052,10 +1069,12 @@ static void update_sum_bitarrays(odd_even_t odd_even) {
+         }
+ 
+         for (uint16_t i = 0; i < 256; i++) {
++            if (hardnested_bruteforce_poll_cancel()) return;
+             nonces[i].num_states_bitarray[odd_even] = count_bitarray_AND(nonces[i].states_bitarray[odd_even], all_bitflips_bitarray[odd_even]);
+         }
+ 
+         for (uint8_t part_sum_a0 = 0; part_sum_a0 < NUM_PART_SUMS; part_sum_a0++) {
++            if (hardnested_bruteforce_poll_cancel()) return;
+             for (uint8_t part_sum_a8 = 0; part_sum_a8 < NUM_PART_SUMS; part_sum_a8++) {
+                 part_sum_count[odd_even][part_sum_a0][part_sum_a8] += count_bitarray_AND2(part_sum_a0_bitarrays[odd_even][part_sum_a0], part_sum_a8_bitarrays[odd_even][part_sum_a8]);
+             }
+@@ -1124,6 +1143,7 @@ static float sort_best_first_bytes(void) {
+     // initialize best_first_bytes, do a rough estimation on remaining states for each Sum_a8 property
+     // and the expected number of states to brute force
+     for (uint16_t i = 0; i < 256; i++) {
++        if (hardnested_bruteforce_poll_cancel()) return 0.0f;
+         best_first_bytes[i] = i;
+         float prob_all_failed = 1.0;
+         nonces[i].expected_num_brute_force = 0.0;
+@@ -1383,14 +1403,16 @@ __attribute__((force_align_arg_pointer))
+     if (hardnested_stage & CHECK_1ST_BYTES) {
+         // for (uint16_t bitflip = 0x001; bitflip < 0x200; bitflip++) {
+         for (uint16_t bitflip_idx = 0; bitflip_idx < num_1st_byte_effective_bitflips; bitflip_idx++) {
++            if (hardnested_bruteforce_stopped()) goto done;
+             uint16_t bitflip = all_effective_bitflip[bitflip_idx];
+             if (time_budget && timeout()) {
+ #if defined (DEBUG_REDUCTION)
+                 PrintAndLogEx(INFO, "break at bitflip_idx " _YELLOW_("%d") " ...", bitflip_idx);
+ #endif
+-                return NULL;
++                goto done;
+             }
+             for (uint16_t i = first_byte; i <= last_byte; i++) {
++                if (hardnested_bruteforce_stopped()) goto done;
+ 
+                 if (nonces[i].BitFlips[bitflip] == 0 && nonces[i].BitFlips[bitflip ^ 0x100] == 0
+                         && nonces[i].first != NULL && nonces[i ^ (bitflip & 0xff)].first != NULL) {
+@@ -1425,14 +1447,16 @@ __attribute__((force_align_arg_pointer))
+ 
+     if (hardnested_stage & CHECK_2ND_BYTES) {
+         for (uint16_t bitflip_idx = num_1st_byte_effective_bitflips; bitflip_idx < num_all_effective_bitflips; bitflip_idx++) {
++            if (hardnested_bruteforce_stopped()) goto done;
+             uint16_t bitflip = all_effective_bitflip[bitflip_idx];
+             if (time_budget && timeout()) {
+ #if defined (DEBUG_REDUCTION)
+                 PrintAndLogEx(INFO, "break at bitflip_idx " _YELLOW_("%d") " ...", bitflip_idx);
+ #endif
+-                return NULL;
++                goto done;
+             }
+             for (uint16_t i = first_byte; i <= last_byte; i++) {
++                if (hardnested_bruteforce_stopped()) goto done;
+                 // Check for Bit Flip Property of 2nd bytes
+                 if (nonces[i].BitFlips[bitflip] == 0) {
+                     for (uint16_t j = 0; j < 256; j++) { // for each 2nd Byte
+@@ -1464,6 +1488,8 @@ __attribute__((force_align_arg_pointer))
+         }
+     }
+ 
++done:
++    hardnested_worker_end();
+     return NULL;
+ }
+ 
+@@ -1483,15 +1509,24 @@ static void check_for_BitFlipProperties(bool time_budget) {
+     // args[num_check_bitflip_threads - 1][1] = MAX(args[num_check_bitflip_threads - 1][1], 255);
+ 
+     // start threads
++    uint32_t threads_created = 0;
+     for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
+-        pthread_create(&thread_id[i], NULL, check_for_BitFlipProperties_thread, args[i]);
++        hardnested_worker_begin();
++        if (pthread_create(&thread_id[i], NULL, check_for_BitFlipProperties_thread, args[i]) != 0) {
++            hardnested_worker_end();
++            hardnested_bruteforce_abort();
++            break;
++        }
++        threads_created++;
+     }
+ 
+     // wait for threads to terminate:
+-    for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
++    hardnested_wait_for_workers();
++    for (uint32_t i = 0; i < threads_created; i++) {
+         pthread_join(thread_id[i], NULL);
+     }
+ 
++    if (hardnested_bruteforce_stopped()) return;
+     if (hardnested_stage & CHECK_2ND_BYTES) {
+         hardnested_stage &= ~CHECK_1ST_BYTES; // we are done with 1st stage, except...
+         for (uint32_t i = 0; i < num_check_bitflip_threads; i++) {
+@@ -1508,9 +1543,13 @@ static void check_for_BitFlipProperties(bool time_budget) {
+ 
+ static void update_nonce_data(bool time_budget) {
+     check_for_BitFlipProperties(time_budget);
++    if (hardnested_bruteforce_stopped()) return;
+     update_allbitflips_array();
++    if (hardnested_bruteforce_stopped()) return;
+     update_sum_bitarrays(EVEN_STATE);
++    if (hardnested_bruteforce_stopped()) return;
+     update_sum_bitarrays(ODD_STATE);
++    if (hardnested_bruteforce_stopped()) return;
+     update_p_K();
+     estimate_sum_a8();
+ }
+@@ -1581,6 +1620,7 @@ static int simulate_acquire_nonces(void) {
+     num_acquired_nonces = 0;
+ 
+     do {
++        if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) return PM3_EOPABORTED;
+         uint32_t nt_enc = 0;
+         uint8_t par_enc = 0;
+ 
+@@ -1618,6 +1658,7 @@ static int simulate_acquire_nonces(void) {
+                 apply_sum_a0();
+             }
+             update_nonce_data(true);
++            if (hardnested_bruteforce_stopped()) return PM3_EOPABORTED;
+             acquisition_completed = shrink_key_space(&brute_force_depth);
+             if (!reported_suma8) {
+                 char progress_string[80];
+@@ -1629,6 +1670,7 @@ static int simulate_acquire_nonces(void) {
+             }
+         } else {
+             update_nonce_data(true);
++            if (hardnested_bruteforce_stopped()) return PM3_EOPABORTED;
+             acquisition_completed = shrink_key_space(&brute_force_depth);
+             hardnested_print_progress(num_acquired_nonces, "Apply bit flip properties", brute_force_depth, 0);
+         }
+@@ -1674,10 +1716,10 @@ static int acquire_nonces(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_
+ 
+         // Never start another acquisition after a scoped GUI cancellation,
+         // including a race where the preceding nonce reply already arrived.
+-        if (pm3_gui_pipe_cancel_poll()) {
++        if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) {
+             if (fnonces != NULL) fclose(fnonces);
+             DropField();
+-            return PM3_EOPABORTED;
++            return hardnested_bruteforce_cancelled() ? PM3_EOPABORTED : PM3_EFAILED;
+         }
+ 
+         if (field_off) {
+@@ -1962,6 +2004,9 @@ static void free_statelist_cache(void) {
+         for (uint16_t j = 0; j < NUM_PART_SUMS; j++) {
+             for (uint16_t k = 0; k < 2; k++) {
+                 free(sl_cache[i][j][k].sl);
++                sl_cache[i][j][k].sl = NULL;
++                sl_cache[i][j][k].len = 0;
++                sl_cache[i][j][k].cache_status = TO_BE_DONE;
+             }
+         }
+     }
+@@ -2001,6 +2046,7 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
+     };
+ 
+     for (uint16_t i = 1; i < 256; i++) {
++        if (hardnested_bruteforce_stopped()) return false;
+         uint_fast8_t bytes_diff = reverse(i); // start with most common bits
+         uint_fast8_t byte2 = byte ^ bytes_diff;
+         uint_fast8_t num_common = trailing_zeros(bytes_diff);
+@@ -2042,9 +2088,12 @@ static bool all_bitflips_match(uint8_t byte, uint32_t state, odd_even_t odd_even
+     return true;
+ }
+ 
+-static void bitarray_to_list(uint8_t byte, uint32_t *bitarray, uint32_t *state_list, uint32_t *len, odd_even_t odd_even) {
++static void bitarray_to_list(uint8_t byte, uint32_t *bitarray, uint32_t *state_list, uint32_t *len, odd_even_t odd_even, bool poll_cancel) {
+     uint32_t *p = state_list;
++    uint32_t iterations = 0;
+     for (uint32_t state = next_state(bitarray, -1L); state < (1 << 24); state = next_state(bitarray, state)) {
++        if (poll_cancel && (iterations++ & 255) == 0) hardnested_bruteforce_poll_cancel();
++        if (hardnested_bruteforce_stopped()) break;
+         if (all_bitflips_match(byte, state, odd_even)) {
+             *p++ = state;
+         }
+@@ -2083,7 +2132,7 @@ static void add_matching_states(statelist_t *cands, uint8_t part_sum_a0, uint8_t
+ 
+     bitarray_AND4(cands_bitarray, bitarray_a0, bitarray_a8, bitarray_bitflips);
+ 
+-    bitarray_to_list(best_first_bytes[0], cands_bitarray, cands->states[odd_even], &(cands->len[odd_even]), odd_even);
++    bitarray_to_list(best_first_bytes[0], cands_bitarray, cands->states[odd_even], &(cands->len[odd_even]), odd_even, false);
+ 
+     if (cands->len[odd_even] == 0) {
+         free(cands->states[odd_even]);
+@@ -2132,7 +2181,7 @@ static void add_bitflip_candidates(uint8_t byte) {
+             exit(4);
+         }
+ 
+-        bitarray_to_list(byte, nonces[byte].states_bitarray[odd_even], candidates1->states[odd_even], &(candidates1->len[odd_even]), odd_even);
++        bitarray_to_list(byte, nonces[byte].states_bitarray[odd_even], candidates1->states[odd_even], &(candidates1->len[odd_even]), odd_even, true);
+ 
+         // slim down the allocated memory.
+         if (candidates1->len[odd_even] + 1 < worstcase_size) {
+@@ -2216,12 +2265,14 @@ __attribute__((force_align_arg_pointer))
+     do {
+         there_might_be_more_work = false;
+         for (uint8_t p = 0; p < NUM_PART_SUMS; p++) {
++            if (hardnested_bruteforce_stopped()) goto done;
+             for (uint8_t q = 0; q < NUM_PART_SUMS; q++) {
+                 if (2 * p * (16 - 2 * q) + (16 - 2 * p) * 2 * q == sum_a0) {
+                     // PrintAndLogEx(INFO, "Reducing Partial Statelists (p,q) = (%d,%d) with lengths %d, %d",
+                     // p, q, partial_statelist[p].len[ODD_STATE], partial_statelist[q].len[EVEN_STATE]);
+                     for (uint8_t r = 0; r < NUM_PART_SUMS; r++) {
+                         for (uint8_t s = 0; s < NUM_PART_SUMS; s++) {
++                            if (hardnested_bruteforce_stopped()) goto done;
+                             if (2 * r * (16 - 2 * s) + (16 - 2 * r) * 2 * s == sum_a8) {
+                                 pthread_mutex_lock(&book_of_work_mutex);
+                                 if (book_of_work[p][q][r][s] != TO_BE_DONE) {  // this has been done or is currently been done by another thread. Look for some other work.
+@@ -2343,6 +2394,8 @@ __attribute__((force_align_arg_pointer))
+         }
+     } while (there_might_be_more_work);
+ 
++done:
++    hardnested_worker_end();
+     return NULL;
+ }
+ 
+@@ -2350,9 +2403,6 @@ __attribute__((force_align_arg_pointer))
+ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
+ 
+     // create mutexes for accessing the statelist cache and our "book of work"
+-    pthread_mutex_init(&statelist_cache_mutex, NULL);
+-    pthread_mutex_init(&book_of_work_mutex, NULL);
+-
+     init_statelist_cache();
+     init_book_of_work();
+ 
+@@ -2361,17 +2411,27 @@ static void generate_candidates(uint8_t sum_a0_idx, uint8_t sum_a8_idx) {
+     pthread_t thread_id[num_reduction_working_threads];
+ 
+     uint16_t sums1[num_reduction_working_threads][3];
++    uint32_t threads_created = 0;
+     for (uint32_t i = 0; i < num_reduction_working_threads; i++) {
+         sums1[i][0] = sum_a0_idx;
+         sums1[i][1] = sum_a8_idx;
+         sums1[i][2] = i + 1;
+-        pthread_create(thread_id + i, NULL, generate_candidates_worker_thread, sums1[i]);
++        hardnested_worker_begin();
++        if (pthread_create(thread_id + i, NULL, generate_candidates_worker_thread, sums1[i]) != 0) {
++            hardnested_worker_end();
++            hardnested_bruteforce_abort();
++            break;
++        }
++        threads_created++;
++
+     }
+ 
+     // wait for threads to terminate:
+-    for (uint32_t i = 0; i < num_reduction_working_threads; i++) {
++    hardnested_wait_for_workers();
++    for (uint32_t i = 0; i < threads_created; i++) {
+         pthread_join(thread_id[i], NULL);
+     }
++    if (hardnested_bruteforce_stopped()) return;
+ 
+     maximum_states = 0;
+     for (statelist_t *sl = candidates; sl != NULL; sl = sl->next) {
+@@ -2474,6 +2534,10 @@ static void Tests2(void) {
+     }
+ }
+ 
++static bool hardnested_cancel_poll(void) {
++    return pm3_gui_pipe_cancel_poll() || kbd_enter_pressed() > 0;
++}
++
+ static uint16_t real_sum_a8 = 0;
+ 
+ static void set_test_state(uint8_t byte) {
+@@ -2529,6 +2593,10 @@ static void init_it_all(void) {
+ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBlockNo, uint8_t trgKeyType, uint8_t *trgkey, bool nonce_file_read, bool nonce_file_write, bool slow, int tests, uint64_t *foundkey, char *filename) {
+     char progress_text[80];
+     char instr_set[12] = {0};
++    bool stats_open = false;
++    bool standalone_candidates = false;
++    hardnested_bruteforce_begin(hardnested_cancel_poll);
++    if (foundkey) *foundkey = 0;
+ 
+     get_SIMD_instruction_set(instr_set);
+ 
+@@ -2536,8 +2604,10 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+     memset(part_sum_count, 0, sizeof(part_sum_count));
+     init_it_all();
+ 
++    if (hardnested_bruteforce_poll_cancel()) goto computation_stopped;
+     srand((unsigned) time(NULL));
+     brute_force_per_second = brute_force_benchmark();
++    if (hardnested_bruteforce_stopped()) goto computation_stopped;
+     write_stats = false;
+ 
+     if (tests) {
+@@ -2549,7 +2619,9 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+             return PM3_EFILE;
+         }
+ 
++        stats_open = true;
+         for (uint32_t i = 0; i < tests; i++) {
++            if (hardnested_bruteforce_poll_cancel()) goto computation_stopped;
+             start_time = msclock();
+             print_progress_header();
+             snprintf(progress_text, sizeof(progress_text), "Brute force benchmark: %1.0f million (2^%1.1f) keys/s", brute_force_per_second / 1000000, log(brute_force_per_second) / log(2.0));
+@@ -2563,15 +2635,26 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+                 known_target_key = -1;
+             }
+ 
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+             init_bitflip_bitarrays();
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+             init_part_sum_bitarrays();
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+             init_sum_bitarrays();
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+             init_allbitflips_array();
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+             init_nonce_memory();
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
+             update_reduction_rate(0.0, true);
+ 
+             int res = simulate_acquire_nonces();
+             if (res != PM3_SUCCESS) {
++                if (hardnested_bruteforce_stopped()) goto computation_stopped;
+                 return res;
+             }
+ 
+@@ -2598,7 +2681,10 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+             if (expected_brute_force1 < expected_brute_force2) {
+                 hardnested_print_progress(num_acquired_nonces, "(Ignoring Sum(a8) properties)", expected_brute_force1, 0);
+                 set_test_state(best_first_byte_smallest_bitarray);
++                if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
++                standalone_candidates = true;
+                 add_bitflip_candidates(best_first_byte_smallest_bitarray);
++                if (hardnested_bruteforce_stopped()) goto computation_stopped;
+                 Tests2();
+                 maximum_states = 0;
+                 for (statelist_t *sl = candidates; sl != NULL; sl = sl->next) {
+@@ -2607,9 +2693,12 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+ 
+                 best_first_bytes[0] = best_first_byte_smallest_bitarray;
+                 pre_XOR_nonces();
++                if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+                 prepare_bf_test_nonces(nonces, best_first_bytes[0]);
++                if (hardnested_bruteforce_stopped()) goto computation_stopped;
+ 
+                 key_found = brute_force(foundkey);
++                if (hardnested_bruteforce_stopped()) goto computation_stopped;
+                 free(candidates->states[ODD_STATE]);
+                 free(candidates->states[EVEN_STATE]);
+                 free_candidates_memory(candidates);
+@@ -2617,9 +2706,12 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+             } else {
+ 
+                 pre_XOR_nonces();
++                if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+                 prepare_bf_test_nonces(nonces, best_first_bytes[0]);
++                if (hardnested_bruteforce_stopped()) goto computation_stopped;
+ 
+                 for (uint8_t j = 0; j < NUM_SUMS && !key_found; j++) {
++                    if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+                     float expected_brute_force = nonces[best_first_bytes[0]].expected_num_brute_force;
+                     snprintf(progress_text, sizeof(progress_text), "(%d. guess: Sum(a8) = %" PRIu16 ")", j + 1, sums[nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx]);
+                     hardnested_print_progress(num_acquired_nonces, progress_text, expected_brute_force, 0);
+@@ -2627,9 +2719,13 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+                         snprintf(progress_text, sizeof(progress_text), "(Estimated Sum(a8) is WRONG! Correct Sum(a8) = %" PRIu16 ")", real_sum_a8);
+                         hardnested_print_progress(num_acquired_nonces, progress_text, expected_brute_force, 0);
+                     }
++                    if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
++                    standalone_candidates = false;
+                     generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx);
++                    if (hardnested_bruteforce_stopped()) goto computation_stopped;
+ 
+                     key_found = brute_force(foundkey);
++                    if (hardnested_bruteforce_stopped()) goto computation_stopped;
+                     free_statelist_cache();
+                     free_candidates_memory(candidates);
+                     candidates = NULL;
+@@ -2659,11 +2755,15 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+ 
+             free_nonces_memory();
+             free_bitarray(all_bitflips_bitarray[ODD_STATE]);
++            all_bitflips_bitarray[ODD_STATE] = NULL;
+             free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
++            all_bitflips_bitarray[EVEN_STATE] = NULL;
+             free_sum_bitarrays();
+             free_part_sum_bitarrays();
+         }
+         fclose(fstats);
++        stats_open = false;
++        fstats = NULL;
+ 
+     } else {
+ 
+@@ -2671,11 +2771,21 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+         print_progress_header();
+         snprintf(progress_text, sizeof(progress_text), "Brute force benchmark: %1.0f million (2^%1.1f) keys/s", brute_force_per_second / 1000000, log(brute_force_per_second) / log(2.0));
+         hardnested_print_progress(0, progress_text, (float)(1LL << 47), 0);
++        if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+         init_bitflip_bitarrays();
++        if (hardnested_bruteforce_stopped()) goto computation_stopped;
++        if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+         init_part_sum_bitarrays();
++        if (hardnested_bruteforce_stopped()) goto computation_stopped;
++        if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+         init_sum_bitarrays();
++        if (hardnested_bruteforce_stopped()) goto computation_stopped;
++        if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+         init_allbitflips_array();
++        if (hardnested_bruteforce_stopped()) goto computation_stopped;
++        if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+         init_nonce_memory();
++        if (hardnested_bruteforce_stopped()) goto computation_stopped;
+         update_reduction_rate(0.0, true);
+ 
+         int res;
+@@ -2687,16 +2797,22 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+                 free_bitflip_bitarrays();
+                 free_nonces_memory();
+                 free_bitarray(all_bitflips_bitarray[ODD_STATE]);
++                all_bitflips_bitarray[ODD_STATE] = NULL;
+                 free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
++                all_bitflips_bitarray[EVEN_STATE] = NULL;
+                 free_sum_bitarrays();
+                 free_part_sum_bitarrays();
+                 return res;
+             }
+ 
+             hardnested_stage = CHECK_1ST_BYTES | CHECK_2ND_BYTES;
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+             update_nonce_data(false);
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
+             float brute_force_depth;
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+             shrink_key_space(&brute_force_depth);
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
+ 
+         } else { // acquire nonces.
+ 
+@@ -2706,7 +2822,9 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+                 free_bitflip_bitarrays();
+                 free_nonces_memory();
+                 free_bitarray(all_bitflips_bitarray[ODD_STATE]);
++                all_bitflips_bitarray[ODD_STATE] = NULL;
+                 free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
++                all_bitflips_bitarray[EVEN_STATE] = NULL;
+                 free_sum_bitarrays();
+                 free_part_sum_bitarrays();
+                 return res;
+@@ -2733,7 +2851,10 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+         if (expected_brute_force1 < expected_brute_force2) {
+             hardnested_print_progress(num_acquired_nonces, "(Ignoring Sum(a8) properties)", expected_brute_force1, 0);
+             set_test_state(best_first_byte_smallest_bitarray);
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
++            standalone_candidates = true;
+             add_bitflip_candidates(best_first_byte_smallest_bitarray);
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
+             Tests2();
+             maximum_states = 0;
+ 
+@@ -2743,9 +2864,12 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+ 
+             best_first_bytes[0] = best_first_byte_smallest_bitarray;
+             pre_XOR_nonces();
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+             prepare_bf_test_nonces(nonces, best_first_bytes[0]);
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
+ 
+             key_found = brute_force(foundkey);
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
+             free(candidates->states[ODD_STATE]);
+             free(candidates->states[EVEN_STATE]);
+             free_candidates_memory(candidates);
+@@ -2753,9 +2877,12 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+         } else {
+ 
+             pre_XOR_nonces();
++            if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+             prepare_bf_test_nonces(nonces, best_first_bytes[0]);
++            if (hardnested_bruteforce_stopped()) goto computation_stopped;
+ 
+             for (uint8_t j = 0; j < NUM_SUMS && !key_found; j++) {
++                if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
+                 float expected_brute_force = nonces[best_first_bytes[0]].expected_num_brute_force;
+                 snprintf(progress_text, sizeof(progress_text), "(%d. guess: Sum(a8) = %" PRIu16 ")", j + 1, sums[nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx]);
+                 hardnested_print_progress(num_acquired_nonces, progress_text, expected_brute_force, 0);
+@@ -2765,8 +2892,12 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+                     hardnested_print_progress(num_acquired_nonces, progress_text, expected_brute_force, 0);
+                 }
+ 
++                if (hardnested_bruteforce_poll_cancel() || hardnested_bruteforce_stopped()) goto computation_stopped;
++                standalone_candidates = false;
+                 generate_candidates(first_byte_Sum, nonces[best_first_bytes[0]].sum_a8_guess[j].sum_a8_idx);
++                if (hardnested_bruteforce_stopped()) goto computation_stopped;
+                 key_found = brute_force(foundkey);
++                if (hardnested_bruteforce_stopped()) goto computation_stopped;
+                 free_statelist_cache();
+                 free_candidates_memory(candidates);
+                 candidates = NULL;
+@@ -2782,12 +2913,45 @@ int mfnestedhard(uint8_t blockNo, uint8_t keyType, uint8_t *key, uint8_t trgBloc
+ 
+         free_nonces_memory();
+         free_bitarray(all_bitflips_bitarray[ODD_STATE]);
++        all_bitflips_bitarray[ODD_STATE] = NULL;
+         free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
++        all_bitflips_bitarray[EVEN_STATE] = NULL;
+         free_sum_bitarrays();
+         free_part_sum_bitarrays();
+ 
++        if (hardnested_bruteforce_poll_cancel()) goto computation_stopped;
+         return (key_found) ? PM3_SUCCESS : PM3_EFAILED;
+     }
+ 
+     return PM3_SUCCESS;
++
++computation_stopped:
++    if (foundkey) *foundkey = 0;
++    if (standalone_candidates && candidates) {
++        free(candidates->states[ODD_STATE]);
++        free(candidates->states[EVEN_STATE]);
++    } else {
++        free_statelist_cache();
++    }
++    free_candidates_memory(candidates);
++    candidates = NULL;
++    free_bitflip_bitarrays();
++    free_nonces_memory();
++    free_bitarray(all_bitflips_bitarray[ODD_STATE]);
++    free_bitarray(all_bitflips_bitarray[EVEN_STATE]);
++    all_bitflips_bitarray[ODD_STATE] = NULL;
++    all_bitflips_bitarray[EVEN_STATE] = NULL;
++    free_sum_bitarrays();
++    free_part_sum_bitarrays();
++    if (stats_open) {
++        fclose(fstats);
++        fstats = NULL;
++    }
++    if (hardnested_bruteforce_cancelled()) {
++        PrintAndLogEx(INFO, "Hardnested computation cancelled; all workers joined (active workers at cancel: %" PRIu32 ", search workers stopped: %" PRIu32 ").",
++                      hardnested_bruteforce_workers_at_cancel(), hardnested_bruteforce_workers_stopped());
++        return PM3_EOPABORTED;
++    }
++    PrintAndLogEx(ERR, "Hardnested computation worker failed.");
++    return PM3_EFAILED;
+ }
+diff --git a/client/src/uart/uart_win32.c b/client/src/uart/uart_win32.c
+index 98ad1d4..4972632 100644
+--- a/client/src/uart/uart_win32.c
++++ b/client/src/uart/uart_win32.c
+@@ -38,6 +38,7 @@
+ #include "uart_win32_wait.h"
+ #include "uart_win32_io.h"
+ #include "uart_win32_bluetooth.h"
++#include "uart_win32_dcb.h"
+ 
+ typedef struct {
+     HANDLE hPort;          // Serial port handle
+@@ -400,18 +401,15 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
+ 
+     // Prepare the device control
+     // doesn't matter since PM3 device ignores this CDC command:  set_line_coding in usb_cdc.c
+-    memset(&sp->dcb, 0, sizeof(DCB));
+-    sp->dcb.DCBlength = sizeof(DCB);
+-    if (!BuildCommDCBA("baud=115200 parity=N data=8 stop=1", &sp->dcb)) {
+-        uart_close(sp);
+-        PrintAndLogEx(WARNING, "UART error cdc setup\n");
+-        return INVALID_SERIAL_PORT;
+-    }
+-
+     // Update the active serial port
+-    if (!SetCommState(sp->hPort, &sp->dcb)) {
++    const char *failed_api = NULL;
++    DWORD dcb_error = uart_win32_initialize_dcb(sp->hPort, &sp->dcb, &failed_api);
++    if (dcb_error != ERROR_SUCCESS) {
++        if (slient == false) {
++            PrintAndLogEx(WARNING, "UART %s failed for %s (Win32 error %lu)",
++                          failed_api, acPortName, (unsigned long)dcb_error);
++        }
+         uart_close(sp);
+-        PrintAndLogEx(WARNING, "UART error while setting com state\n");
+         return INVALID_SERIAL_PORT;
+     }
+ 
+@@ -421,12 +419,17 @@ serial_port uart_open(const char *pcPortName, uint32_t speed, bool slient) {
+         return INVALID_SERIAL_PORT;
+     }
+ 
+-    if (!uart_set_speed(sp, speed)) {
++    if (speed != sp->dcb.BaudRate && !uart_set_speed(sp, speed)) {
++        DWORD speed_error = GetLastError();
+         // try fallback automatically
+         speed = 115200;
+         if (!uart_set_speed(sp, speed)) {
++            DWORD fallback_error = GetLastError();
++            if (slient == false) {
++                PrintAndLogEx(WARNING, "UART baudrate setup failed for %s (Win32 error %lu; 115200 fallback error %lu)",
++                              acPortName, (unsigned long)speed_error, (unsigned long)fallback_error);
++            }
+             uart_close(sp);
+-            PrintAndLogEx(WARNING, "UART error while setting baudrate\n");
+             return INVALID_SERIAL_PORT;
+         }
+     }
+@@ -485,15 +488,17 @@ bool uart_set_speed(serial_port sp, const uint32_t uiPortSpeed) {
+         case 1382400:
+             break;
+         default:
++            SetLastError(ERROR_INVALID_PARAMETER);
+             return false;
+     };
+ 
+-    spw->dcb.BaudRate = uiPortSpeed;
+-    bool result = SetCommState(spw->hPort, &spw->dcb);
+-    if (result)
++    DWORD error = uart_win32_set_baudrate(spw->hPort, &spw->dcb, uiPortSpeed);
++    if (error == ERROR_SUCCESS) {
+         g_conn.uart_speed = uiPortSpeed;
+-
+-    return result;
++        return true;
++    }
++    SetLastError(error);
++    return false;
+ }
+ 
+ uint32_t uart_get_speed(const serial_port sp) {
+diff --git a/client/src/uart/uart_win32_dcb.h b/client/src/uart/uart_win32_dcb.h
+new file mode 100644
+index 0000000..dd6e460
+--- /dev/null
++++ b/client/src/uart/uart_win32_dcb.h
+@@ -0,0 +1,90 @@
++//-----------------------------------------------------------------------------
++// Copyright (C) Proxmark3 contributors. See AUTHORS.md for details.
++//
++// This program is free software: you can redistribute it and/or modify
++// it under the terms of the GNU General Public License as published by
++// the Free Software Foundation, either version 3 of the License, or
++// (at your option) any later version.
++//
++// This program is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// See LICENSE.txt for the text of the license.
++//-----------------------------------------------------------------------------
++
++#ifndef UART_WIN32_DCB_H_
++#define UART_WIN32_DCB_H_
++
++#include <windows.h>
++#include <string.h>
++
++static inline DWORD uart_win32_dcb_error(void) {
++    DWORD error = GetLastError();
++    return error != ERROR_SUCCESS ? error : ERROR_GEN_FAILURE;
++}
++
++static inline DWORD uart_win32_initialize_dcb(HANDLE port, DCB *active,
++                                             const char **failed_api) {
++    if (failed_api != NULL) {
++        *failed_api = "DCB validation";
++    }
++    if (active == NULL) {
++        return ERROR_INVALID_PARAMETER;
++    }
++    DCB candidate;
++    memset(&candidate, 0, sizeof(candidate));
++    candidate.DCBlength = sizeof(candidate);
++    if (!GetCommState(port, &candidate)) {
++        if (failed_api != NULL) *failed_api = "GetCommState";
++        return uart_win32_dcb_error();
++    }
++    candidate.DCBlength = sizeof(candidate);
++    if (!BuildCommDCBA("baud=115200 parity=N data=8 stop=1", &candidate)) {
++        if (failed_api != NULL) *failed_api = "BuildCommDCB";
++        return uart_win32_dcb_error();
++    }
++
++    candidate.fBinary = TRUE;
++    candidate.fParity = FALSE;
++    candidate.fOutxCtsFlow = FALSE;
++    candidate.fOutxDsrFlow = FALSE;
++    candidate.fDtrControl = DTR_CONTROL_DISABLE;
++    candidate.fDsrSensitivity = FALSE;
++    candidate.fTXContinueOnXoff = TRUE;
++    candidate.fOutX = FALSE;
++    candidate.fInX = FALSE;
++    candidate.fErrorChar = FALSE;
++    candidate.fNull = FALSE;
++    candidate.fRtsControl = RTS_CONTROL_DISABLE;
++    candidate.fAbortOnError = FALSE;
++    candidate.fDummy2 = 0;
++    // Windows rejects equal XON/XOFF characters even with flow control disabled.
++    if (candidate.XonChar == candidate.XoffChar) {
++        candidate.XonChar = '\x11';
++        candidate.XoffChar = '\x13';
++    }
++    if (!SetCommState(port, &candidate)) {
++        if (failed_api != NULL) *failed_api = "SetCommState";
++        return uart_win32_dcb_error();
++    }
++    *active = candidate;
++    if (failed_api != NULL) *failed_api = NULL;
++    return ERROR_SUCCESS;
++}
++
++static inline DWORD uart_win32_set_baudrate(HANDLE port, DCB *active, DWORD speed) {
++    if (active == NULL) {
++        return ERROR_INVALID_PARAMETER;
++    }
++    DCB candidate = *active;
++    candidate.BaudRate = speed;
++    if (!SetCommState(port, &candidate)) {
++        return uart_win32_dcb_error();
++    }
++    *active = candidate;
++    return ERROR_SUCCESS;
++}
++
++#endif
+diff --git a/client/src/version_pm3.c b/client/src/version_pm3.c
+index 2f4716e..89a50e2 100644
+--- a/client/src/version_pm3.c
++++ b/client/src/version_pm3.c
+@@ -10,8 +10,8 @@ const struct version_information_t SECTVERSINFO g_version_information = {
+     VERSION_INFORMATION_MAGIC,
+     1,
+     1,
+-    2,
+-    "Iceman/codex/gui-usb-stable/v4.23346-dirty",
+-    "2026-11-09 22:49:12",
+-    "75ed7066f"
++    0,
++    "Iceman/ProxmarkStudio/v4.23346-usb-cpu-fix",
++    "2026-11-11 22:44:55",
++    "c3f8ba2a1"
+ };
+diff --git a/common/default_version_pm3.c b/common/default_version_pm3.c
+index 2f4716e..89a50e2 100644
+--- a/common/default_version_pm3.c
++++ b/common/default_version_pm3.c
+@@ -10,8 +10,8 @@ const struct version_information_t SECTVERSINFO g_version_information = {
+     VERSION_INFORMATION_MAGIC,
+     1,
+     1,
+-    2,
+-    "Iceman/codex/gui-usb-stable/v4.23346-dirty",
+-    "2026-11-09 22:49:12",
+-    "75ed7066f"
++    0,
++    "Iceman/ProxmarkStudio/v4.23346-usb-cpu-fix",
++    "2026-11-11 22:44:55",
++    "c3f8ba2a1"
+ };
+diff --git a/common_arm/usb/usb_cdc_at91.c b/common_arm/usb/usb_cdc_at91.c
+index ddd83cc..02eab59 100644
+--- a/common_arm/usb/usb_cdc_at91.c
++++ b/common_arm/usb/usb_cdc_at91.c
+@@ -90,8 +90,8 @@ static uint8_t btConnection    = 0;
+ static uint8_t btReceiveBank   = AT91C_UDP_RX_DATA_BK0;
+ 
+ // -- pre def functions
+-void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uint32_t wLength);
+-void AT91F_USB_SendZlp(AT91PS_UDP pudp);
++bool AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uint32_t wLength);
++bool AT91F_USB_SendZlp(AT91PS_UDP pudp);
+ void AT91F_USB_SendStall(AT91PS_UDP pudp);
+ void AT91F_CDC_Enumerate(void);
+ // --
+@@ -228,6 +228,59 @@ static void usb_reset_endpoint(uint32_t mask) {
+     }
+ }
+ 
++#define USB_TRANSFER_TIMEOUT_MS 500u
++#define USB_TRANSFER_SPIN_LIMIT 0x00200000u
++
++static bool usb_control_interrupted(AT91PS_UDP pudp) {
++    return (pudp->UDP_ISR & AT91C_UDP_ENDBUSRES) ||
++           (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP);
++}
++
++static void usb_recover_endpoint(AT91PS_UDP pudp, uint8_t endpoint) {
++    // Leave reset and replacement SETUP packets for the outer USB poll.
++    if ((pudp->UDP_ISR & AT91C_UDP_ENDBUSRES) ||
++        (endpoint == AT91C_EP_CONTROL &&
++         (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP))) {
++        return;
++    }
++    usb_reset_endpoint(1u << endpoint);
++    pudp->UDP_CSR[endpoint] = AT91C_UDP_EPEDS |
++                            (endpoint == AT91C_EP_CONTROL ? AT91C_UDP_EPTYPE_CTRL : AT91C_UDP_EPTYPE_BULK_IN);
++}
++
++static bool usb_wait_endpoint(AT91PS_UDP pudp, uint8_t endpoint, uint32_t flags, bool set) {
++    uint32_t spins = 0;
++#ifndef AS_BOOTROM
++    uint32_t started = GetTickCount();
++#endif
++    for (;;) {
++        uint32_t csr = pudp->UDP_CSR[endpoint];
++        if (pudp->UDP_ISR & AT91C_UDP_ENDBUSRES) {
++            return false;
++        }
++        // The initial SETUP acknowledgement still owns RXSETUP during CSR sync.
++        if (endpoint == AT91C_EP_CONTROL && flags != AT91C_UDP_DIR &&
++            flags != AT91C_UDP_RXSETUP && (csr & AT91C_UDP_RXSETUP)) {
++            return false;
++        }
++        if (set ? (csr & flags) != 0 : (csr & flags) == 0) {
++            return true;
++        }
++        if (endpoint != AT91C_EP_CONTROL && !usb_check()) {
++            return false;
++        }
++        WDT_HIT();
++        if (++spins >= USB_TRANSFER_SPIN_LIMIT
++#ifndef AS_BOOTROM
++            || (uint32_t)(GetTickCount() - started) >= USB_TRANSFER_TIMEOUT_MS
++#endif
++           ) {
++            usb_recover_endpoint(pudp, endpoint);
++            return false;
++        }
++    }
++}
++
+ /*
+  *----------------------------------------------------------------------------
+  * \fn    usb_disable
+@@ -502,7 +555,9 @@ int usb_write(const uint8_t *data, const size_t len) {
+     }
+ 
+     UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+-    while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY)) {};
++    if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXPKTRDY, true)) {
++        return PM3_EIO;
++    }
+ 
+     while (length) {
+         // Send next chunk
+@@ -514,37 +569,43 @@ int usb_write(const uint8_t *data, const size_t len) {
+ 
+         // Wait for previous chunk to be sent
+         // (iceman) when is the bankswapping done?
+-        while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
+-            if (usb_check() == false) {
+-                return PM3_EIO;
+-            }
++        if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXCOMP, true)) {
++            return PM3_EIO;
+         }
+ 
+         UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+-        while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
++        if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXCOMP, false)) {
++            return PM3_EIO;
++        }
+ 
+         UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+-        while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXPKTRDY)) {};
++        if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXPKTRDY, true)) {
++            return PM3_EIO;
++        }
+     }
+ 
+     // Wait for the end of transfer
+-    while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {
+-        if (usb_check() == false) {
+-            return PM3_EIO;
+-        }
++    if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXCOMP, true)) {
++        return PM3_EIO;
+     }
+ 
+     UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+-    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
++    if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXCOMP, false)) {
++        return PM3_EIO;
++    }
+ 
+ 
+     if (len % AT91C_USB_EP_IN_SIZE == 0) {
+         // like AT91F_USB_SendZlp(), in non ping-pong mode
+         UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+-        while (!(pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP)) {};
++        if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXCOMP, true)) {
++            return PM3_EIO;
++        }
+ 
+         UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+-        while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
++        if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXCOMP, false)) {
++            return PM3_EIO;
++        }
+     }
+ 
+     return PM3_SUCCESS;
+@@ -645,7 +706,9 @@ inline bool async_usb_write_requestWrite(void) {
+ 
+     // clear transmission completed flag
+     UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+-    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
++    if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXCOMP, false)) {
++        return false;
++    }
+ 
+     // start of transmission
+     UDP_SET_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXPKTRDY);
+@@ -690,7 +753,9 @@ int async_usb_write_stop(void) {
+ 
+     // clear transmission completed flag
+     UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+-    while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
++    if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXCOMP, false)) {
++        return PM3_EIO;
++    }
+ 
+     // FIFO is not empty, request a write in non-ping-pong mode.
+     // Must send ZLP to close transfer
+@@ -713,7 +778,9 @@ int async_usb_write_stop(void) {
+         }
+ 
+         UDP_CLEAR_EP_FLAGS(AT91C_EP_IN, AT91C_UDP_TXCOMP);
+-        while (pUdp->UDP_CSR[AT91C_EP_IN] & AT91C_UDP_TXCOMP) {};
++        if (!usb_wait_endpoint(pUdp, AT91C_EP_IN, AT91C_UDP_TXCOMP, false)) {
++            return PM3_EIO;
++        }
+     }
+     return PM3_SUCCESS;
+ }
+@@ -729,7 +796,7 @@ int async_usb_write_stop(void) {
+  * or the host keeps polling until it times out.
+  *----------------------------------------------------------------------------
+ */
+-void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uint32_t wLength) {
++bool AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uint32_t wLength) {
+     AT91_REG csr;
+ 
+     length = MIN(length, wLength);
+@@ -739,6 +806,9 @@ void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uin
+                     ((length % AT91C_USB_EP_CONTROL_SIZE) == 0);
+ 
+     do {
++        if (usb_control_interrupted(pudp)) {
++            return false;
++        }
+         uint32_t cpt = MIN(length, AT91C_USB_EP_CONTROL_SIZE);
+         length -= cpt;
+ 
+@@ -748,44 +818,66 @@ void AT91F_USB_SendData(AT91PS_UDP pudp, const char *pData, uint32_t length, uin
+ 
+         if (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {
+             UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
+-            while (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {};
++            if (!usb_wait_endpoint(pudp, AT91C_EP_CONTROL, AT91C_UDP_TXCOMP, false)) {
++                return false;
++            }
+         }
+ 
+         UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXPKTRDY);
+ 
+-        do {
+-            csr = pudp->UDP_CSR[AT91C_EP_CONTROL];
+-            // Data IN stage has been stopped by a status OUT
+-            if (csr & AT91C_UDP_RX_DATA_BK0) {
+-
+-                UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0)
+-                return;
++        if (!usb_wait_endpoint(pudp, AT91C_EP_CONTROL, AT91C_UDP_TXCOMP | AT91C_UDP_RX_DATA_BK0, true) ||
++            usb_control_interrupted(pudp)) {
++            return false;
++        }
++        csr = pudp->UDP_CSR[AT91C_EP_CONTROL];
++        // Data IN stage has been stopped by a status OUT
++        if (csr & AT91C_UDP_RX_DATA_BK0) {
++            UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0)
++            if (!usb_wait_endpoint(pudp, AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0, false)) {
++                return false;
+             }
+-        } while (!(csr & AT91C_UDP_TXCOMP));
++            usb_recover_endpoint(pudp, AT91C_EP_CONTROL);
++            return true;
++        }
+ 
+     } while (length);
+ 
+     if (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {
+         UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
+-        while (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {};
++        if (!usb_wait_endpoint(pudp, AT91C_EP_CONTROL, AT91C_UDP_TXCOMP, false)) {
++            return false;
++        }
+     }
+ 
+     if (send_zlp) {
+-        AT91F_USB_SendZlp(pudp);
++        return AT91F_USB_SendZlp(pudp);
+     }
++    return true;
+ }
+ 
+ //*----------------------------------------------------------------------------
+ //* \fn    AT91F_USB_SendZlp
+ //* \brief Send zero length packet through the control endpoint
+ //*----------------------------------------------------------------------------
+-void AT91F_USB_SendZlp(AT91PS_UDP pudp) {
++bool AT91F_USB_SendZlp(AT91PS_UDP pudp) {
++    if (usb_control_interrupted(pudp)) {
++        return false;
++    }
++    if (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {
++        UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
++        if (!usb_wait_endpoint(pudp, AT91C_EP_CONTROL, AT91C_UDP_TXCOMP, false)) {
++            return false;
++        }
++    }
+     UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXPKTRDY);
+     // for non ping-pong operation, wait until the FIFO is released
+     // the flag for FIFO released is AT91C_UDP_TXCOMP rather than AT91C_UDP_TXPKTRDY
+-    while (!(pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP)) {};
++    if (!usb_wait_endpoint(pudp, AT91C_EP_CONTROL, AT91C_UDP_TXCOMP, true)) {
++        return false;
++    }
+     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_TXCOMP);
+-    while (pudp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_TXCOMP) {};
++    return usb_wait_endpoint(pudp, AT91C_EP_CONTROL, AT91C_UDP_TXCOMP, false) &&
++           !usb_control_interrupted(pudp);
+ }
+ 
+ //*----------------------------------------------------------------------------
+@@ -856,10 +948,14 @@ void AT91F_CDC_Enumerate(void) {
+ 
+     if (bmRequestType & 0x80) {        // Data Phase Transfer Direction Device to Host
+         UDP_SET_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_DIR);
+-        while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_DIR)) {};
++        if (!usb_wait_endpoint(pUdp, AT91C_EP_CONTROL, AT91C_UDP_DIR, true)) {
++            return;
++        }
+     }
+     UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RXSETUP);
+-    while ((pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXSETUP)) {};
++    if (!usb_wait_endpoint(pUdp, AT91C_EP_CONTROL, AT91C_UDP_RXSETUP, false)) {
++        return;
++    }
+ 
+     // WCID vendor request. StrMS_OSDescriptor advertises MS_VENDOR_CODE, so
+     // every request carrying it has to be answered here. Falling through to the
+@@ -906,7 +1002,9 @@ void AT91F_CDC_Enumerate(void) {
+         }
+         break;
+         case STD_SET_ADDRESS:
+-            AT91F_USB_SendZlp(pUdp);
++            if (!AT91F_USB_SendZlp(pUdp)) {
++                break;
++            }
+             pUdp->UDP_FADDR = (AT91C_UDP_FEN | (wValue & 0x7F));
+             pUdp->UDP_GLBSTATE  = (wValue) ? AT91C_UDP_FADDEN : 0;
+             break;
+@@ -919,7 +1017,9 @@ void AT91F_CDC_Enumerate(void) {
+             *   otherwise an error must have occurred.
+             *   This device has only one configuration and its Config Number is CONF_NB (= 1).
+             */
+-            AT91F_USB_SendZlp(pUdp);
++            if (!AT91F_USB_SendZlp(pUdp)) {
++                break;
++            }
+             usb_reset_endpoint((1u << AT91C_EP_OUT) | (1u << AT91C_EP_IN) | (1u << AT91C_EP_NOTIFY));
+             btConfiguration = wValue;
+             btConnection = 0;
+@@ -1010,17 +1110,36 @@ void AT91F_CDC_Enumerate(void) {
+                     ((uint8_t*)&line)[i] =  pUdp->UDP_FDR[AT91C_EP_CONTROL];
+                 }  */
+             // ignore SET_LINE_CODING...
+-            while (!(pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RX_DATA_BK0)) {};
++            if (wLength != sizeof(line)) {
++                AT91F_USB_SendStall(pUdp);
++                break;
++            }
++            if (!usb_wait_endpoint(pUdp, AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0, true) ||
++                usb_control_interrupted(pUdp)) {
++                break;
++            }
++            uint32_t received = (pUdp->UDP_CSR[AT91C_EP_CONTROL] & AT91C_UDP_RXBYTECNT) >> 16;
++            if (received != sizeof(line)) {
++                UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0);
++                AT91F_USB_SendStall(pUdp);
++                break;
++            }
++            for (uint32_t i = 0; i < received; i++) {
++                (void)(uint32_t)pUdp->UDP_FDR[AT91C_EP_CONTROL];
++            }
+             UDP_CLEAR_EP_FLAGS(AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0);
+-            AT91F_USB_SendZlp(pUdp);
++            if (usb_wait_endpoint(pUdp, AT91C_EP_CONTROL, AT91C_UDP_RX_DATA_BK0, false)) {
++                AT91F_USB_SendZlp(pUdp);
++            }
+             break;
+         }
+         case GET_LINE_CODING:
+             AT91F_USB_SendData(pUdp, (char *) &line, sizeof(line), wLength);
+             break;
+         case SET_CONTROL_LINE_STATE:
+-            btConnection = wValue;
+-            AT91F_USB_SendZlp(pUdp);
++            if (AT91F_USB_SendZlp(pUdp)) {
++                btConnection = wValue;
++            }
+             break;
+         default:
+             AT91F_USB_SendStall(pUdp);

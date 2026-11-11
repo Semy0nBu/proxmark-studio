@@ -180,6 +180,81 @@ class InstallerValidationTests(unittest.TestCase):
         self.assertFalse(result['passed'])
         self.assertIn('Run as user/administrator', '\n'.join(result['errors']))
 
+    def shortcut_fixture(self, target, name='retained-profile.lnk'):
+        path = self.root/name
+        write(path, struct.pack('<I', 76) + validation.SHELL_LINK_CLSID + struct.pack('<I', 0) + bytes(52))
+        expected = validation.subprocess.list2cmdline(['--data-dir', str(self.root/'Profile with spaces')])
+        properties = {'TargetPath': str(target/'ProxmarkStudio.exe'),
+                      'WorkingDirectory': str(target), 'Arguments': expected}
+        return path, expected, properties
+
+    def test_explicit_expected_profile_arguments_match_exactly_and_are_not_executed(self):
+        target = self.installed()
+        desktop, expected, properties = self.shortcut_fixture(target)
+        start_menu, _, _ = self.shortcut_fixture(target, 'start-retained.lnk')
+        with patch.object(validation, '_shortcut_properties', return_value=properties) as inspect, \
+                patch.object(validation.subprocess, 'run', side_effect=AssertionError('Never execute shortcut arguments')):
+            result = validation.verify_installation(target, self.payload, desktop_shortcut=desktop,
+                start_menu_shortcut=start_menu, expected_shortcut_arguments=expected)
+        self.assertTrue(result['passed'], result['errors'])
+        self.assertEqual(inspect.call_count, 2)
+        self.assertEqual(result['expected_shortcut_arguments'], expected)
+        shortcuts = [item['details'] for item in result['checks'] if item['name'].endswith('-shortcut')]
+        self.assertEqual([item['arguments'] for item in shortcuts], [expected, expected])
+
+    def test_retained_profile_arguments_are_rejected_without_explicit_opt_in(self):
+        target = self.installed()
+        desktop, expected, properties = self.shortcut_fixture(target)
+        with patch.object(validation, '_shortcut_properties', return_value=properties):
+            result = validation.verify_installation(target, self.payload, desktop_shortcut=desktop)
+        self.assertFalse(result['passed'])
+        self.assertEqual(result['expected_shortcut_arguments'], '')
+        self.assertIn('unexpected command-line arguments', '\n'.join(result['errors']))
+
+    def test_expected_profile_arguments_do_not_accept_extra_changed_or_whitespace_arguments(self):
+        target = self.installed()
+        desktop, expected, properties = self.shortcut_fixture(target)
+        for arguments in (expected+' --unexpected', expected.replace('Profile with spaces', 'Other profile'),
+                          ' '+expected, expected+' ', '', ' '):
+            with self.subTest(arguments=arguments), patch.object(validation, '_shortcut_properties',
+                    return_value={**properties, 'Arguments': arguments}):
+                result = validation.verify_installation(target, self.payload, desktop_shortcut=desktop,
+                    expected_shortcut_arguments=expected)
+            self.assertFalse(result['passed'])
+            self.assertIn('unexpected command-line arguments', '\n'.join(result['errors']))
+        with patch.object(validation, '_shortcut_properties', return_value={**properties, 'Arguments': ' '}):
+            result = validation.verify_installation(target, self.payload, desktop_shortcut=desktop)
+        self.assertFalse(result['passed'])
+
+    def test_opt_in_does_not_weaken_target_working_directory_or_elevation_checks(self):
+        target = self.installed()
+        desktop, expected, properties = self.shortcut_fixture(target)
+        for field, value, message in (('TargetPath', str(self.root/'other.exe'), 'different application'),
+                                      ('WorkingDirectory', str(self.root), 'working directory')):
+            with self.subTest(field=field), patch.object(validation, '_shortcut_properties', return_value={**properties, field: value}):
+                result = validation.verify_installation(target, self.payload, desktop_shortcut=desktop,
+                    expected_shortcut_arguments=expected)
+            self.assertFalse(result['passed'])
+            self.assertIn(message, '\n'.join(result['errors']))
+        write(desktop, struct.pack('<I', 76) + validation.SHELL_LINK_CLSID + struct.pack('<I', validation.RUN_AS_USER) + bytes(52))
+        with patch.object(validation, '_shortcut_properties', side_effect=AssertionError('No property read for elevated shortcut')):
+            result = validation.verify_installation(target, self.payload, desktop_shortcut=desktop,
+                expected_shortcut_arguments=expected)
+        self.assertFalse(result['passed'])
+        self.assertIn('Run as user/administrator', '\n'.join(result['errors']))
+
+    def test_CLI_expected_shortcut_arguments_are_forwarded_exactly(self):
+        target = self.installed()
+        desktop, expected, properties = self.shortcut_fixture(target)
+        output = self.root/'declared-args-report.json'
+        with patch('sys.argv', ['verify', '--application', str(target), '--payload', str(self.payload),
+                '--output', str(output), '--desktop-shortcut', str(desktop),
+                '--expected-shortcut-arguments='+expected]), \
+                patch.object(validation, '_shortcut_properties', return_value=properties), \
+                patch('sys.stdout', new=io.StringIO()):
+            self.assertEqual(validation.main(), 0)
+        self.assertEqual(json.loads(output.read_text(encoding='utf8'))['expected_shortcut_arguments'], expected)
+
 
 if __name__ == '__main__':
     unittest.main()

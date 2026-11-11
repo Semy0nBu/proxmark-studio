@@ -86,3 +86,37 @@ purge. The handshake runner exercises the production fresh-PING validator and
 checks its binding to startup code. These tests neither open a COM port nor
 replay a device/RF command. Existing historical reports under `outputs/usb-live`
 remain separate from newly selected output directories.
+
+## Cooperative Hardnested computation cancellation
+
+```powershell
+.\.venv-release\Scripts\python.exe tools/native-client-tests/hardnested_cancel_tests.py `
+  --client-source 'D:\Tools\Proxmark3-RDV4\v4.23346-gui-bt-direct-client' `
+  --output outputs/hardnested-cpu-cancel-tests
+```
+
+This runner compiles the selected production brute-force coordinator, every x86
+SIMD implementation and the common Crypto1 implementation. It executes scalar,
+MMX, SSE2, AVX, AVX2 and AVX512 cases supported by the current CPU, at O0 and O2
+with warnings treated as errors. UI logging, allocation accounting and thread
+creation/join observation are host fixtures; no USB/Bluetooth backend is linked.
+PE imports are checked before reporting success.
+
+The cases cover cancellation before work, partial even-state preparation,
+interruption inside actual SIMD search, sticky cancellation and a clean next
+command, worker-creation failure, normal no-key/success results and cancellation
+accepted after joins but before publishing a candidate. All created workers must
+be joined and all tracked aligned allocations freed. A late cancellation has zero
+search-abort counters; it cannot be represented as an interrupted search.
+
+The production caller starts one cancellation context per command. Only its main
+thread polls the input callback; workers inspect atomic flags. The main thread
+emits `Hardnested CPU search started` only after a worker has processed a candidate
+block. The cancellation exit reports active workers at cancellation and workers
+that took a cancellation branch in a previously running search. These counters
+distinguish genuine search interruption from cancelling preparation or discarding
+a result after computation finished.
+
+These tests use synthetic states/nonces. They do not prove RF recovery or native
+command/controller cleanup, which need the separately recorded live USB/Blue Shark
+checks. Native CMake, Make and experimental-library builds are also separate.

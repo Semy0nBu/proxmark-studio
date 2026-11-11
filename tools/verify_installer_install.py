@@ -141,7 +141,9 @@ def _shortcut_properties(path):
     return value
 
 
-def _shortcut(path, application):
+def _shortcut(path, application, *, expected_shortcut_arguments=''):
+    if not isinstance(expected_shortcut_arguments, str):
+        raise ValueError('Expected shortcut arguments must be a string.')
     path = _resolved_path(path)
     io_path = _io_path(path)
     if path.suffix.lower() != '.lnk' or not io_path.is_file() or io_path.stat().st_size > 4 * 1024 * 1024:
@@ -161,17 +163,22 @@ def _shortcut(path, application):
         raise ValueError('The shortcut points to a different application.')
     if not working or _resolved_path(working) != application:
         raise ValueError('The shortcut working directory differs from the installation.')
-    if arguments.strip():
+    if arguments != expected_shortcut_arguments:
         raise ValueError('The shortcut supplies unexpected command-line arguments.')
     return {'path': str(path), 'target': str(_resolved_path(target)), 'working_directory': str(_resolved_path(working)),
             'arguments': arguments, 'run_as_user_or_admin': False}
 
 
-def verify_installation(application_dir, payload_dir, *, desktop_shortcut=None, start_menu_shortcut=None):
+def verify_installation(application_dir, payload_dir, *, desktop_shortcut=None, start_menu_shortcut=None,
+                        expected_shortcut_arguments=''):
+    if not isinstance(expected_shortcut_arguments, str):
+        raise ValueError('Expected shortcut arguments must be a string.')
     application, payload = _resolved_path(application_dir), _resolved_path(payload_dir)
     report = {'passed': False, 'generated_utc': datetime.now(timezone.utc).isoformat(),
               'application_directory': str(application), 'payload_directory': str(payload),
-              'read_only': True, 'hardware_access': False, 'checks': [], 'errors': [], 'warnings': []}
+              'read_only': True, 'hardware_access': False,
+              'expected_shortcut_arguments': expected_shortcut_arguments,
+              'checks': [], 'errors': [], 'warnings': []}
 
     def check(name, function, summarize=None):
         try:
@@ -249,7 +256,8 @@ def verify_installation(application_dir, payload_dir, *, desktop_shortcut=None, 
     check('installed-pe-architecture', architecture)
     for name, path in [('desktop-shortcut', desktop_shortcut), ('start-menu-shortcut', start_menu_shortcut)]:
         if path is not None:
-            check(name, lambda path=path: _shortcut(path, application))
+            check(name, lambda path=path: _shortcut(path, application,
+                  expected_shortcut_arguments=expected_shortcut_arguments))
     report['passed'] = not report['errors']
     return report
 
@@ -261,6 +269,8 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--desktop-shortcut', type=Path)
     parser.add_argument('--start-menu-shortcut', type=Path)
+    parser.add_argument('--expected-shortcut-arguments', default='',
+                        help='Exact shortcut arguments to accept (empty by default; never executed).')
     args = parser.parse_args()
     output = _resolved_path(args.output)
     if any(output.is_relative_to(_resolved_path(path)) for path in (args.application, args.payload)):
@@ -268,7 +278,8 @@ def main():
     if any(output == _resolved_path(path) for path in (args.desktop_shortcut, args.start_menu_shortcut) if path is not None):
         parser.error('The report cannot replace a shortcut.')
     report = verify_installation(args.application, args.payload, desktop_shortcut=args.desktop_shortcut,
-                                 start_menu_shortcut=args.start_menu_shortcut)
+                                 start_menu_shortcut=args.start_menu_shortcut,
+                                 expected_shortcut_arguments=args.expected_shortcut_arguments)
     io_output = _io_path(output)
     io_output.parent.mkdir(parents=True, exist_ok=True)
     io_output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

@@ -1,5 +1,34 @@
 # Changelog / История изменений
 
+## 0.3.0-preview.12 — 2026-11-12
+
+- Connect page transitions to the actual Workbench navigation, card tabs and
+  HF/LF tabs, including mouse and keyboard selection.
+- Blend the real button hover, press and selected styles instead of applying a
+  faint overlay. Commands and Stop still activate immediately.
+- Release transition snapshots after completion, interruption or resize;
+  preserve editor focus, page geometry and reduced-motion preferences.
+- Verify distinct rendered animation frames in the frozen EXE.
+
+По-русски: заметнее наведение и нажатие кнопок, плавные переходы разделов и
+вкладок Workbench. Анимация не задерживает команды и Stop, не перемещает
+редакторы и освобождает временные снимки после завершения.
+
+## 0.3.0-preview.11 — internal validation, included in preview.12
+
+- Bound USB control transfers, endpoint status waits and aborted setup handling
+  so an interrupted host request cannot indefinitely block the device loop.
+- Initialize Windows serial settings from the driver, apply explicit binary 8N1
+  settings and retain the original API error before closing the handle.
+- Cooperatively cancel Hardnested computation and preparation, join every worker
+  before cleanup and discard cancelled results. The next operation starts clean.
+- Recognize confirmed bootloader reconnect countdowns without accepting real
+  write errors. Complete flash readback, bootrom and SPI checks remain required.
+
+По-русски: исправлены ожидания USB при переподключении с сохранённым питанием,
+настройка COM-порта Windows и остановка вычислений Hardnested. Сообщения о
+переходе в загрузчик отделены от ошибок записи; проверка памяти обязательна.
+
 ## 0.3.0-preview.10 — 2026-11-11
 
 - On Windows, the selected Blue Shark COM entry identifies the remembered paired

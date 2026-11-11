@@ -22,7 +22,7 @@ GENERATED_INPUTS = (
     'client/src/comms_bulk_download.h', 'client/src/comms_handshake.h',
     'client/src/uart/frame_reader.h', 'client/src/uart/tx_lifecycle.h',
     'client/src/uart/uart_win32_io.h', 'client/src/uart/uart_win32_wait.h',
-    'client/src/uart/uart_win32_bluetooth.h',
+    'client/src/uart/uart_win32_bluetooth.h', 'client/src/uart/uart_win32_dcb.h',
     'client/src/pm3_luawrap.c', 'client/src/pm3_pywrap.c',
     'client/src/version_pm3.c', 'armsrc/version_pm3.c',
 )

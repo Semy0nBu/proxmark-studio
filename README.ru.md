@@ -12,18 +12,22 @@
 
 ## Скачать
 
-Текущий предварительный выпуск — **0.3.0-preview.10**. Python и отдельная установка клиента
+Текущий предварительный выпуск — **0.3.0-preview.12**. Python и отдельная установка клиента
 Proxmark не нужны: согласованный комплект уже внутри.
 
 | Вариант | Как запустить |
 |---|---|
-| **[Установщик для Windows](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.10/ProxmarkStudio-0.3.0-preview.10-Setup-x64.exe)** | Установить для текущего пользователя. Ярлыки на рабочем столе и в «Пуск» создаются по умолчанию. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.10/ProxmarkStudio-0.3.0-preview.10-windows-x64.zip) | Распаковать архив целиком и открыть `ProxmarkStudio.exe`. |
+| **[Установщик для Windows](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.12/ProxmarkStudio-0.3.0-preview.12-Setup-x64.exe)** | Установить для текущего пользователя. Ярлыки на рабочем столе и в «Пуск» создаются по умолчанию. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.12/ProxmarkStudio-0.3.0-preview.12-windows-x64.zip) | Распаковать архив целиком и открыть `ProxmarkStudio.exe`. |
 
 Установка работает без интернета и прав администратора. Подключите Proxmark
 по USB, выберите **USB → COM-порт → Подключить**, затем положите карту на
 соответствующую HF- или LF-антенну. Дальнейшие шаги — в
 [руководстве](docs/USER_GUIDE_RU.md).
+
+В preview.12 добавлены плавные переходы Workbench, вкладок и состояний кнопок,
+а также улучшения USB и отмены вычислений Hardnested. Действия и Stop срабатывают
+сразу. Установка приложения не обновляет прошивку платы автоматически.
 
 ## Интерфейс
 

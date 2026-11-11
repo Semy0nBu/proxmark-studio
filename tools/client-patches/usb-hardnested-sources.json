@@ -1,0 +1,100 @@
+{
+  "format": "proxmark-studio-native-source-delta-v1",
+  "source_tag": "v4.23346",
+  "upstream_commit": "dc0110c29d320e04b37ea436ee2924901407ae72",
+  "base_application_version": "0.3.0-preview.10",
+  "target_application_version": "0.3.0-preview.12",
+  "base_source_archive_sha256": "664512a5b6d8a77c062fd465c5e4615b4d880bf20a5306d6e2981c0f157b3c4e",
+  "target_source_archive_sha256": "1847ff2bcab3df7ecc89ac40387cbfae41225d8155f8ea1f5eba8b0e848dc3ec",
+  "base_manifest_source_files": 2803,
+  "target_manifest_source_files": 2804,
+  "patch_filename": "usb-hardnested-v4.23346.patch",
+  "patch_sha256": "1199f1d884408860dc3a63502010e7e6cbd973bafb132603464e93cad9b4273a",
+  "byte_preserving_patch": true,
+  "client_original_sha256": "a071d6e2fa817a9a5a33ad01a3c9b95dcfeb45e026842c15e3ede5c6575a716c",
+  "client_packaged_sha256": "c2df3904bb3234e979c7ea4e659d5e24c46c18cf64a780eac2a74dbe117fa364",
+  "custom_version": "Iceman/ProxmarkStudio/v4.23346-usb-cpu-fix",
+  "arm_sources_checksum": "c3f8ba2a1",
+  "files": {
+    "armsrc/version_pm3.c": {
+      "before_sha256": "a4e7216757e75aa694bab1afa51b3580dddf73255ac05908df79e5abe7d1bcb0",
+      "after_sha256": "0939732f60e33f47b9fa1dd970448b0a544fc9a6c49560fdc0e70746747c4f47",
+      "after_bytes": 399,
+      "role": "generated_version_metadata"
+    },
+    "client/deps/hardnested/hardnested_bf_core.c": {
+      "before_sha256": "2f689f85c4fde697fb0912801ae98ac0fab5d5ac8524d2008419efeabe8e61bd",
+      "after_sha256": "8e7ab1fe71260550b1a11fba36c4beec871763ad34e3c3a090a64dda3eb5aa3c",
+      "after_bytes": 34246,
+      "role": "production_source"
+    },
+    "client/deps/hardnested/hardnested_bruteforce.c": {
+      "before_sha256": "ab88b16def7c5bec727e85b263f97a473fca13e37f94b45645e79d03a41af0bb",
+      "after_sha256": "f65243e6421ded86ce8cc68c4a6266bbbed8ede7bc13de2f9c089aef690390ed",
+      "after_bytes": 25896,
+      "role": "production_source"
+    },
+    "client/deps/hardnested/hardnested_bruteforce.h": {
+      "before_sha256": "999fea1b02b6374bd09fb209fea5d0d87f7671d735e85136869e97d465e432d9",
+      "after_sha256": "1be70cd0dd322563ab806b9b684b471a3f46c86833b1455cc7c2e9e0243c4123",
+      "after_bytes": 2896,
+      "role": "production_source"
+    },
+    "client/src/cmdhfmfhard.c": {
+      "before_sha256": "f23a0869de6bbf6adced178436698d60b5198a863b518c40ce1e85d6811a8d9c",
+      "after_sha256": "82325d6d8e2de97942ff464a4268f63b822f812fef1af6b9d1076ae8dcd5328a",
+      "after_bytes": 129442,
+      "role": "production_source"
+    },
+    "client/src/uart/uart_win32.c": {
+      "before_sha256": "7995670b665ca4cdf35128e29da15a20ec7d2bfef6cd276ccc4ffb52a8f8e084",
+      "after_sha256": "61366f699bb687ffa2df0dc330b4dcd1e1e4ce78aaa2147fc7e4ed2c25341cad",
+      "after_bytes": 28329,
+      "role": "production_source"
+    },
+    "client/src/uart/uart_win32_dcb.h": {
+      "before_sha256": null,
+      "after_sha256": "ee29677504f121bfca221d20f20ec30332bd7eed749a4b79c70078deedc1e68b",
+      "after_bytes": 3135,
+      "role": "production_source"
+    },
+    "client/src/version_pm3.c": {
+      "before_sha256": "a4e7216757e75aa694bab1afa51b3580dddf73255ac05908df79e5abe7d1bcb0",
+      "after_sha256": "0939732f60e33f47b9fa1dd970448b0a544fc9a6c49560fdc0e70746747c4f47",
+      "after_bytes": 399,
+      "role": "generated_version_metadata"
+    },
+    "common/default_version_pm3.c": {
+      "before_sha256": "a4e7216757e75aa694bab1afa51b3580dddf73255ac05908df79e5abe7d1bcb0",
+      "after_sha256": "0939732f60e33f47b9fa1dd970448b0a544fc9a6c49560fdc0e70746747c4f47",
+      "after_bytes": 399,
+      "role": "generated_version_metadata"
+    },
+    "common_arm/usb/usb_cdc_at91.c": {
+      "before_sha256": "92ff2a90516ed7494380cdd94b034a708cd70b004401ee878b60f61899755792",
+      "after_sha256": "c7832de72bb6efa19ef6b55c5c649c1bd9a98f159e4b19814e3bf340b43224c7",
+      "after_bytes": 39852,
+      "role": "production_source"
+    }
+  },
+  "validation": {
+    "git_apply_check": true,
+    "git_apply": true,
+    "all_target_manifest_hashes_verified": true,
+    "verified_source_files": 2804,
+    "extra_source_files": 0
+  },
+  "hardware_accessed": false,
+  "firmware_built_or_flashed": false,
+  "base_client_packaged_sha256": "ae0373d131399c3521afaa66dcf8b04f4082ce4220e0481713d7d4c9a4df6479",
+  "firmware_profiles": {
+    "usb": {
+      "image_sha256": "e9273b3370f18a1bd2efd43d6a9bb9c2c4b98f1b7257d3df02baf52639a65dd3"
+    },
+    "blueshark": {
+      "image_sha256": "d227a1917a9b3dec7ae04471a6c31b51870edce87841a8f6b40177a175f15543"
+    }
+  },
+  "delta_scope": "Ten source paths only; old source-archive manifest and UTF-8 proof metadata are not replaced by this code delta.",
+  "full_current_source_archive_recommended_for_rebuild": true
+}

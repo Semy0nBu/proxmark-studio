@@ -42,10 +42,22 @@ insufficient.
 
 ## Buttons and scrolling
 
-Application buttons use short hover/press fades. Activation, cancellation and
-disabled states remain immediate. Animation does not resize controls or install
-opacity effects on forms. Manual scrollbar interaction interrupts smooth scrolling.
-The interface follows Qt's system reduced-motion preference.
+Application buttons blend their real styled backgrounds and borders on hover,
+press and selection; labels and focus remain current. Activation, cancellation
+and disabled states remain immediate. Animation does not resize controls or
+install opacity effects on forms.
+
+Workbench navigation, HF/LF tabs, saved-card tabs and laboratory sections use
+220 ms transitions. Selection and controller callbacks change immediately. An
+input-transparent picture of the outgoing page fades away above the live target;
+the persistent connection strip and Stop stay outside it. Rapid navigation starts
+from the currently visible frame. Completion, resize, hide and reduced motion
+release the picture; no screenshots are written to disk by these effects.
+
+Manual scrollbar interaction and native touchpad gestures interrupt pending
+wheel scrolling. The interface follows Qt's system reduced-motion preference.
+Tests compare actual rendered intermediate frames and exercise the production
+navigation paths, rather than only checking that an animation timer is running.
 
 ## Stop and exit
 

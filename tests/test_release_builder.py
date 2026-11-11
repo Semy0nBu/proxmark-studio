@@ -32,12 +32,16 @@ class ReleaseBuilderTests(unittest.TestCase):
                       'installer/proxmark-studio.iss','installer/toolchain.json',
                       'docs/assets/banner.svg','docs/assets/interface-en.png','.gitattributes','CHANGELOG.md',
                       '.github/workflows/ci.yml')
+            public += ('tools/native-client-tests/production_usb_control_test.cpp',
+                       'tools/client-patches/USB_HARDNESTED.md',
+                       'tools/client-patches/usb-hardnested-sources.json')
             private = ('data/personal/library.sqlite3','data/personal/settings.json',
                        'outputs/backup.bin','docs/PRIVATE_HARDWARE_REPORT.md',
                        'tools/iphone-connection-lab/secret.py','reference/dump.bin',
                        'tests/test_connection_lab.py','tests/test_live_functional_harness.py',
                        'pm3gui/__pycache__/app.pyc','docs/assets/private-capture.png',
-                       'pm3gui/private.pm3backup','tests/private.pm3backup')
+                       'pm3gui/private.pm3backup','tests/private.pm3backup',
+                       'tools/client-patches/private-lab.json')
             for name in (*public,*private):
                 p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('fixture')
             destination=Path(directory)/'publication'

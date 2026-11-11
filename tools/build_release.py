@@ -27,6 +27,7 @@ PUBLIC_TOOLS = ('build_release.py', 'release_native.py', 'release_firmware.py',
                 'release_windows_manifest.py', 'verify_release.py',
                 'audit_english_catalog.py', 'build_installer.py', 'verify_installer_install.py')
 PUBLIC_INSTALLER = ('proxmark-studio.iss', 'toolchain.json')
+PUBLIC_CLIENT_PATCH_DOCS = ('USB_HARDNESTED.md', 'usb-hardnested-sources.json')
 PUBLIC_ASSETS = ('banner.svg', 'interface-en.png', 'interface-ru.png',
                  'library-en.png', 'quick-actions-en.png', 'catalog-en.png', 'diagnostics-en.png')
 PUBLIC_TEST_EXCLUDES = {'test_connection_lab.py', 'test_live_functional_harness.py'}
@@ -149,7 +150,7 @@ def export_source(destination):
     for folder in ('tools/native-client-tests', '.github'):
         if (ROOT/folder).is_dir():
             for source in sorted((ROOT/folder).rglob('*')):
-                if source.is_file() and source.suffix in {'.py', '.c', '.md', '.yml'}:
+                if source.is_file() and source.suffix in {'.py', '.c', '.cpp', '.md', '.yml'}:
                     target = destination/source.relative_to(ROOT)
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(source, target)
@@ -157,6 +158,12 @@ def export_source(destination):
         target = destination/source.relative_to(ROOT)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
+    for name in PUBLIC_CLIENT_PATCH_DOCS:
+        source = ROOT/'tools/client-patches'/name
+        if source.is_file():
+            target = destination/'tools/client-patches'/name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
     write_json(destination/'SOURCE_SNAPSHOT.json', {'version': APP_VERSION,
                'excluded_lab_tests': sorted(PUBLIC_TEST_EXCLUDES),
                'reason': 'Operator hardware harness and deferred iPhone prototype are outside the desktop product.'})

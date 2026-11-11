@@ -38,7 +38,7 @@ static uint8_t btConfiguration,btConnection,btReceiveBank;
 static unsigned zlp_calls,stall_calls,enum_calls,poll_calls,clear_calls;
 static uint16_t available;
 static bool poll_ready;
-static void AT91F_USB_SendZlp(udp_t *udp){(void)udp;zlp_calls++;}
+static bool AT91F_USB_SendZlp(udp_t *udp){(void)udp;zlp_calls++;return true;}
 static void AT91F_USB_SendStall(udp_t *udp){(void)udp;stall_calls++;}
 static void AT91F_CDC_Enumerate(void){enum_calls++;}
 static bool usb_poll(void){poll_calls++;return poll_ready;}

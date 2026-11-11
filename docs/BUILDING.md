@@ -39,6 +39,14 @@ metadata. The firmware stage validates two previously reviewed RDV4 image manife
 These are explicit binary inputs, not binaries from an arbitrary user's settings.
 A public source checkout alone cannot invent these reviewed firmware inputs.
 
+The complete preview.12 package contains the exact modified native tree in
+`sources/proxmark3-corresponding-source.zip`, including the USB control-transfer,
+Windows DCB and Hardnested cancellation changes. Start a native rebuild from
+that tree and its build notes. The older patch series alone stops at preview.10;
+the [USB/Hardnested delta](../tools/client-patches/USB_HARDNESTED.md) describes
+the verified update from its matching source archive. Building an image does
+not install it on a board.
+
 For GUI-only distribution, pass `--gui-only`; the recipient selects a separate
 compatible client. The complete local release is the default for end users.
 
@@ -89,7 +97,7 @@ compiling; a different compiler requires a reviewed toolchain-lock update.
 ```
 
 The default output directory is `dist`. It contains
-`ProxmarkStudio-0.3.0-preview.5-Setup-x64.exe`, `installer-manifest.json`, and the
+`ProxmarkStudio-<version>-Setup-x64.exe`, `installer-manifest.json`, and the
 updated `SHA256SUMS.txt`. Use `--output-root` to choose a different output folder.
 The installer script and toolchain lock are included in the public source export.
 The unmodified Inno Setup runtime retains its own

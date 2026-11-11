@@ -12,18 +12,23 @@ library, with RRG/Iceman tools available from the same interface.
 
 ## Download
 
-Current preview: **0.3.0-preview.10**. The matching Proxmark client and runtime
+Current preview: **0.3.0-preview.12**. The matching Proxmark client and runtime
 are included. You do not need to install Python or a separate client.
 
 | Package | Getting started |
 |---|---|
-| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.10/ProxmarkStudio-0.3.0-preview.10-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.10/ProxmarkStudio-0.3.0-preview.10-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
+| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.12/ProxmarkStudio-0.3.0-preview.12-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.12/ProxmarkStudio-0.3.0-preview.12-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
 
 Installation works offline and does not require administrator rights. Connect
 your Proxmark over USB, select **USB → COM port → Connect**, and place a card on
 the appropriate HF or LF antenna. The [user guide](docs/USER_GUIDE_EN.md) covers
 the next steps.
+
+Preview.12 adds smoother Workbench navigation, tabs and button states, plus USB
+control-transfer and Hardnested cancellation improvements. Actions and Stop
+remain immediate. Installing the application does not update board firmware
+automatically.
 
 ## Interface
 

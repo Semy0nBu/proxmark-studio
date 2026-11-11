@@ -25,16 +25,19 @@ class NativeReleaseTests(unittest.TestCase):
             (root/'client/src/uart').mkdir()
             bluetooth=root/'client/src/uart/uart_win32_bluetooth.h'
             bluetooth.write_text('exact compiled Bluetooth helper\n')
+            dcb=root/'client/src/uart/uart_win32_dcb.h'
+            dcb.write_text('exact compiled Windows DCB helper\n')
             (root/'client/src/local_notes.h').write_text('private note\n')
             (root/'client/resources').mkdir();(root/'client/resources/private-card.bin').write_bytes(b'private capture')
             subprocess.run(['git','-C',str(root),'add','client/resources/private-card.bin'],check=True)
             archive=Path(directory)/'source.zip'
             result=build_native_source_archive(root,archive)
-            self.assertEqual(result['source_files'],4)
+            self.assertEqual(result['source_files'],5)
             with zipfile.ZipFile(archive) as data:
                 self.assertEqual(data.read('proxmark3/client/src/comms.c'),source.read_bytes())
                 self.assertIn('proxmark3/client/src/comms_handshake.h',data.namelist())
                 self.assertEqual(data.read('proxmark3/client/src/uart/uart_win32_bluetooth.h'),bluetooth.read_bytes())
+                self.assertEqual(data.read('proxmark3/client/src/uart/uart_win32_dcb.h'),dcb.read_bytes())
                 self.assertFalse(any('private-card' in name or 'local_notes' in name for name in data.namelist()))
             with self.assertRaises(ValueError):build_native_source_archive(root,archive)
 

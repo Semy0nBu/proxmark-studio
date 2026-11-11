@@ -248,6 +248,54 @@ def check_bluetooth_worker(directory):
             'radio_queries':0,'physical_device_access':False}
 
 
+def check_visible_motion(window):
+    """Exercise rendered production navigation, including the frozen modules."""
+    from .motion import SmoothStack
+    from .motion_tabs import SmoothTabs
+    application = QApplication.instance()
+    preference = application.property('reducedMotion')
+    original_page = window.stack.currentIndex()
+    original_band = window.workspace_bands.currentIndex()
+    try:
+        application.setProperty('reducedMotion', False)
+        assert isinstance(window.stack, SmoothStack)
+        assert isinstance(window.workspace_bands, SmoothTabs)
+        assert isinstance(window.card_tabs, SmoothTabs)
+        window.navigate(0)
+        window.stack._transition.clear()
+        application.processEvents()
+        def pixels():
+            image = window.stack.grab().toImage()
+            return hashlib.sha256(bytes(image.constBits())).hexdigest()
+        before = pixels()
+        window.navigate(4)
+        assert window.stack.currentIndex() == 4 and window.stack._transition.running
+        window.stack._transition.animation.setCurrentTime(80)
+        middle = pixels()
+        window.stack._transition.animation.setCurrentTime(220)
+        after = pixels()
+        assert len({before, middle, after}) == 3
+        assert window.stack._transition.overlay.pixmap.isNull()
+        window.navigate(0)
+        window.stack._transition.clear()
+        window.workspace_bands.setCurrentIndex(0)
+        window.workspace_bands._transition.clear()
+        window.workspace_bands.setCurrentIndex(1)
+        assert window.workspace_bands.currentIndex() == 1
+        assert window.workspace_bands._transition.running
+        window.workspace_bands._transition.animation.setCurrentTime(220)
+        assert window.stop_button.isVisible() and not window.stack.isAncestorOf(window.stop_button)
+        return {'name': 'visible-page-and-tab-motion', 'passed': True,
+                'different_rendered_frames': 3, 'selection_is_immediate': True,
+                'permanent_Stop_outside_transition': True, 'physical_device_access': False}
+    finally:
+        window.workspace_bands.setCurrentIndex(original_band)
+        window.workspace_bands._transition.clear()
+        window.navigate(original_page)
+        window.stack._transition.clear()
+        application.setProperty('reducedMotion', preference)
+
+
 def run_release_check(report_path: Path, *, language='en') -> int:
     report = {'version': APP_VERSION, 'frozen': is_frozen(), 'checks': [],
               'hardware_commands': 0, 'personal_data_opened': False, 'passed': False}
@@ -320,6 +368,7 @@ def run_release_check(report_path: Path, *, language='en') -> int:
         QTimer.singleShot(300, settle.quit)
         settle.exec()
         assert window.isVisible() and int(window.winId()) and not window.runner.busy
+        report['checks'].append(check_visible_motion(window))
         screenshot = Path(report_path).resolve().with_suffix('.png')
         screenshot.parent.mkdir(parents=True, exist_ok=True)
         assert window.grab().save(str(screenshot), 'PNG')

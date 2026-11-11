@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from .antenna import AntennaPlot
 from .theme import mono_font
 from .ui import Disclosure, SmoothScrollArea, SoftButton, line_icon
+from .motion_tabs import SmoothTabs
 from .i18n import LANGUAGES
 from .studio_data import say
 from .interface_mode import Guidance
@@ -38,6 +39,8 @@ class CardList(QListWidget):
     def __init__(self):
         super().__init__()
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        from .scroll_motion import SmoothViewScroll
+        self._wheel_motion = SmoothViewScroll(self)
 
     def fit_items(self):
         width = max(100, self.viewport().width() - 24)
@@ -51,7 +54,7 @@ class CardList(QListWidget):
         self.fit_items()
 
 
-class CardTabs(QTabWidget):
+class CardTabs(SmoothTabs):
     """Let the outer detail scroller size the working area to its viewport.
 
     QTabWidget's height-for-width uses the preferred height of every page,
@@ -172,6 +175,9 @@ def editor(title, widget):
 
 
 def configure_table(table, widths):
+    from .scroll_motion import SmoothViewScroll
+    if not hasattr(table, '_wheel_motion'):
+        table._wheel_motion = SmoothViewScroll(table)
     table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
     table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
     table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -382,7 +388,8 @@ class PresentationMixin:
         self.operation_progress.setTextVisible(False)
         self.operation_progress.hide()
         layout.addWidget(self.operation_progress)
-        self.stack = QStackedWidget()
+        from .ui import SmoothStack
+        self.stack = SmoothStack()
         self.ui_has_operation = False
         for build in (self._device_page, self._library_page, self._keys_page, self._antenna_page, self._encoding_page, self._build_studio_page):
             self.stack.addWidget(build())
@@ -519,7 +526,7 @@ class PresentationMixin:
         self.keep_connection.toggled.connect(self._keep_connection_changed)
         self._update_connection_help()
         layout.addWidget(connection)
-        self.workspace_bands=QTabWidget()
+        self.workspace_bands=SmoothTabs()
         hf_page,lf_page=QWidget(),QWidget()
         hf_layout,lf_layout=column(hf_page,8,10),column(lf_page,8,10)
         self.workspace_bands.addTab(hf_page,tr('HF · 13,56 МГц'));self.workspace_bands.addTab(lf_page,tr('LF · 125 / 134 кГц'))
@@ -676,7 +683,8 @@ class PresentationMixin:
         self.cards.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.cards.customContextMenuRequested.connect(self._card_context)
         self.library_splitter.addWidget(self.cards)
-        self.detail_stack = QStackedWidget()
+        from .ui import SmoothStack
+        self.detail_stack = SmoothStack()
         empty = QWidget()
         empty_layout = column(empty, 24)
         empty_layout.addStretch()

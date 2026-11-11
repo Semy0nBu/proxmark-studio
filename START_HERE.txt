@@ -1,8 +1,8 @@
-PROXMARK STUDIO 0.3.0-preview.1
+PROXMARK STUDIO 0.3.0-preview.12
 Windows 10 (1903+) / Windows 11, x64
 
 РУССКИЙ
-1. Запустите ProxmarkStudio-0.3.0-preview.1-Setup-x64.exe.
+1. Запустите ProxmarkStudio-0.3.0-preview.12-Setup-x64.exe.
    Установка для текущего пользователя, без прав администратора:
    %LOCALAPPDATA%\Programs\Proxmark Studio.
    Ярлыки рабочего стола и меню «Пуск» выбраны по умолчанию.
@@ -10,7 +10,7 @@ Windows 10 (1903+) / Windows 11, x64
 2. Откройте Proxmark Studio через ярлык или ProxmarkStudio.exe.
    Устанавливать Python не нужно.
 3. Подключите Proxmark по USB, выберите USB и его COM-порт, нажмите «Подключить».
-4. Язык выбирается внизу боковой панели и применяется после перезапуска.
+4. Язык выбирается в «Настройках» верхней панели и применяется после перезапуска.
 5. Библиотека и настройки: %LOCALAPPDATA%\Proxmark Studio.
    Найти их можно через «О программе» → «Открыть папку библиотеки».
 
@@ -22,7 +22,7 @@ Windows 10 (1903+) / Windows 11, x64
 Установка программы и подключение платы не запускают прошивку автоматически.
 
 ENGLISH
-1. Run ProxmarkStudio-0.3.0-preview.1-Setup-x64.exe.
+1. Run ProxmarkStudio-0.3.0-preview.12-Setup-x64.exe.
    It installs for the current user without administrator rights in:
    %LOCALAPPDATA%\Programs\Proxmark Studio.
    Desktop and Start Menu shortcuts are selected by default.
@@ -30,7 +30,7 @@ ENGLISH
 2. Open the Proxmark Studio shortcut or ProxmarkStudio.exe.
    Python installation is not required.
 3. Connect Proxmark over USB, select USB and its COM port, then Connect.
-4. Choose your language at the bottom of the sidebar, then restart.
+4. Choose your language in Settings on the top bar, then restart.
 5. Data location: %LOCALAPPDATA%\Proxmark Studio.
    Open it with About → Open library folder.
 

@@ -13,17 +13,20 @@ from pm3gui.firmware_output import FlashTranscript, flash_diagnostics
 from pm3gui.firmware import _SystemFlashIO, FirmwareError, execute_flash
 
 TRANSITION='[+] Entering bootloader...\n[+] Trigger restart...\n'
+WAIT='[+] Waiting for Proxmark3 to appear on COM3\n'
+FOUND='[|]  49 found\n'
 OPEN='[!!] UART CreateFile failed for COM3 (Win32 error 2)\n[!] ERROR: invalid serial port COM3\n'
 WRITE='[+] Writing segments for file: selected-fullimage.elf\n'
+RECONNECTED=TRANSITION+WAIT+OPEN+FOUND
 
 
 class TranscriptTests(unittest.TestCase):
     def test_only_bootloader_transition_open_errors_are_transient(self):
-        result=flash_diagnostics(TRANSITION+OPEN+WRITE+'[+] All done\n')
+        result=flash_diagnostics(RECONNECTED+WRITE+'[+] All done\n')
         self.assertTrue(result.all_done);self.assertFalse(result.fatal_lines);self.assertEqual(result.reconnect_lines,2)
-        for output in (OPEN+WRITE+'All done',TRANSITION+WRITE+OPEN+'All done',
+        for output in (OPEN+WRITE+'All done',TRANSITION+WAIT+FOUND+WRITE+OPEN+'All done',
                        TRANSITION+'[!] Flash program error\nAll done',
-                       TRANSITION+OPEN.replace('error 2','error 5')+WRITE+'All done'):
+                       TRANSITION+WAIT+OPEN.replace('error 2','error 5')+FOUND+WRITE+'All done'):
             with self.subTest(output=output):self.assertTrue(flash_diagnostics(output).fatal_lines)
 
     def test_fatal_middle_diagnostic_survives_truncation_and_terminal_controls(self):
@@ -38,8 +41,71 @@ class TranscriptTests(unittest.TestCase):
 
     def test_partial_utf8_and_split_diagnostics_are_parsed(self):
         capture=FlashTranscript()
-        for byte in (TRANSITION+OPEN+WRITE+'[+] All done').encode():capture.feed(bytes([byte]))
+        for byte in (RECONNECTED+WRITE+'[+] All done').encode():capture.feed(bytes([byte]))
         result=capture.finish();self.assertTrue(result.all_done);self.assertFalse(result.fatal_lines)
+
+    def test_countdown_prefixes_and_device_paths_in_confirmed_wait(self):
+        messages=''.join(f'[{spinner}]  {60-i}[!!] UART CreateFile failed for \\\\.\\COM3 (Win32 error 2)\r'
+                         for i,spinner in enumerate('/-\\|'*3))
+        output=TRANSITION+WAIT+messages+FOUND+WRITE+'[+] All done\n'
+        result=flash_diagnostics(output)
+        self.assertFalse(result.fatal_lines);self.assertTrue(result.all_done)
+        self.assertEqual(result.reconnect_lines,12)
+
+    def test_countdown_and_phase_markers_can_arrive_one_byte_at_a_time(self):
+        raw=(TRANSITION+WAIT+'\x1b[33m[/]  60[!!] UART CreateFile failed for \\\\.\\COM3 (Win32 error 2)\x1b[0m\r'+FOUND+WRITE+'All done').encode()
+        for width in (1,3,7,31):
+            with self.subTest(width=width):
+                capture=FlashTranscript()
+                for offset in range(0,len(raw),width):capture.feed(raw[offset:offset+width])
+                result=capture.finish();self.assertFalse(result.fatal_lines)
+                self.assertEqual(result.reconnect_lines,1);self.assertTrue(result.all_done)
+
+    def test_missing_wait_missing_found_and_initial_wait_errors_remain_fatal(self):
+        outputs=(TRANSITION+OPEN+FOUND+WRITE+'All done',
+                 WAIT+OPEN+FOUND+WRITE+'All done',
+                 TRANSITION+WAIT+OPEN,
+                 TRANSITION+WAIT+OPEN+'All done',
+                 TRANSITION+WAIT+OPEN+WRITE+'All done')
+        for output in outputs:
+            with self.subTest(output=output):
+                result=flash_diagnostics(output)
+                self.assertTrue(result.fatal_lines);self.assertEqual(result.reconnect_lines,0)
+
+    def test_other_errors_wrong_ports_and_unpaired_invalid_port_remain_fatal(self):
+        failures=[OPEN.replace('error 2',f'error {code}') for code in (5,31,87,121,1168)]
+        failures += [OPEN.replace('COM3','COM9'), '[!] ERROR: invalid serial port COM3\n',
+                     '[!] UART error while setting com state\n',
+                     '[!!] UART GetCommState failed (Win32 error 2)\n',
+                     '[!] Timeout waiting for bootloader\n',
+                     '[unexpected] 60[!!] UART CreateFile failed for COM3 (Win32 error 2)\n']
+        for failure in failures:
+            with self.subTest(failure=failure):
+                result=flash_diagnostics(TRANSITION+WAIT+failure+FOUND+WRITE+'All done')
+                self.assertTrue(result.fatal_lines)
+
+    def test_detached_device_error_is_transient_only_until_confirmed_found(self):
+        output=TRANSITION+WAIT+OPEN.replace('error 2','error 1167')+FOUND+WRITE+'All done'
+        result=flash_diagnostics(output)
+        self.assertFalse(result.fatal_lines);self.assertEqual(result.reconnect_lines,2)
+
+    def test_errors_after_found_flashing_writing_or_done_cannot_be_hidden(self):
+        countdown='[/]  60[!!] UART CreateFile failed for COM3 (Win32 error 2)\n'
+        for later in (FOUND,FOUND+'[+] Flashing...\n',FOUND+WRITE,FOUND+WRITE+'All done\n'):
+            with self.subTest(later=later):
+                result=flash_diagnostics(TRANSITION+WAIT+later+countdown+'All done\n')
+                self.assertTrue(result.fatal_lines)
+
+    def test_transition_allowance_can_be_disabled_for_verification(self):
+        capture=FlashTranscript(allow_transition=False);capture.feed((RECONNECTED+WRITE+'All done').encode())
+        result=capture.finish();self.assertTrue(result.fatal_lines);self.assertEqual(result.reconnect_lines,0)
+
+    def test_unresolved_retry_evidence_is_bounded_and_never_becomes_success(self):
+        capture=FlashTranscript(1024)
+        capture.feed((TRANSITION+WAIT+OPEN*5000+'All done').encode())
+        result=capture.finish();self.assertTrue(result.fatal_lines)
+        self.assertLessEqual(len(result.fatal_lines),32);self.assertTrue(capture.truncated)
+        self.assertLess(len(capture.retained()),1200);self.assertEqual(result.reconnect_lines,0)
 
 
 class FirmwareStabilityTests(unittest.TestCase):
@@ -50,7 +116,7 @@ class FirmwareStabilityTests(unittest.TestCase):
 
     def test_expected_reenumeration_diagnostics_still_require_full_readback(self):
         prepared=self.prepared();fake=fixtures.FakeIO(prepared)
-        fake.flash_output=TRANSITION+OPEN+WRITE+'All done'
+        fake.flash_output=RECONNECTED+WRITE+'All done'
         result=execute_flash(prepared,io=fake)
         self.assertTrue(result['verified']);self.assertEqual(result['bootloader_reconnect_messages'],2)
         self.assertEqual(fake.flash_calls,1)
@@ -58,9 +124,22 @@ class FirmwareStabilityTests(unittest.TestCase):
 
     def test_transient_messages_do_not_hide_a_readback_mismatch(self):
         prepared=self.prepared();fake=fixtures.FakeIO(prepared)
-        fake.flash_output=TRANSITION+OPEN+WRITE+'All done';fake.internal[-1]=bytes(fixtures.INTERNAL_SIZE)
+        fake.flash_output=RECONNECTED+WRITE+'All done';fake.internal[-1]=bytes(fixtures.INTERNAL_SIZE)
         with self.assertRaises(FirmwareError):execute_flash(prepared,io=fake)
         self.assertEqual(fake.flash_calls,1)
+
+    def test_countdown_retries_still_require_readback_and_late_errors_are_fatal(self):
+        countdown='[/]  60[!!] UART CreateFile failed for \\\\.\\COM3 (Win32 error 2)\n'
+        prepared=self.prepared();fake=fixtures.FakeIO(prepared)
+        fake.flash_output=TRANSITION+WAIT+countdown+FOUND+WRITE+'All done'
+        result=execute_flash(prepared,io=fake)
+        self.assertTrue(result['verified']);self.assertEqual(result['bootloader_reconnect_messages'],1)
+        for failure in (TRANSITION+WAIT+countdown+WRITE+'All done',
+                        RECONNECTED+WRITE+countdown+'All done'):
+            with self.subTest(failure=failure):
+                prepared=self.prepared();fake=fixtures.FakeIO(prepared);fake.flash_output=failure
+                with self.assertRaises(FirmwareError):execute_flash(prepared,io=fake)
+                self.assertEqual(fake.flash_calls,1)
 
     def test_oversized_process_output_does_not_kill_client_and_keeps_error_evidence(self):
         prepared=self.prepared()
