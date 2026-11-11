@@ -3,6 +3,17 @@ import sys
 import traceback
 
 if __name__ == "__main__":
+    # Internal worker: no QApplication, profile, startup dialog or user files.
+    # A separate process lets the GUI cancel a blocked Windows SDP request.
+    if sys.argv[1:2] == ['--bluetooth-service-probe']:
+        try:
+            from pm3gui.bluetooth_ready import probe_main
+            result = probe_main(sys.argv[2:])
+        except Exception:
+            if sys.stdout is not None:
+                sys.stdout.write('{"status":"error","internal_error":true}\n')
+            result = 1
+        raise SystemExit(result)
     try:
         from pm3gui.app import main
         result = main()

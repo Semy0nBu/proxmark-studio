@@ -9,9 +9,11 @@ from .i18n import tr
 
 from pathlib import Path
 import re
+import sys
+import tempfile
 from uuid import uuid4
 
-from PySide6.QtCore import QObject, QProcess, QTimer
+from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QTimer
 
 from .device import _Run, _MAX_PROBE_BYTES, parse_connection_status
 from .connection_checks import version_probe_status
@@ -22,6 +24,9 @@ HEARTBEAT_TIMEOUT_MS = 8000
 CANCEL_TIMEOUT_MS = 8000
 BLUESHARK_OPEN_RETRY_DELAY_MS = 1500
 BLUESHARK_OPEN_RETRY_LIMIT = 2
+BLUESHARK_PREPARATION_BUDGET_MS = 7000
+BLUESHARK_PREPARATION_HARD_TIMEOUT_MS = 10000
+BLUESHARK_PREPARATION_MAX_OUTPUT = 8192
 MAX_FRAME_FIELD_BYTES = 8192
 _END_CODE = re.compile(rb"-?\d{1,10}\Z")
 _BLUESHARK_OPEN_UNAVAILABLE = re.compile(
@@ -55,6 +60,12 @@ class PersistentSession(QObject):
         self.open_retry_count = 0
         self.open_retry_run = None
         self.ready_seen = False
+        self.preparation_process = None
+        self.preparation_run = None
+        self.preparation_output = bytearray()
+        self.preparation_timer = None
+        self.preparation_directory = None
+        self.preparation_result = None
         self.open_retry_timer = QTimer(self)
         self.open_retry_timer.setSingleShot(True)
         self.open_retry_timer.timeout.connect(self._retry_open)
@@ -88,6 +99,7 @@ class PersistentSession(QObject):
                    preserve_tail=preserve_tail, bulk_cancel=bulk_cancel)
         run.completion_token = self.owner.completion_token
         run.require_session = settings.require_session
+        run.bluetooth_prepared = False
         self.owner._active = run
         run.timeout = QTimer(self.owner)
         run.timeout.setSingleShot(True)
@@ -96,7 +108,7 @@ class PersistentSession(QObject):
         self.owner.busy_changed.emit(True)
         # Qt slots run synchronously: a listener may cancel/shut down as soon
         # as busy is announced. Do not submit its command after that result.
-        if self.owner._active is not run or run.stop_reason:
+        if self.owner._active is not run or run.stop_reason or self.owner._shutting_down:
             return
         self.open_retry_timer.stop()
         self.open_retry_run = None
@@ -130,7 +142,7 @@ class PersistentSession(QObject):
         if self.pending is None:
             return
         run, _, port, transport, signature = self.pending
-        if self.owner._active is not run or run.stop_reason:
+        if self.owner._active is not run or run.stop_reason or self.owner._shutting_down:
             return
         self.signature = signature
         self.transport = transport
@@ -145,6 +157,8 @@ class PersistentSession(QObject):
             self._spawn(run, ['--help'])
         elif not self.owner._pipe_capabilities[run.cache_key]:
             self._fallback(run)
+        elif self._should_prepare_bluetooth(run):
+            self._prepare_bluetooth(run, port)
         else:
             self.phase = 'starting'
             run.probing = False
@@ -154,15 +168,123 @@ class PersistentSession(QObject):
                 args.insert(0, '--incognito')
             self._spawn(run, args)
 
-    def _spawn(self, run, arguments):
-        if self.owner._active is not run or run.stop_reason:
+    def _should_prepare_bluetooth(self, run):
+        return (sys.platform == 'win32' and self.transport == 'blueshark'
+                and not self.owner._argument_prefix
+                and not getattr(run, 'bluetooth_prepared', False))
+
+    @staticmethod
+    def _preparation_environment():
+        # The native client's bundled Python/Qt paths must never leak into the
+        # source GUI interpreter or the frozen helper's independent bootstrap.
+        environment = QProcessEnvironment.systemEnvironment()
+        for name in ('PYTHONHOME', 'PYTHONPATH', 'VIRTUAL_ENV', 'QT_PLUGIN_PATH',
+                     'QT_QPA_PLATFORM_PLUGIN_PATH', 'QT_QPA_PLATFORM',
+                     '__PYVENV_LAUNCHER__', 'PYTHONEXECUTABLE'):
+            environment.remove(name)
+        if sys.platform == 'win32' and not getattr(sys, 'frozen', False):
+            # Execute the actual interpreter, not Windows' venv redirector.
+            # This trusted launcher hint retains the source GUI's dependencies
+            # without creating an unowned child that could outlive Stop.
+            environment.insert('__PYVENV_LAUNCHER__', str(Path(sys.executable).resolve()))
+        environment.insert('PYINSTALLER_RESET_ENVIRONMENT', '1')
+        return environment
+
+    def _prepare_bluetooth(self, run, port):
+        from .bluetooth_ready import preparation_invocation
+        remaining = run.timeout.remainingTime() if run.timeout and run.timeout.isActive() else 0
+        if remaining <= 0:
+            self.owner._stop(run, 'timeout')
+            return
+        directory = None
+        try:
+            directory = tempfile.TemporaryDirectory(prefix='pm3-bluetooth-')
+            result_path = Path(directory.name)/'result.json'
+            program, arguments, cwd = preparation_invocation(
+                port, min(BLUESHARK_PREPARATION_BUDGET_MS, remaining), result_path=result_path)
+        except (OSError, ValueError):
+            self._cleanup_preparation_directory(directory)
+            self._preparation_failed(run, tr('Не удалось подготовить проверку службы Bluetooth.'))
+            return
+        self.phase = 'preparing'
+        run.probing = False
+        self.preparation_run = run
+        self.preparation_directory = directory
+        self.preparation_result = result_path
+        self.preparation_output.clear()
+        message = tr('Проверяем доступность Blue Shark перед открытием порта…')
+        self.owner.session_changed.emit(False, message)
+        if self.owner._active is not run or run.stop_reason or self.owner._shutting_down:
+            self._abandon_preparation_before_spawn(run, directory)
+            return
+        self.owner.output.emit('\n[=] ' + message + '\n')
+        if self.owner._active is not run or run.stop_reason or self.owner._shutting_down:
+            self._abandon_preparation_before_spawn(run, directory)
+            return
+        self._spawn(run, arguments, program=program, cwd=cwd,
+                    environment=self._preparation_environment(), preparation=True)
+        process = self.preparation_process
+        if process is None or self.process is not process or self.owner._active is not run:
+            return
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.timeout.connect(lambda: self._preparation_expired(run, process))
+        self.preparation_timer = timer
+        timer.start(min(BLUESHARK_PREPARATION_HARD_TIMEOUT_MS, remaining))
+
+    def _abandon_preparation_before_spawn(self, run, directory):
+        # A synchronous status listener can cancel and start another profile.
+        # Discard only this helper's reservation, never the replacement's.
+        if self.preparation_run is run:
+            self.preparation_directory = None
+            self.preparation_result = None
+            self.preparation_run = None
+        if self.pending is not None and self.pending[0] is run:
+            self.pending = None
+            self.user_commands = []
+            self.phase = 'closed'
+        self._cleanup_preparation_directory(directory)
+
+    def _stop_preparation_timer(self):
+        timer, self.preparation_timer = self.preparation_timer, None
+        if timer is not None:
+            timer.stop()
+            timer.deleteLater()
+
+    @staticmethod
+    def _cleanup_preparation_directory(directory):
+        if directory is not None:
+            path = Path(directory.name).resolve()
+            if path.parent != Path(tempfile.gettempdir()).resolve() or not path.name.startswith('pm3-bluetooth-'):
+                raise ValueError('Unexpected Bluetooth preparation temporary directory')
+            try:
+                directory.cleanup()
+            except OSError:
+                # The child has already exited. A filesystem cleanup error must
+                # not interrupt Qt's process/completion bookkeeping or reopen it.
+                return False
+        return True
+
+    def _preparation_failed(self, run, message):
+        if run is not None and self.owner._active is run and not run.stop_reason:
+            self._lost(message)
+
+    def _preparation_expired(self, run, process):
+        if (self.phase == 'preparing' and self.process is process
+                and self.preparation_process is process and self.preparation_run is run):
+            self._preparation_failed(run, tr('Blue Shark не подтвердил доступность службы Bluetooth за отведённое время.'))
+
+    def _spawn(self, run, arguments, *, program=None, cwd=None, environment=None, preparation=False):
+        if self.owner._active is not run or run.stop_reason or self.owner._shutting_down:
             return
         process = QProcess(self.owner)
         self.process = run.process = process
-        process.setProgram(run.executable)
-        process.setArguments(self.owner._argument_prefix + arguments)
-        process.setWorkingDirectory(run.cwd)
-        process.setProcessEnvironment(run.environment)
+        if preparation:
+            self.preparation_process = process
+        process.setProgram(program if program is not None else run.executable)
+        process.setArguments(arguments if preparation else self.owner._argument_prefix + arguments)
+        process.setWorkingDirectory(cwd if cwd is not None else run.cwd)
+        process.setProcessEnvironment(environment if environment is not None else run.environment)
         process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         process.readyReadStandardOutput.connect(lambda: self._read(process))
         process.finished.connect(lambda code, status: self._ended(process, code, status))
@@ -171,7 +293,16 @@ class PersistentSession(QObject):
             with external_process_libraries():
                 process.start()
         except OSError as exc:
+            if process.state() != QProcess.ProcessState.NotRunning:
+                self._lost(tr('Не удалось запустить клиент: ') + str(exc))
+                return
             self.process = None
+            if self.preparation_process is process:
+                self.preparation_process = None
+                self.preparation_run = None
+                directory, self.preparation_directory = self.preparation_directory, None
+                self.preparation_result = None
+                self._cleanup_preparation_directory(directory)
             self._lost(tr('Не удалось запустить клиент: ') + str(exc))
 
     def _fallback(self, run):
@@ -188,6 +319,17 @@ class PersistentSession(QObject):
         if self.process is not process:
             return
         run = self.owner._active
+        if self.preparation_process is process:
+            # Closing/replaced helpers are drained silently as well. Their JSON
+            # never becomes client output and never controls a replacement run.
+            if self.phase != 'preparing':
+                return
+            if len(self.preparation_output) + len(data) > BLUESHARK_PREPARATION_MAX_OUTPUT:
+                self._preparation_failed(self.preparation_run,
+                    tr('Проверка службы Bluetooth вернула некорректный ответ.'))
+            else:
+                self.preparation_output.extend(data)
+            return
         if self.phase == 'probe':
             if run:
                 run.probe.extend(data[:max(0, _MAX_PROBE_BYTES - len(run.probe))])
@@ -415,6 +557,7 @@ class PersistentSession(QObject):
 
     def _set_closed(self, message):
         self.connected = False
+        self._stop_preparation_timer()
         self.heartbeat.stop()
         self.ping_timeout.stop()
         self.cancel_timer.stop()
@@ -473,6 +616,24 @@ class PersistentSession(QObject):
             return
         self._read(process)
         phase = self.phase
+        preparing = self.preparation_process is process
+        preparation_run = self.preparation_run
+        preparation_output = None
+        if preparing:
+            path = self.preparation_result
+            if phase == 'preparing' and path is not None:
+                try:
+                    if path.is_file() and not path.is_symlink() and path.stat().st_size <= BLUESHARK_PREPARATION_MAX_OUTPUT:
+                        preparation_output = path.read_bytes()
+                except OSError:
+                    pass
+            self._stop_preparation_timer()
+            self.preparation_process = None
+            self.preparation_run = None
+            directory, self.preparation_directory = self.preparation_directory, None
+            self.preparation_result = None
+            self.preparation_output.clear()
+            self._cleanup_preparation_directory(directory)
         idle_loss = self.idle_loss or (phase=='idle' and self.connected and self.owner._active is None
                                       and not self.owner.rf_lease and self.transport!='offline')
         self.idle_loss=False
@@ -484,6 +645,7 @@ class PersistentSession(QObject):
         open_error = self._can_retry_open(phase, run)
         if open_error:
             self.open_retry_count += 1
+            run.bluetooth_prepared = False
             run.process = None
             self.open_retry_run = run
             self.phase = 'retry_wait'
@@ -494,6 +656,27 @@ class PersistentSession(QObject):
             self.owner.output.emit('\n[=] ' + message + '\n')
             self.owner.session_changed.emit(False, message)
             return
+        if phase == 'preparing' and preparing and run is preparation_run and run and not run.stop_reason:
+            from .bluetooth_ready import parse_probe_result
+            try:
+                result = parse_probe_result(preparation_output, self.pending[2])
+                if result['status'] == 'ready' and (code != 0 or status != QProcess.ExitStatus.NormalExit):
+                    raise ValueError('Preparation did not exit normally')
+            except (ValueError, TypeError, KeyError, IndexError):
+                result = {'status': 'error'}
+            if (result['status'] == 'ready' and self.pending is not None
+                    and self.pending[0] is run and self.owner._active is run
+                    and not self.owner._shutting_down):
+                run.process = None
+                run.bluetooth_prepared = True
+                self._start_pending()
+                return
+            messages = {
+                'not_bluetooth': tr('Выбранный порт не связан с устройством Bluetooth. Выберите порт Blue Shark.'),
+                'unavailable': tr('Служба Blue Shark пока недоступна. Проверьте питание и Bluetooth, затем подключитесь снова.'),
+            }
+            run.session_error = messages.get(result['status'],
+                tr('Не удалось проверить службу Bluetooth. Подключение к порту не выполнялось.'))
         if phase == 'probe' and run and not run.stop_reason and code == 0:
             self.owner._capabilities[run.cache_key] = _help_has_option(run.probe, b'--incognito')
             self.owner._pipe_capabilities[run.cache_key] = _help_has_option(run.probe, b'--gui-pipe')

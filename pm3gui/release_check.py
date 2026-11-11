@@ -223,6 +223,31 @@ def check_workbench(window):
             'physical_device_access':False,'dump_preserved':True}
 
 
+def check_bluetooth_worker(directory):
+    """Exercise windowless file IPC; an invalid port never reaches Windows APIs."""
+    import sys
+    from .persistent import PersistentSession
+    result=Path(directory)/'invalid-bluetooth-worker.json'
+    process=QProcess()
+    process.setProcessEnvironment(PersistentSession._preparation_environment())
+    process.setProgram(sys.executable)
+    arguments=[] if is_frozen() else [str(application_root()/'run_gui.py')]
+    process.setArguments(arguments+['--bluetooth-service-probe','--port','COM0',
+                                  '--budget-ms','100','--result',str(result)])
+    process.start()
+    if not process.waitForFinished(10000):
+        process.kill();process.waitForFinished(2000)
+        raise AssertionError('Bluetooth worker did not stop at invalid input')
+    assert process.exitStatus()==QProcess.ExitStatus.NormalExit and process.exitCode()==1
+    assert result.is_file() and result.stat().st_size<=8192
+    value=json.loads(result.read_text(encoding='utf8'))
+    assert set(value)=={'proto','port','status','queries','elapsed_ms','last_error','channel'}
+    assert value['proto']==1 and value['status']=='error' and value['queries']==0
+    assert value['last_error']==87 and value['channel'] is None
+    return {'name':'windowless-bluetooth-worker-file-ipc-no-device','passed':True,
+            'radio_queries':0,'physical_device_access':False}
+
+
 def run_release_check(report_path: Path, *, language='en') -> int:
     report = {'version': APP_VERSION, 'frozen': is_frozen(), 'checks': [],
               'hardware_commands': 0, 'personal_data_opened': False, 'passed': False}
@@ -284,6 +309,7 @@ def run_release_check(report_path: Path, *, language='en') -> int:
             report['checks'].append(check_interface_modes(window))
             report['checks'].append(check_desktop_workflows(window))
             report['checks'].append(check_workbench(window))
+            report['checks'].append(check_bluetooth_worker(temporary.name))
         finally:
             window.runner.run, window.runner.run_operation = original_run, original_typed
         report['checks'].append(check_stop_completion(window))

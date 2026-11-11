@@ -1428,5 +1428,12 @@
   "Настройки": "Settings",
   "Режим интерфейса, язык и библиотека": "Interface mode, language and library",
   "Показать текст рядом с рабочим HEX": "Show text alongside the working HEX",
-  "Подключение…": "Connection…"
+  "Подключение…": "Connection…",
+  "Не удалось подготовить проверку службы Bluetooth.": "Could not prepare the Bluetooth service check.",
+  "Проверяем доступность Blue Shark перед открытием порта…": "Checking Blue Shark availability before opening the port…",
+  "Blue Shark не подтвердил доступность службы Bluetooth за отведённое время.": "Blue Shark did not confirm Bluetooth service availability before the deadline.",
+  "Проверка службы Bluetooth вернула некорректный ответ.": "The Bluetooth service check returned an invalid response.",
+  "Выбранный порт не связан с устройством Bluetooth. Выберите порт Blue Shark.": "The selected port is not associated with a Bluetooth device. Choose the Blue Shark port.",
+  "Служба Blue Shark пока недоступна. Проверьте питание и Bluetooth, затем подключитесь снова.": "The Blue Shark service is not available yet. Check power and Bluetooth, then connect again.",
+  "Не удалось проверить службу Bluetooth. Подключение к порту не выполнялось.": "Could not check the Bluetooth service. The COM port was not opened."
 }

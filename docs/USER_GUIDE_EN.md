@@ -41,6 +41,10 @@ the cable and Windows Device Manager → Ports. Close another client using that 
 and choose its outgoing SPP COM port. This is Bluetooth Classic SPP. Matching
 BTADDON firmware and a compatible client are required.
 
+Connect first checks whether the selected Bluetooth service is ready. You can
+cancel this step with Stop. If it remains unavailable, check BTpower and the
+selected outgoing Bluetooth port, then connect again.
+
 **TCP:** enter `tcp:host:port` for an existing compatible network bridge.
 The stock Blue Shark does not host that server.
 

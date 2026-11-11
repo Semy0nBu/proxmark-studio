@@ -1,5 +1,20 @@
 # Changelog / История изменений
 
+## 0.3.0-preview.10 — 2026-11-11
+
+- On Windows, Blue Shark checks the selected paired SPP service before a fresh
+  native COM-port open. Existing connected sessions keep their current client.
+- Bluetooth preparation runs in a separate process with a bounded deadline.
+  Stop, timeout and close release that process and prevent a delayed command.
+- The worker uses file-based results in the windowless EXE. Source launches own
+  the real Python process directly, preserving cancellation in virtual environments.
+- Service discovery does not pair devices, reset drivers or change board settings.
+  Fresh Proxmark OS verification is still required before the link is connected;
+  bounded recovery remains available for a real outage.
+
+По-русски: готовность службы Blue Shark проверяется перед открытием COM-порта.
+Подготовка отменяется и не блокирует интерфейс. Прошивка платы не меняется.
+
 ## 0.3.0-preview.9 — 2026-11-11
 
 - Workbench interface with top navigation and a persistent connection / Stop bar.
