@@ -11,6 +11,7 @@ from .i18n import tr
 from .library_backup import BackupCancelled, BackupError, create_backup, restore_backup, validate_profile
 from .paths import default_data_dir
 from .ui import SoftButton
+from .interface_mode import Guidance
 
 
 class BackupWorker(QThread):
@@ -57,7 +58,7 @@ class LibraryBackupDialog(QDialog):
         self.resize(680, 410)
         layout = QVBoxLayout(self)
         description = QLabel(tr('Карты, все версии, ключи, настройки и файлы профиля — в одном архиве. Сохраняются данные, уже записанные в библиотеку.'))
-        description.setWordWrap(True); layout.addWidget(description)
+        description.setWordWrap(True); layout.addWidget(Guidance(owner,description))
         self.profile_label = QLabel(tr('Текущий профиль: {0}', str(owner.data_dir)))
         self.profile_label.setWordWrap(True); layout.addWidget(self.profile_label)
         self.tabs = QTabWidget(); layout.addWidget(self.tabs)

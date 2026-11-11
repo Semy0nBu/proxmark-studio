@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (QComboBox, QDialog, QFileDialog, QFormLayout, QFr
                               QPlainTextEdit, QProgressBar, QPushButton, QVBoxLayout)
 from .ui import Disclosure, SoftButton
 from .theme import mono_font
+from .interface_mode import Guidance
 
 
 
@@ -46,7 +47,7 @@ class FirmwareDialog(QDialog):
         note = QLabel(tr('Запись выполняется по USB. Загрузчик сохраняется; после записи проверяются прошивка и резервные копии.'))
         note.setWordWrap(True)
         note.setObjectName('muted')
-        layout.addWidget(note)
+        layout.addWidget(Guidance(owner,note))
         self.status = QLabel('')
         self.status.setWordWrap(True)
         layout.addWidget(self.status)

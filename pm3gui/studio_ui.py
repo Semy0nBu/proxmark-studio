@@ -16,6 +16,7 @@ from .core import DumpData, parse_dump, parse_hex, export_dump
 from .operations import CLASSIC_GEOMETRIES, sector_first_block, sector_trailer, _path_token
 from .writing import access_conditions
 from .source_picker import SourcePicker
+from .interface_mode import Guidance
 from .hf_tools_ui import ParameterForm
 from .hf_forms import form_arguments
 from .client_catalog import COMMANDS, split_command, uses_rf, changes_data
@@ -377,7 +378,7 @@ class StudioPage(QWidget):
         self.button(toolbar,'Ключи библиотеки → новая версия','Library keys → new revision',self.library_keys_to_dump,False)
         toolbar=row(layout);self.button(toolbar,'Импорт key.bin…','Import key.bin…',self.import_keybin,False)
         self.button(toolbar,'Экспорт key.bin…','Export key.bin…',self.export_keybin,False)
-        layout.addWidget(label('Импорт и заполнение не подтверждают ключи на физической карте. Неизвестные позиции экспорта отмечаются в сопутствующем JSON.','Importing or filling does not verify a key on a physical card. Unknown exported slots are recorded in a sidecar JSON.'))
+        layout.addWidget(Guidance(self.owner,label('Импорт и заполнение не подтверждают ключи на физической карте. Неизвестные позиции экспорта отмечаются в сопутствующем JSON.','Importing or filling does not verify a key on a physical card. Unknown exported slots are recorded in a sidecar JSON.')))
         return w
 
     def show_keys(self):
@@ -418,7 +419,7 @@ class StudioPage(QWidget):
         toolbar=row(layout)
         self.button(toolbar,'Определить поколение','Identify generation',lambda:self.run(one_command('hf 14a info'),say('Диагностика Magic','Magic diagnostics'),True))
         self.button(toolbar,'Gen1a: копия → UID → проверка','Gen1a: backup → UID → verify',self.write_magic_uid)
-        layout.addWidget(label('Мастер Gen1a требует положительного определения поколения и полной резервной копии. Другие поколения используют свои команды ниже.','The Gen1a wizard requires positive generation detection and a complete backup. Other generations use their own actions below.'))
+        layout.addWidget(Guidance(self.owner,label('Мастер Gen1a требует положительного определения поколения и полной резервной копии. Другие поколения используют свои команды ниже.','The Gen1a wizard requires positive generation detection and a complete backup. Other generations use their own actions below.')))
         self.magic_action=QComboBox()
         actions=[c for c in COMMANDS if c.startswith('hf mf ') and (re.search(r'\b(?:gen3|gdm|g4|gen4)',c) or c.split()[-1] in {'cgetblk','csetblk','csave','cload','csetuid'}) and not c.endswith(' help')]
         for c in actions:self.magic_action.addItem(c,c)
@@ -473,7 +474,7 @@ class StudioPage(QWidget):
         w,layout=panel();toolbar=row(layout);self.button(toolbar,'Сравнить с файлом…','Compare with file…',self.compare_file,False)
         self.button(toolbar,'Сравнить с версией библиотеки…','Compare with library revision…',self.compare_library,False)
         self.diff_table=table([say('Адрес','Offset'),'A','B',say('Состояние A / B','State A / B')]);layout.addWidget(self.diff_table)
-        layout.addWidget(label('Сравниваются байты и карта прочитанных данных. Заполнители не считаются прочитанными нулями.','Compares bytes and known-byte maps. Placeholders are not treated as confirmed zero bytes.'))
+        layout.addWidget(Guidance(self.owner,label('Сравниваются байты и карта прочитанных данных. Заполнители не считаются прочитанными нулями.','Compares bytes and known-byte maps. Placeholders are not treated as confirmed zero bytes.')))
         self.value_decode=QLineEdit();self.value_decode.setPlaceholderText('Value block · 16 bytes HEX');layout.addWidget(self.value_decode)
         self.button(layout,'Декодировать value-блок','Decode value block',lambda:self.status.setText(str(decode_value_block(parse_hex(self.value_decode.text())))),False)
         return w
@@ -510,7 +511,7 @@ class StudioPage(QWidget):
         toolbar=row(layout);self.button(toolbar,'Декодировать HEX','Decode HEX',self.decode_ndef_hex,False)
         self.button(toolbar,'В библиотеку','Add to library',self.save_ndef_library,False)
         self.button(toolbar,'NTAG: копия → запись → проверка…','NTAG: backup → write → verify…',self.write_ndef)
-        layout.addWidget(label('Обычная запись — Ultralight/NTAG. Для других типов ниже доступны команды с собственными параметрами и просмотром плана.','The verified writer targets Ultralight/NTAG. Other tag types have their own parameterised actions in the expert tools.'))
+        layout.addWidget(Guidance(self.owner,label('Обычная запись — Ultralight/NTAG. Для других типов ниже доступны команды с собственными параметрами и просмотром плана.','The verified writer targets Ultralight/NTAG. Other tag types have their own parameterised actions in the expert tools.')))
         return w
 
     def build_ndef(self):
@@ -560,7 +561,7 @@ class StudioPage(QWidget):
         self.family_action_form=None;self.family_action_host=QVBoxLayout();layout.addLayout(self.family_action_host)
         self.family_action.currentIndexChanged.connect(self.family_action_changed)
         self.button(layout,'Проверить и выполнить действие…','Review and run family action…',self.run_family_action)
-        self.profile_hint=label('','');layout.addWidget(self.profile_hint)
+        self.profile_hint=label('','');layout.addWidget(Guidance(self.owner,self.profile_hint))
         self.profile_view=QPlainTextEdit();self.profile_view.setReadOnly(True);self.profile_view.setFont(mono_font());layout.addWidget(self.profile_view)
         toolbar=row(layout);self.button(toolbar,'Открыть снимок для просмотра…','Open snapshot for inspection…',self.inspect_profile_file,False)
         self.sim_profile=QComboBox();self.sim_profile.addItems(['Ultralight / NTAG','ISO15693 / NFC-V','FeliCa','LEGIC']);toolbar.addWidget(self.sim_profile)
@@ -731,7 +732,7 @@ class StudioPage(QWidget):
         self.trace_filter=QLineEdit();self.trace_filter.setPlaceholderText(say('Фильтр: команда, HEX, направление','Filter: command, HEX, direction'));self.trace_filter.textChanged.connect(self.filter_trace);layout.addWidget(self.trace_filter)
         self.trace_table=table([say('Начало','Start'),say('Конец','End'),say('Направление','Direction'),'HEX','CRC',say('Команда','Command')],[90,90,90,260,70,220]);layout.addWidget(self.trace_table)
         toolbar=row(layout);self.button(toolbar,'Экспорт CSV…','Export CSV…',self.export_trace,False)
-        layout.addWidget(label('«Остановить» завершает захват и затем сохраняет буфер. Таблица показывает разбор клиента, исходный TRACE остаётся в файлах сеанса.','Stop ends capture and then saves the buffer. The table uses the client decoder; the original TRACE is kept in the session files.'))
+        layout.addWidget(Guidance(self.owner,label('«Остановить» завершает захват и затем сохраняет буфер. Таблица показывает разбор клиента, исходный TRACE остаётся в файлах сеанса.','Stop ends capture and then saves the buffer. The table uses the client decoder; the original TRACE is kept in the session files.')))
         return w
 
     def show_trace(self,result):
@@ -876,9 +877,9 @@ class StudioPage(QWidget):
         self.threshold_form=ParameterForm('hw sethfthresh',lambda:None);layout.addWidget(self.threshold_form)
         self.button(layout,'Применить пороги…','Apply thresholds…',lambda:self.run_form('hw sethfthresh',self.threshold_form))
         self.button(layout,'Стандартные пороги…','Default thresholds…',lambda:self.run_reviewed('hw sethfthresh','-t 7 -i 20 -l 8'))
-        layout.addWidget(label('В установленной GUI-BlueShark сборке автономный модуль — LF_SAMYRUN (HID26). Он управляется кнопкой платы: чтение, эмуляция, запись на заготовку. Другие standalone-модули требуют другой сборки.','The installed GUI-BlueShark image contains LF_SAMYRUN (HID26). The device button controls reading, simulation and writing a blank tag. Other standalone modules require a different build.'))
+        layout.addWidget(Guidance(self.owner,label('В установленной GUI-BlueShark сборке автономный модуль — LF_SAMYRUN (HID26). Он управляется кнопкой платы: чтение, эмуляция, запись на заготовку. Другие standalone-модули требуют другой сборки.','The installed GUI-BlueShark image contains LF_SAMYRUN (HID26). The device button controls reading, simulation and writing a blank tag. Other standalone modules require a different build.')))
         self.button(layout,'Запустить установленный автономный режим…','Start installed standalone mode…',self.start_standalone)
-        layout.addWidget(label('Диагностика антенн не измеряет заряд Blue Shark и не гарантирует устранение Auth2.','Antenna diagnostics do not measure Blue Shark battery charge or guarantee an Auth2 fix.'))
+        layout.addWidget(Guidance(self.owner,label('Диагностика антенн не измеряет заряд Blue Shark и не гарантирует устранение Auth2.','Antenna diagnostics do not measure Blue Shark battery charge or guarantee an Auth2 fix.')))
         return w
 
     def show_decay(self,result):

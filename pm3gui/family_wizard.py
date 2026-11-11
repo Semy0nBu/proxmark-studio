@@ -3,6 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 import json
 import sqlite3
+import hashlib
 from PySide6.QtCore import Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QComboBox, QLineEdit,
@@ -17,6 +18,11 @@ from .operations import CLASSIC_GEOMETRIES
 from .presentation import configure_table, install_table_copy
 from .theme import mono_font
 from .ui import Disclosure
+from .transfer_ui import TransferPanel
+from .transfer import Check
+from .core import DumpData
+from .i18n import tr
+from .interface_mode import Guidance
 from .wizard_plans import data_block_write, desfire_file_write, magic_user_restore, desfire_source_files
 from .studio_flows import restore_hf_profile, HF_DUMP_PROFILES, HF_RESTORE_PROFILES, LF_READERS, clone_lf_profile, magic_uid, ndef_write
 
@@ -40,11 +46,13 @@ OPERATIONS = [
 from .ui import SoftButton
 
 class FamilyWizard(QDialog):
-    def __init__(self, owner, profile='', source=None):
+    def __init__(self, owner, profile='', source=None,*,source_record=None):
         super().__init__(owner);self.owner=owner;self.gate=None;self.outcome=None;self.closing=False;self.last_session=None
         self.setWindowTitle(say('Мастер операций с картой','Card operation wizard'));self.resize(1000,820);self.setMinimumSize(720,540)
-        outer=QVBoxLayout(self);self.steps=QLabel(say('Источник → копия назначения → план → запись → проверка','Source → target backup → plan → write → verify'));self.steps.setWordWrap(True);outer.addWidget(self.steps)
+        outer=QVBoxLayout(self)
         scroll=self.scroll=QScrollArea();scroll.setWidgetResizable(True);body=QWidget();layout=QVBoxLayout(body);outer.addWidget(scroll,1);scroll.setWidget(body)
+        self.transfer=TransferPanel(owner=owner);layout.addWidget(self.transfer)
+        self._prepared_signature=None
         self.configuration=QWidget();config=QVBoxLayout(self.configuration);config.setContentsMargins(0,0,0,0)
         self.config_disclosure=Disclosure(say('Параметры операции','Operation settings'),expanded=True)
         self.config_disclosure.body.addWidget(self.configuration);layout.addWidget(self.config_disclosure)
@@ -54,7 +62,7 @@ class FamilyWizard(QDialog):
         self.sources=SourcePicker(owner,parser=self.import_source);config.addWidget(self.sources)
         self.target=QLineEdit();self.target.setPlaceholderText(say('Необязательно: UID / IDm назначения','Optional: destination UID / IDm'));self.target.setFont(mono_font());config.addWidget(self.target)
         self.form_host=QVBoxLayout();config.addLayout(self.form_host);self.form_widget=None
-        self.hint=QLabel();self.hint.setWordWrap(True);config.addWidget(self.hint)
+        self.hint=QLabel();self.hint.setWordWrap(True);config.addWidget(Guidance(owner,self.hint))
         self.plan_heading=QLabel(say('Сначала проверим карту и сохраним резервную копию.','First, check the card and save its backup.'));self.plan_heading.setWordWrap(True);layout.addWidget(self.plan_heading)
         self.plan=QTableWidget(0,3);self.plan.setHorizontalHeaderLabels([say('Область','Region'),say('Было','Before'),say('Будет','After')])
         configure_table(self.plan,[150,330,330]);install_table_copy(self.plan);self.plan.setMinimumHeight(170);layout.addWidget(self.plan,1)
@@ -78,6 +86,7 @@ class FamilyWizard(QDialog):
         if match:self.operation.setCurrentIndex(self.operation.findData(match))
         if source is not None:
             token='selected-snapshot.json';self.sources.files[token]=deepcopy(source)
+            self.sources.file_records[token]=dict(source_record or {'name':say('Выбранный снимок','Selected snapshot')})
             self.sources.cards.addItem(say('Выбранный снимок','Selected snapshot'),('file',token));self.sources.cards.setCurrentIndex(self.sources.cards.count()-1)
         self.sync()
 
@@ -97,6 +106,9 @@ class FamilyWizard(QDialog):
         self.save_result.setEnabled(not owned);self.reset.setVisible(bool(owned and job['stage']=='uncertain'))
         if owned and job['stage']=='uncertain':self.status.setText(self.owner.studio.status.text())
         elif owned and job['stage'].startswith('cleanup_'):self.status.setText(say('Выключаем поле и проверяем отклик платы…','Turning RF off and checking the device…'))
+        elif owned and job.get('review_approved'):
+            request=job.get('request')
+            self.transfer.set_stage(4 if job.get('may_have_written') and request and not request.modifying else 3)
 
     def line(self,form,name,title,value=''):
         w=QLineEdit(value);w.setFont(mono_font());form.addRow(title,w);setattr(self,name,w);return w
@@ -180,6 +192,13 @@ class FamilyWizard(QDialog):
             if op=='lf:EM410x':self.combo(form,'clock',say('Тактовый делитель','Clock divisor'),['64','32'])
             hint=say('T5577 без пароля: backup page 0 и заводской page 1; проверка ID, заводских и посторонних блоков. Параметры LF берутся из выбранной записи.','Unprotected T5577: page 0 and factory page 1 backup; ID, factory and unrelated-block verification. LF parameters come from the selected record.')
         self.hint.setText(hint)
+        for widget in self.configuration.findChildren(QWidget):
+            if widget.property('transferConnected'):continue
+            signal=(widget.textChanged if isinstance(widget,(QLineEdit,QPlainTextEdit)) else
+                    widget.valueChanged if isinstance(widget,QSpinBox) else
+                    widget.toggled if isinstance(widget,QCheckBox) else
+                    widget.currentIndexChanged if isinstance(widget,QComboBox) and widget is not self.operation else None)
+            if signal is not None:signal.connect(self.configuration_changed);widget.setProperty('transferConnected',True)
         self.source_changed()
 
     def source_changed(self):
@@ -193,6 +212,41 @@ class FamilyWizard(QDialog):
                         self.source_files.addItem(file['aid']+' / '+file['fid']+f" · {len(file['data'])} B",file)
             except (ValueError,KeyError):pass
             self.source_files.blockSignals(False)
+        self.configuration_changed()
+
+    def configuration_signature(self):
+        values=[self.operation.currentData(),self.sources.cards.currentData(),self.sources.versions.currentData()]
+        if self.sources.dump is not None:
+            values.extend((hashlib.sha256(self.sources.dump.data).hexdigest(),repr(self.sources.dump.metadata)))
+        for widget in [self.target,*self.form_widget.findChildren(QWidget)]:
+            if isinstance(widget,QLineEdit):values.append(widget.text())
+            elif isinstance(widget,QPlainTextEdit):values.append(widget.toPlainText())
+            elif isinstance(widget,QSpinBox):values.append(widget.value())
+            elif isinstance(widget,QCheckBox):values.append(widget.isChecked())
+            elif isinstance(widget,QComboBox):values.append(widget.currentIndex())
+        return hashlib.sha256(repr(values).encode('utf8')).hexdigest()
+
+    def configuration_changed(self,*_):
+        if getattr(self.sources,'loading',False):return
+        if self.owned():
+            if self._prepared_signature and self.configuration_signature()!=self._prepared_signature:
+                self.gate=None;self.commit.setEnabled(False)
+                self.transfer.show_checks([Check(tr('План изменён'),'blocked',tr('Источник или параметры изменились. Остановите операцию и подготовьте новый план.'))])
+            return
+        self.gate=None;self.commit.setEnabled(False)
+        dump=self.sources.dump;name=self.sources.record.get('name','')
+        op=self.operation.currentData()
+        if op in {'ndef','desfire'} or op.startswith('block:'):
+            payload=getattr(self,'payload',None)
+            try:raw=parse_hex(payload.toPlainText()) if payload is not None else b''
+            except ValueError:raw=b''
+            if raw:
+                profile='NDEF' if op=='ndef' else 'DESFire' if op=='desfire' else op.split(':',1)[1]
+                dump=DumpData(raw,'bin',{'protocol':profile,'record_kind':'selected-region'},8 if profile=='Topaz' else 16)
+                name=tr('Подготовленные данные выбранной области')
+        self.transfer.set_source(dump,self.sources.record if dump is self.sources.dump else {},name)
+        if op=='uid':self.transfer.set_source_description(tr('Новые UID / ATQA / SAK задаются в параметрах. Память карты проверяется отдельно.'))
+        self.transfer.reset_target()
 
     def select_source_file(self):
         file=self.source_files.currentData()
@@ -261,15 +315,28 @@ class FamilyWizard(QDialog):
 
     def prepare_operation(self):
         self.owner._lab_available();flow=self.build_flow();self.gate=None;self.outcome=None;self.plan.setRowCount(0)
+        self._prepared_signature=self.configuration_signature()
+        self.transfer.reset_target()
         self.status.setText(say('Проверяем карту и читаем резервную копию…','Checking the card and reading its backup…'))
         self.save_requested=self.save_result.isChecked()
         self.owner.start_studio(flow,self.operation.currentText(),rf=True,on_review=self.show_review,on_finished=self.operation_finished)
-        if self.owned():self.last_session=self.owner.current_session
+        if self.owned():
+            self.last_session=self.owner.current_session
+            self.owner.read_job['review_guard']=self.review_is_current
         else:self.status.setText(self.owner.studio.status.text())
         self.sync()
 
     def show_review(self,gate):
+        if self.configuration_signature()!=self._prepared_signature:
+            self.gate=None;self.commit.setEnabled(False)
+            self.transfer.show_checks([Check(tr('План изменён'),'blocked',tr('Источник или параметры изменились. Остановите операцию и подготовьте новый план.'))]);return
         self.gate=gate;self.plan.setRowCount(len(gate.rows));self.plan.setSortingEnabled(False)
+        lf=self.operation.currentData().startswith('lf:')
+        self.transfer.set_target('T5577 / T55x7' if lf else self.operation.currentText(),'' if lf else gate.uid,
+            tr('Проверена выбранная область; состояние всей карты не заявляется.'))
+        self.transfer.show_checks([Check(tr('Область операции'),'ok',gate.scope),
+            Check(tr('Резервная копия'),'ok',tr('Резервные данные сохранены. Перед записью назначение проверяется повторно.')),
+            Check(tr('Ограничения'),'limit',self.hint.text())],ready=True)
         self.config_disclosure.setExpanded(False)
         for i,row in enumerate(gate.rows):
             for j,key in enumerate(('address','before','after')):
@@ -284,8 +351,16 @@ class FamilyWizard(QDialog):
 
     def approve(self):
         if not self.gate or not self.owned():raise ValueError('Prepare the operation first.')
+        if self.configuration_signature()!=self._prepared_signature:
+            self.gate=None;self.commit.setEnabled(False)
+            raise ValueError(tr('Источник или параметры изменились. Проверьте заготовку и подготовьте новый план.'))
         self.status.setText(say('Проверяем назначение заново, затем записываем…','Rechecking the target, then writing…'))
+        self.transfer.set_stage(3)
         self.owner.approve_studio_review(self.gate.digest);self.sync()
+
+    def review_is_current(self):
+        return bool(self.gate and self.owned() and self.owner.read_job.get('review') is self.gate
+                    and self.configuration_signature()==self._prepared_signature)
 
     def operation_finished(self,outcome):
         self.outcome=outcome;self.last_session=outcome['session'];self.commit.setEnabled(False)
@@ -301,6 +376,7 @@ class FamilyWizard(QDialog):
             except (ValueError,OSError,sqlite3.Error) as exc:message+='\n'+say('Не удалось добавить результат в библиотеку: ','Could not add the result to the library: ')+str(exc)
         self.status.setText(message);self.report.appendPlainText(json.dumps({'status':outcome['status'],'verification':result.get('verification',''),
             'may_have_written':outcome['may_have_written'],'error':outcome['error']},ensure_ascii=False,indent=2));self.sync()
+        self.transfer.finish(outcome['status']=='completed',message)
         if self.closing:QTimer.singleShot(0,self.accept)
 
     def open_files(self):

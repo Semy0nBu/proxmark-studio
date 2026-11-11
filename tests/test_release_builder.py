@@ -28,7 +28,7 @@ class ReleaseBuilderTests(unittest.TestCase):
             public = ('README.md','README.ru.md','LICENSE','pm3gui/app.py','pm3gui/locales/en.json',
                       'tests/test_product.py','tools/release_gui_sources.json',
                       'docs/USER_GUIDE_EN.md','docs/licenses/component/COPYING',
-                      'docs/PRIVACY_RU.md','docs/PRIVACY_EN.md','docs/CARD_WORKSPACE.md','docs/STABILITY_AND_MOTION.md','docs/LIBRARY_BACKUPS.md',
+                      'docs/PRIVACY_RU.md','docs/PRIVACY_EN.md','docs/CARD_WORKSPACE.md','docs/CARD_TRANSFER.md','docs/STABILITY_AND_MOTION.md','docs/LIBRARY_BACKUPS.md',
                       'installer/proxmark-studio.iss','installer/toolchain.json',
                       'docs/assets/banner.svg','docs/assets/interface-en.png','.gitattributes','CHANGELOG.md',
                       '.github/workflows/ci.yml')

@@ -50,7 +50,9 @@ class LabControllerMixin:
     def prepare_lf_write(self,dialog):
         try:
             self._lab_available();plan=LFWritePlan(dialog.identifier(),dialog.clock.currentData(),self._new_session())
-            self._new_lab_job('lf_write',dialog,plan);self._next_lf_write()
+            self._new_lab_job('lf_write',dialog,plan)
+            self.read_job['source_token']=(dialog.picker.cards.currentData(),dialog.picker.versions.currentData())
+            self._next_lf_write()
         except (ValueError,OSError) as exc:
             if self.read_job and self.read_job.get('dialog') is dialog:self._lab_failed(exc)
             else:dialog.status.setText(str(exc))
@@ -58,17 +60,23 @@ class LabControllerMixin:
     def approve_lf_write(self,dialog):
         job=self.read_job
         if not job or job.get('dialog') is not dialog or self.runner.busy:return
-        try:job['plan'].approve();dialog.write.setEnabled(False);dialog.active(True);self._next_lf_write()
+        try:
+            if (dialog.identifier()!=job['plan'].uid or dialog.clock.currentData()!=job['plan'].clock or
+                    (dialog.picker.cards.currentData(),dialog.picker.versions.currentData())!=job.get('source_token')):
+                raise ValueError(tr('Источник или параметры изменились. Проверьте заготовку и подготовьте новый план.'))
+            job['plan'].approve();dialog.write.setEnabled(False);dialog.active(True);self._next_lf_write()
         except (ValueError,OSError) as exc:self._lab_failed(exc)
 
     def _next_lf_write(self):
         job=self.read_job;plan=job['plan'];dialog=job['dialog']
+        dialog.show_preflight(plan)
         if plan.done:
             job['result']=tr('Запись LF проверена: ID ')+plan.uid+tr(' · 8 блоков page 0 совпали; заводская область подтверждена.')
             self._cleanup_lab();return
         operation=plan.next_operation()
         if operation is None:
             job['stage']='review';dialog.review(plan);self._busy_changed(False);self.operation_progress.hide();return
+        dialog.show_preflight(plan)
         job['stage']='lf_step';self._start_step(operation,45000);job['has_sent']=True
         dialog.status.setText((tr('Проверка и резервная копия T5577…') if not plan.approved else tr('Запись и чтение обратно…'))+' · '+plan.pending[0])
 
@@ -212,6 +220,9 @@ class LabControllerMixin:
         message=job.get('result',tr('Эмуляция остановлена. RF выключено, плата отвечает.'))
         if job.get('log_warning'):message+=' '+job['log_warning']
         dialog.status.setText(message);self.device_info.setText(message);self._busy_changed(False)
+        if job['job_kind']=='lf_write':
+            dialog.transfer.finish(bool(job['plan'].verified and not job.get('failure') and not job.get('cancelled')),message)
+        if getattr(dialog,'_close_requested',False):QTimer.singleShot(0,dialog.accept)
 
     def start_resume_read(self,dialog):
         try:

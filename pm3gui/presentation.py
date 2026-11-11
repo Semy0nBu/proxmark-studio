@@ -18,6 +18,7 @@ from .theme import mono_font
 from .ui import Disclosure, SmoothScrollArea, SoftButton, line_icon
 from .i18n import LANGUAGES
 from .studio_data import say
+from .interface_mode import Guidance
 
 ENCODINGS = [('UTF-8', 'utf-8'), ('Windows-1251 · кириллица', 'cp1251'),
              ('CP866 · DOS', 'cp866'), ('KOI8-R', 'koi8-r'), ('UTF-16 LE', 'utf-16-le'),
@@ -222,6 +223,15 @@ class PresentationMixin:
             self.nav_buttons.append(nav)
             side.addWidget(nav)
         side.addStretch()
+        side.addWidget(text(tr('Режим интерфейса'),wrap=False))
+        self.interface_mode_selector=QComboBox()
+        self.interface_mode_selector.addItem(tr('Пошаговый'),'guided')
+        self.interface_mode_selector.addItem(tr('Компактный'),'compact')
+        self.interface_mode_selector.setCurrentIndex(self.interface_mode_selector.findData(self.interface_mode))
+        self.interface_mode_selector.setToolTip(tr('Пошаговый: пояснения на экране. Компактный: подробности по запросу. Проверки записи одинаковы.'))
+        self.interface_mode_selector.currentIndexChanged.connect(self.choose_interface_mode)
+        side.addWidget(self.interface_mode_selector)
+        self.interface_mode_notice=text('');self.interface_mode_notice.hide();side.addWidget(self.interface_mode_notice)
         side.addWidget(text(tr('Язык / Language'),wrap=False))
         self.language_selector=QComboBox()
         for code,title in LANGUAGES.items():self.language_selector.addItem(title,code)
@@ -600,7 +610,7 @@ class PresentationMixin:
         details.addWidget(self.decode_info)
         hint = text(tr('Изменения сохраняются новой версией.'))
         hint.setToolTip(tr('Правки текста обновляют HEX. Название, UID и тип — поля библиотеки; служебные Card-поля JSON сохраняются из оригинала и не пересчитываются автоматически. BIN/MFD содержит исходные байты, включая возможные заголовки.'))
-        details.addWidget(hint)
+        details.addWidget(Guidance(self,hint))
         scroll = SmoothScrollArea()
         scroll.setWidgetResizable(True)
         self.card_editors.setMinimumHeight(140)
@@ -660,7 +670,7 @@ class PresentationMixin:
         layout.addWidget(self.keys_empty)
         guide = text(tr('Импортированные ключи — кандидаты.'))
         guide.setToolTip(tr('Импорт: .dic / .dict / .txt, Flipper .nfc / .shd, .cache/<UID>.keys. Экспортирует словарь без привязок UID, секторов и дат. Повторный импорт сохраняет дату первого добавления.'))
-        layout.addWidget(guide)
+        layout.addWidget(Guidance(self,guide))
         return page
 
     def _antenna_page(self):
@@ -668,7 +678,7 @@ class PresentationMixin:
         scroll.setWidgetResizable(True)
         page = QWidget()
         layout = column(page)
-        layout.addWidget(text(tr('Перед базовым замером снимите карты с антенн и уберите близкий металл.')))
+        layout.addWidget(Guidance(self,text(tr('Перед базовым замером снимите карты с антенн и уберите близкий металл.'))))
         row = QHBoxLayout()
         self.antenna_mode = QComboBox()
         for title, data in [(tr('HF · 13,56 МГц'), 'hf'), (tr('LF · 125 кГц'), 95), (tr('LF · 134,83 кГц'), 88), (tr('LF · другая частота'), 'custom')]:
@@ -737,8 +747,7 @@ class PresentationMixin:
                 self.antenna_baseline_label.setText(tr('Эталон: ') + saved.get('created_at', ''))
         except (OSError, ValueError, AttributeError):
             pass
-        help_box = Disclosure(tr('О частотах и сравнении'))
-        help_box.body.addWidget(text(tr('Переключатели F (125 / 134) и Q (7 / 14) на LF-плате RDV4.01 меняются вручную. Частота возбуждения не меняет резонанс антенны. HF измеряется на 13,56 МГц. Оценки Q приблизительны; больший Q не всегда улучшает чтение. Нагрузку карты сравнивайте отдельно с замером без карты.')))
+        help_box = Guidance(self,text(tr('Переключатели F (125 / 134) и Q (7 / 14) на LF-плате RDV4.01 меняются вручную. Частота возбуждения не меняет резонанс антенны. HF измеряется на 13,56 МГц. Оценки Q приблизительны; больший Q не всегда улучшает чтение. Нагрузку карты сравнивайте отдельно с замером без карты.')),tr('О частотах и сравнении'))
         layout.addWidget(help_box)
         scroll.setWidget(page)
         return scroll

@@ -4,6 +4,7 @@ from PySide6.QtGui import QColor, QTextCursor
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QComboBox, QPushButton, QProgressBar, QTableWidget, QTableWidgetItem)
 from .studio_data import say
+from .interface_mode import Guidance
 from .card_snapshot import load_revision, compare_card_snapshots
 from .semantic_diff import Protocol, ScopeKind, Representation
 from .operation_recovery import State, Action
@@ -146,8 +147,8 @@ class CardWorkspace(QObject):
         self.diff_table.setMinimumHeight(180)
         self.diff_table.cellDoubleClicked.connect(self.jump)
         layout.addWidget(self.diff_table)
-        layout.addWidget(label(say('A → B задаёт направление сравнения. Значения ключей скрыты. Изменения версий не доказывают изменения физической карты.',
-                                   'A → B defines comparison direction. Key values are hidden. Snapshot changes do not prove changes to a physical card.')))
+        layout.addWidget(Guidance(owner,label(say('A → B задаёт направление сравнения. Значения ключей скрыты. Изменения версий не доказывают изменения физической карты.',
+                                   'A → B defines comparison direction. Key values are hidden. Snapshot changes do not prove changes to a physical card.'))))
         layout.addStretch()
         bridge.source_changed.connect(self.schedule)
         bridge.result_changed.connect(self.update_actions)

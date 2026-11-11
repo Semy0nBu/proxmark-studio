@@ -5,6 +5,7 @@ from .card_band import card_band
 from .write_dialog import WriteDialog
 from .operation_recovery import Termination, Link, State
 from .studio_data import say
+from PySide6.QtCore import QTimer
 
 
 class HFWriteControllerMixin:
@@ -24,6 +25,10 @@ class HFWriteControllerMixin:
         if self.runner.busy or self.read_job is not None or self.antenna_job is not None or self.firmware_busy:
             return
         try:
+            from .transfer import hf_checks
+            checks=hf_checks(dialog.transfer.facts,options=dialog.options())
+            if any(item.state=='blocked' for item in checks):
+                raise ValueError('\n'.join(item.detail for item in checks if item.state=='blocked'))
             directory=self._new_session()
             self.current_session=directory
             candidates=getattr(dialog,'recovery_keys',())
@@ -32,7 +37,8 @@ class HFWriteControllerMixin:
             self.workspace_bridge.invalidate('new_write_preflight')
             dialog.recovery_panel.hide()
             dialog.plan=plan
-            self.read_job={'job_kind':'write','stage':'write_transaction','session':directory,'write_plan':plan,'write_dialog':dialog}
+            self.read_job={'job_kind':'write','stage':'write_transaction','session':directory,'write_plan':plan,'write_dialog':dialog,
+                           'source_token':dialog.source_token()}
             dialog.set_active(True)
             dialog.write_button.setEnabled(False)
             self._next_write_step()
@@ -46,6 +52,8 @@ class HFWriteControllerMixin:
         try:
             if not self.workspace_bridge.can_approve(job.get('workspace_epoch')):
                 raise ValueError(say('План изменён или уже завершён. Подготовьте новый план.', 'The plan changed or has ended. Prepare a new plan.'))
+            if not dialog.configuration_unchanged(job['write_plan'],job['source_token']):
+                raise ValueError(tr('Источник или параметры изменились. Проверьте заготовку и подготовьте новый план.'))
             dialog.plan.approve()
             dialog.set_active(True)
             self._next_write_step()
@@ -71,9 +79,12 @@ class HFWriteControllerMixin:
     def _next_write_step(self):
         job=self.read_job
         plan,dialog=job['write_plan'],job['write_dialog']
+        dialog.show_preflight(plan)
         if plan.done:
             self._persist_write_keys(job)
-            self._end_write(True,tr('Запись проверена чтением: {0} блоков/страниц. UID {1}.', f'{len(plan.verified)}', f'{plan.target.uid}'))
+            message=(tr('Запись проверена чтением: {0} блоков/страниц. UID {1}.', f'{len(plan.verified)}', f'{plan.target.uid}') if plan.entries else
+                tr('Данные выбранной области уже совпадают. Запись не потребовалась.'))
+            self._end_write(True,message)
             return
         operation=plan.next_operation()
         if operation is None:
@@ -110,11 +121,14 @@ class HFWriteControllerMixin:
         dialog.write_button.setEnabled(False)
         dialog.show_review(job['write_plan'])
         dialog.steps.setText(tr('Автозапись завершена') if success else tr('Автозапись остановлена'))
+        dialog.steps.hide()
         dialog.status.setText(message)
+        dialog.transfer.finish(success,message)
         if captured:
             dialog.recovery_panel.show()
             self.workspace_bridge.result_changed.emit()
         self.device_info.setText(message)
+        if getattr(dialog,'_close_requested',False):QTimer.singleShot(0,dialog.accept)
 
     def check_interrupted_write(self):
         bridge=self.workspace_bridge

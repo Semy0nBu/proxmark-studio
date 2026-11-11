@@ -56,9 +56,15 @@ filenames and user labels remain intact. Displayed times use UTC+3 without a suf
 
 ## Write
 
+Use the sidebar **Interface mode** selector for **Guided** explanations or
+**Compact** details on demand. The choice takes effect immediately and is saved
+for the current profile. Both modes keep the same operations and write checks.
+
 Auto-write prepares one HF target: source, target check, backup, plan review,
 write, and readback. Unknown source positions are not treated as confirmed zeros.
 UID changes, system pages, and access rights use their supported dedicated flows.
+The source and blank appear side by side, with the checked scope and reasons for
+restrictions. See [Source → blank → write](CARD_TRANSFER.md) for the full workflow.
 
 Use family tools and a compatible writable blank for LF. An EM410x read alone
 does not establish a T5577 chip. Laboratory provides family workflows, blocks,

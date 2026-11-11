@@ -1,5 +1,24 @@
 # Changelog / История изменений
 
+## Unreleased
+
+- Guided and Compact interface modes, switched live from the sidebar and saved
+  per profile. Optional explanations collapse in Compact; blockers, errors and
+  partial/placeholder-write warnings remain visible. Both modes use the same
+  operation parameters, reviewed plans, backup and readback checks.
+
+- Source → blank → plan → write → verify panels across the existing HF/LF writers.
+  The selected snapshot and observed target appear separately, with family,
+  capacity, access, unknown-data and preserved-service-field explanations.
+- Changed sources or write parameters invalidate approval. The prepared backup,
+  target identity recheck and readback remain mandatory; identical data needs no write.
+- Closing a write wizard cancels its owned operation and closes after completion.
+  Errors retain the source and report; no failed write is automatically repeated.
+
+По-русски: источник и заготовка показаны рядом, ограничения объясняются до записи.
+Изменение параметров требует нового плана. Закрытие отменяет текущую операцию
+и ждёт её завершения; успешный результат подтверждается чтением.
+
 ## 0.3.0-preview.6 — 2026-11-11
 
 - Whole-profile library backup to one archive: cards, all revisions, partial-read

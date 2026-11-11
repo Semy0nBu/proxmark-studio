@@ -15,7 +15,7 @@ from .ui import SoftButton
 class SourcePicker(QWidget):
     changed=Signal()
     def __init__(self,owner,band=None,parser=parse_dump):
-        super().__init__();self.owner=owner;self.dump=None;self.record={};self.files={};self.loading=False;self.parser=parser
+        super().__init__();self.owner=owner;self.dump=None;self.record={};self.files={};self.file_records={};self.loading=False;self.parser=parser
         layout=QVBoxLayout(self);layout.setContentsMargins(0,0,0,0)
         row=QHBoxLayout();self.cards=QComboBox();self.cards.setMinimumContentsLength(14)
         self.cards.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
@@ -38,7 +38,7 @@ class SourcePicker(QWidget):
         try:
             item=self.cards.currentData();self.dump=None;self.record={}
             if item and item[0]=='editor':self.dump=deepcopy(self.current);self.record=dict(self.current_record);self.versions.addItem(tr('Текущие байты'))
-            elif item and item[0]=='file':self.dump=deepcopy(self.files[item[1]]);self.record={'name':Path(item[1]).name};self.versions.addItem(tr('Из файла'))
+            elif item and item[0]=='file':self.dump=deepcopy(self.files[item[1]]);self.record=dict(self.file_records.get(item[1]) or {'name':Path(item[1]).name});self.versions.addItem(tr('Из файла'))
             elif item:
                 self.record=self.owner.library.get_card(item[1])
                 for rev in self.owner.library.list_revisions(item[1]):

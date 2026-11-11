@@ -3,7 +3,8 @@ from .i18n import tr, display_revision_note
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt,QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QCheckBox,QComboBox,QDialog,QFileDialog,QFormLayout,QHBoxLayout,
     QLabel,QLineEdit,QPlainTextEdit,QProgressBar,QPushButton,QSpinBox,QTableWidget,QTableWidgetItem,QVBoxLayout,QScrollArea,QWidget)
 from .core import DumpData,parse_dump,parse_hex
@@ -13,6 +14,8 @@ from .write_scenario import load_scenario,save_scenario
 from .theme import mono_font
 from .ui import Disclosure
 from .presentation import configure_table,install_table_copy
+from .transfer_ui import TransferPanel
+from .transfer import hf_checks
 
 
 
@@ -22,14 +25,17 @@ class WriteDialog(QDialog):
     def __init__(self,owner,dump=None):
         super().__init__(owner)
         self.owner,self.dump,self.plan=owner,None,None
-        self._editor=deepcopy(dump);self._files={};self._loading=True
+        self._close_requested=False;self.report_directory=None
+        self._editor=deepcopy(dump);self._files={};self._loading=True;self.source_record={}
+        self._editor_record={'name':owner.card_name.text(),'uid':owner.uid.text(),'protocol':owner.protocol.text()}
         self.setWindowTitle(tr('Автозапись HF-карты'));self.setModal(True)
         screen=owner.screen().availableGeometry();self.resize(min(850,screen.width()-40),min(730,screen.height()-60))
         outer=QVBoxLayout(self);outer.setSpacing(10)
         content=QWidget();layout=QVBoxLayout(content);layout.setContentsMargins(0,0,0,0);layout.setSpacing(12)
         scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setWidget(content);outer.addWidget(scroll,1)
-        self.steps=QLabel(tr('1  Источник    ›    2  Проверка карты    ›    3  Автозапись'))
-        self.steps.setObjectName('section');layout.addWidget(self.steps)
+        self.steps=QLabel()
+        self.steps.setWordWrap(True)
+        self.steps.setObjectName('section');layout.addWidget(self.steps);self.steps.hide()
         row=QHBoxLayout();row.addWidget(QLabel(tr('Дамп')))
         self.sources=QComboBox();self.sources.setMinimumContentsLength(16)
         self.sources.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
@@ -50,7 +56,10 @@ class WriteDialog(QDialog):
         self.save_scenario_button=SoftButton(tr('Сохранить сценарий…'));self.save_scenario_button.clicked.connect(self.export_scenario);row.addWidget(self.save_scenario_button)
         layout.addLayout(row)
         self.source_info=QLabel(tr('Выберите дамп. Затем положите карту назначения на HF-антенну.'))
-        self.source_info.setWordWrap(True);self.source_info.setObjectName('muted');layout.addWidget(self.source_info)
+        self.source_info.setWordWrap(True);self.source_info.setObjectName('muted');layout.addWidget(self.source_info);self.source_info.hide()
+        self.transfer = TransferPanel(owner=owner);layout.addWidget(self.transfer)
+        self.family_button=SoftButton(tr('Профильные мастера HF / LF…'))
+        self.family_button.clicked.connect(self.open_family);layout.addWidget(self.family_button)
         self.parameters=Disclosure(tr('Параметры записи'))
         form=QFormLayout();self.form=form;form.setSpacing(8)
         self.family=QComboBox();self.family.addItem(tr('Определить по дампу'),'auto')
@@ -85,7 +94,10 @@ class WriteDialog(QDialog):
         self.plan_table.setMinimumHeight(140);layout.addWidget(self.plan_table,1)
         self.details=Disclosure(tr('Отчёт и подробности'))
         self.summary=QPlainTextEdit();self.summary.setReadOnly(True);self.summary.setFont(mono_font());self.summary.setMaximumHeight(150)
-        self.details.body.addWidget(self.summary);layout.addWidget(self.details)
+        self.details.body.addWidget(self.summary)
+        self.files_button=SoftButton(tr('Файлы отчёта и резервной копии…'));self.files_button.setEnabled(False)
+        self.files_button.clicked.connect(lambda:QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.report_directory))) if self.report_directory else None)
+        self.details.body.addWidget(self.files_button);layout.addWidget(self.details)
         from .card_workspace import RecoveryPanel
         self.recovery_panel=RecoveryPanel(owner,owner.workspace_bridge)
         self.recovery_panel.hide();layout.addWidget(self.recovery_panel)
@@ -104,6 +116,9 @@ class WriteDialog(QDialog):
         self.sources.currentIndexChanged.connect(self._source_selected)
         self.source_versions.currentIndexChanged.connect(self._version_selected)
         self.family.currentIndexChanged.connect(self._family_changed)
+        for field in (self.key_a,self.key_b,self.mfu_key,self.target_uid,self.selected_blocks):field.textChanged.connect(self._options_changed)
+        for field in (self.secure,self.include_keys,self.include_unknown):field.toggled.connect(self._options_changed)
+        for field in (self.first,self.last):field.valueChanged.connect(self._options_changed)
         self._loading=False
         if dump is not None:self.sources.setCurrentIndex(1)
         elif self.sources.count()>1:self.sources.setCurrentIndex(1)
@@ -118,13 +133,16 @@ class WriteDialog(QDialog):
         finally:self._loading=False
 
     def _load_source(self,entry):
+        self.source_record={}
         if not entry:source=None;name=''
         elif entry[0]=='editor':
-            source=deepcopy(self._editor);name=self.owner.card_name.text();self.source_versions.addItem(tr('Текущие байты редактора'),None)
+            self.source_record=dict(self._editor_record)
+            source=deepcopy(self._editor);name=self._editor_record['name'];self.source_versions.addItem(tr('Текущие байты редактора'),None)
         elif entry[0]=='file':
             source=deepcopy(self._files[entry[1]]);name=Path(entry[1]).name;self.source_versions.addItem(tr('Из файла'),None)
         else:
             card=self.owner.library.get_card(entry[1]);name=card['name']
+            self.source_record=card
             for rev in self.owner.library.list_revisions(entry[1]):
                 self.source_versions.addItem(tr('{0} · {1} Б · {2}', f"{format_key_timestamp(rev['created_at'])}", f"{rev['size']}", display_revision_note(rev['note'])),rev['id'])
                 self.source_versions.setItemData(self.source_versions.count()-1,self.source_versions.itemText(self.source_versions.count()-1),Qt.ItemDataRole.ToolTipRole)
@@ -141,6 +159,7 @@ class WriteDialog(QDialog):
 
     def _set_source(self,source,name):
         self.dump=deepcopy(source);self.source_name=name;self.plan=None
+        self.report_directory=None;self.files_button.setEnabled(False)
         self.plan_table.setRowCount(0);self.write_button.setEnabled(False);self.target_uid.clear()
         self.selected_blocks.clear()
         self.family.setCurrentIndex(0)
@@ -150,6 +169,47 @@ class WriteDialog(QDialog):
         self.source_info.setText((tr('{0} · {1} байт', f'{name}', f'{len(source.data)}')+(tr(' · НЕПОЛНЫЙ ДАМП') if source.metadata.get('partial_dump') else '')+
                                  tr('\nUID, условия доступа и служебные страницы сохраняются.')) if source else tr('Выберите дамп из библиотеки или файла.'))
         self.review_heading.setText(tr('План появится после проверки карты'));self._family_changed()
+        self.transfer.set_source(self.dump,self.source_record,name)
+        self.transfer.reset_target();self._refresh_compatibility()
+
+    def _options_changed(self,*_):
+        if self._loading:return
+        job=self.owner.read_job
+        owned=bool(job and job.get('write_dialog') is self)
+        if not owned:
+            self.plan=None;self.write_button.setEnabled(False);self.plan_table.setRowCount(0)
+            self.transfer.reset_target();self._refresh_compatibility()
+
+    def open_family(self):
+        if self.owner.read_job is not None:return
+        protocol=self.transfer.facts.protocol
+        profile=next((name for name in ('DESFire','MIFARE Plus','FeliCa','Topaz','ISO15693 / NFC-V','iCLASS / PicoPass','LEGIC') if name.lower().split(' / ')[0] in protocol.lower()),'')
+        self.owner.open_family_wizard(profile,self.dump,source_record=self.source_record)
+
+    def source_token(self):
+        return self.sources.currentData(),self.source_versions.currentData()
+
+    def configuration_unchanged(self,plan,token):
+        return (self.plan is plan and self.dump is not None and self.source_token()==token
+                and self.dump.data==plan.source.data and self.dump.metadata==plan.source.metadata
+                and self.dump.block_size==plan.source.block_size and self.options()==plan.options)
+
+    def _refresh_compatibility(self,plan=None):
+        try:options=self.options() if self.dump is not None else None
+        except ValueError:options=None
+        checks=hf_checks(self.transfer.facts,plan,options)
+        self.transfer.show_checks(checks,ready=bool(plan and plan.ready and not plan.error and not plan.done))
+        if not self.owner.read_job:self.prepare_button.setEnabled(self.dump is not None and not any(c.state=='blocked' for c in checks))
+
+    def show_preflight(self,plan):
+        self.report_directory=plan.directory
+        self.files_button.setEnabled(plan.directory.is_dir())
+        target=plan.target
+        if target and target.uid and not target.ambiguous_identity:
+            self.transfer.set_target(getattr(plan,'model','') or target.protocol,target.uid,
+                tr('Проверяется только выбранная область; пустота всей карты не устанавливается.'))
+        self._refresh_compatibility(plan)
+        if plan.approved:self.transfer.set_stage(4 if plan.phase in {'verify','verify_b','keys_identity','verify_identity','final_identity'} else 3)
 
     def choose_file(self):
         filename,_=QFileDialog.getOpenFileName(self,tr('Дамп для автозаписи'),'',tr('Дампы (*.json *.bin *.mfd *.eml);;Все файлы (*)'))
@@ -187,13 +247,15 @@ class WriteDialog(QDialog):
 
     def _family_changed(self,*_,reset_range=True):
         family=self.family.currentData()
-        classic=(source_family(self.dump) if family=='auto' and self.dump is not None else family)=='mfc'
+        try:classic=(source_family(self.dump) if family=='auto' and self.dump is not None else family)=='mfc'
+        except ValueError:classic=False
         for widget,visible in ((self.key_a,classic),(self.key_b,classic),(self.mfu_key,not classic),(self.secure,not classic)):
             self.form.setRowVisible(widget,visible)
         self.key_a.setEnabled(classic);self.key_b.setEnabled(classic);self.include_keys.setEnabled(classic)
         if not classic:self.include_keys.setChecked(False)
         self.mfu_key.setEnabled(not classic);self.secure.setEnabled(not classic)
         if reset_range and self.dump:self.first.setValue(0);self.last.setValue(min(255,len(self.dump.data)//(16 if classic else 4)-1))
+        if not self._loading and reset_range:self._options_changed()
 
     def options(self):
         if self.dump is None:raise ValueError(tr('Выберите дамп для записи.'))
@@ -211,6 +273,7 @@ class WriteDialog(QDialog):
         for widget in (self.sources,self.source_versions,self.file_button,self.load_button,self.family,self.key_a,self.key_b,
                        self.mfu_key,self.secure,self.include_keys,self.include_unknown,self.first,self.last,self.target_uid,self.selected_blocks,self.prepare_button):
             widget.setEnabled(not active)
+        self.family_button.setEnabled(not active)
         self.save_scenario_button.setEnabled(self.dump is not None and (not active or review))
         if not active:self._family_changed(reset_range=False)
         self.prepare_button.setEnabled(not active and self.dump is not None)
@@ -219,14 +282,17 @@ class WriteDialog(QDialog):
         if active and not review:self.progress.setRange(0,0)
 
     def update_progress(self,plan):
-        self.steps.setText(tr('3  Автозапись · ')+str(len(plan.verified))+' / '+str(len(plan.entries)))
+        self.steps.setVisible(self.owner.interface_mode!='compact')
+        self.steps.setText(tr('Запись и проверка: {0} / {1}',len(plan.verified),len(plan.entries)))
         self.progress.setRange(0,max(1,len(plan.entries)));self.progress.setValue(len(plan.verified))
         for row,entry in enumerate(plan.entries):
             item=self.plan_table.item(row,3)
             if item and entry['block'] in plan.verified:item.setText(tr('Проверен'))
 
     def show_review(self,plan):
-        self.review_heading.setText(tr('Карта {0} · изменится {1} блоков/страниц', f'{plan.target.uid}', f'{len(plan.entries)}'))
+        self.show_preflight(plan)
+        self.review_heading.setText(tr('Карта {0} · изменится {1} блоков/страниц', f'{plan.target.uid}', f'{len(plan.entries)}')
+            if plan.target else tr('План появится после проверки карты'))
         self.summary.setPlainText(plan.review());self.plan_table.setRowCount(len(plan.entries))
         for row,entry in enumerate(plan.entries):
             state=tr('Проверен') if entry['block'] in plan.verified else tr('Не подтверждён') if entry['block'] in plan.may_have_written else tr('Ожидает')
@@ -237,7 +303,15 @@ class WriteDialog(QDialog):
 
     def reject(self):
         job=self.owner.read_job
-        if job and job.get('job_kind')=='write':
+        if job and job.get('write_dialog') is self:
+            self._close_requested=True
             self.owner.cancel_operation()
-            if self.owner.runner.busy:return
+            if self.owner.read_job is not None:return
         super().reject()
+
+    def closeEvent(self,event):
+        job=self.owner.read_job
+        if job and job.get('write_dialog') is self:
+            self.reject()
+            if self.owner.read_job is not None:event.ignore();return
+        super().closeEvent(event)

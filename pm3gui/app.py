@@ -46,6 +46,7 @@ from .i18n import LanguageControllerMixin,set_language,LANGUAGES
 from .paths import application_root, default_data_dir, is_frozen
 from .version import APP_NAME, APP_VERSION
 from .library_backup_ui import LibraryBackupMixin
+from .interface_mode import InterfaceModeMixin,MODES
 
 ROOT = application_root()
 
@@ -83,7 +84,8 @@ class FlipperFetchWorker(QThread):
             self.failed.emit(str(exc))
 
 
-class MainWindow(LibraryBackupMixin, PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, StudioControllerMixin, LabControllerMixin, PartialReadControllerMixin, HFWriteControllerMixin, HFToolsControllerMixin, FirmwareControllerMixin, AntennaControllerMixin, QMainWindow):
+class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, LanguageControllerMixin, AutoCaptureMixin, StudioControllerMixin, LabControllerMixin, PartialReadControllerMixin, HFWriteControllerMixin, HFToolsControllerMixin, FirmwareControllerMixin, AntennaControllerMixin, QMainWindow):
+    interface_mode_changed=Signal(str)
     def __init__(self, data_dir: Path,language=None):
         super().__init__()
         self.data_dir = data_dir
@@ -93,6 +95,7 @@ class MainWindow(LibraryBackupMixin, PresentationMixin, LanguageControllerMixin,
         self.key_library = KeyLibrary(self.data_dir / "library.sqlite3")
         self.settings_path = self.data_dir / "settings.json"
         self.settings = self._load_settings()
+        self.interface_mode=self.settings['interface_mode']
         self.ui_language=set_language(language or self.settings.get('language','ru'))
         self._active_transport = self.settings['transport']
         self.port_profiles = {'usb': self.settings['usb_port'], 'blueshark': self.settings['bluetooth_port'], 'tcp': self.settings.get('tcp_endpoint', '')}
@@ -165,6 +168,7 @@ class MainWindow(LibraryBackupMixin, PresentationMixin, LanguageControllerMixin,
         value['usb_port'] = port('usb_port', legacy_port if value['transport'] == 'usb' else '')
         value['bluetooth_port'] = port('bluetooth_port', legacy_port if value['transport'] == 'blueshark' else '')
         value['language']=value.get('language') if isinstance(value.get('language'),str) and value.get('language') in LANGUAGES else 'ru'
+        value['interface_mode']=value.get('interface_mode') if value.get('interface_mode') in MODES else 'guided'
         if is_frozen() and value.get('client_path') and not Path(str(value['client_path'])).is_file():
             value['client_path'] = discover_client(ROOT)
         return value

@@ -46,12 +46,12 @@ class StudioControllerMixin:
         self.classic_attack_dialog = dialog = ClassicAttackDialog(self, method, uid=uid, size=size, dump=dump)
         dialog.show();return dialog
 
-    def open_family_wizard(self, profile='', source=None, operation=None):
+    def open_family_wizard(self, profile='', source=None, operation=None, source_record=None):
         from .family_wizard import FamilyWizard
         previous=getattr(self,'family_wizard',None)
         if previous is not None and previous.owned():previous.show();previous.raise_();return previous
         if previous is not None:previous.close();previous.deleteLater()
-        self.family_wizard=dialog=FamilyWizard(self,profile,source)
+        self.family_wizard=dialog=FamilyWizard(self,profile,source,source_record=source_record)
         if operation is not None:dialog.operation.setCurrentIndex(dialog.operation.findData(operation))
         dialog.show();return dialog
 
@@ -155,6 +155,9 @@ class StudioControllerMixin:
         if not job or job.get('job_kind') != 'studio' or job['stage'] != 'review' or self.runner.busy:return
         try:
             if digest != job['review'].digest:raise ValueError('The approved plan does not match the prepared transaction.')
+            if job.get('review_guard') and not job['review_guard']():
+                raise ValueError(say('Источник или параметры изменились. Проверьте заготовку и подготовьте новый план.',
+                    'The source or settings changed. Check the blank and prepare a new plan.'))
             job['stage'] = 'running';job['review_approved'] = True
             self._studio_report('approved')
             self._studio_next(True)

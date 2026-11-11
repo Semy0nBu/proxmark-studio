@@ -10,6 +10,9 @@ from .emulation import simulation_profile
 from .core import parse_dump
 from .theme import mono_font
 from .presentation import configure_table
+from .transfer_ui import TransferPanel
+from .transfer import Check
+from .interface_mode import Guidance
 
 
 
@@ -21,7 +24,7 @@ def caption(text,kind='muted'):
 
 class OperationDialog(QDialog):
     def __init__(self,owner,title):
-        super().__init__(owner);self.owner=owner;self.setModal(True);self.setWindowTitle(title)
+        super().__init__(owner);self.owner=owner;self._close_requested=False;self.setModal(True);self.setWindowTitle(title)
         screen=owner.screen().availableGeometry();self.resize(min(820,screen.width()-40),min(650,screen.height()-70))
         self.outer=QVBoxLayout(self);scroll=QScrollArea();scroll.setWidgetResizable(True);content=QWidget();self.layout=QVBoxLayout(content)
         self.layout.setSpacing(14);self.layout.addWidget(caption(title,'title'));scroll.setWidget(content);self.outer.addWidget(scroll,1)
@@ -49,6 +52,7 @@ class OperationDialog(QDialog):
 
     def reject(self):
         if self.owner.read_job and self.owner.read_job.get('dialog') is self:
+            self._close_requested=True
             self.owner.cancel_operation()
             if self.owner.read_job:return
         super().reject()
@@ -91,11 +95,11 @@ class EmulationDialog(OperationDialog):
 class LFWriteDialog(OperationDialog):
     def __init__(self,owner):
         super().__init__(owner,tr('Мастер записи LF'))
-        self.layout.addWidget(caption(tr('1  EM410x ID    ›    2  Копия T5577    ›    3  План    ›    4  Проверка'),'section'))
         self.picker=SourcePicker(owner,'lf');self.layout.addWidget(self.picker)
-        self.profile=caption(tr('EM410x → T5577 без пароля · резервная копия page 0 и контроль заводской области'));self.layout.addWidget(self.profile)
+        self.transfer=TransferPanel(owner=owner);self.layout.addWidget(self.transfer)
+        self.profile=caption(tr('EM410x → T5577 без пароля · резервная копия page 0 и контроль заводской области'));self.layout.addWidget(Guidance(owner,self.profile))
         row=QHBoxLayout();self.clock=QComboBox();self.clock.addItem('RF/64',64);self.clock.addItem('RF/32',32);row.addWidget(caption(tr('Скорость')));row.addWidget(self.clock);row.addStretch();self.layout.addLayout(row)
-        self.table=QTableWidget(0,3);self.table.setHorizontalHeaderLabels([tr('Блок'),tr('Было'),tr('Будет')]);configure_table(self.table,[80,250,250]);self.layout.addWidget(self.table,1)
+        self.table=QTableWidget(0,3);self.table.setHorizontalHeaderLabels([tr('Блок'),tr('Было'),tr('Будет')]);configure_table(self.table,[80,250,250]);self.table.setMinimumHeight(150);self.layout.addWidget(self.table,1)
         self.prepare=SoftButton(tr('Проверить заготовку'));self.prepare.clicked.connect(lambda:owner.prepare_lf_write(self))
         self.write=SoftButton(tr('Записать и проверить'));self.write.setObjectName('primary');self.write.setEnabled(False);self.write.clicked.connect(lambda:owner.approve_lf_write(self))
         self.footer([self.prepare,self.write]);self.picker.changed.connect(self.source_changed);self.source_changed()
@@ -108,10 +112,13 @@ class LFWriteDialog(OperationDialog):
 
     def source_changed(self,*_):
         self.write.setEnabled(False);self.table.setRowCount(0)
+        self.transfer.set_source(self.picker.dump,self.picker.record)
+        self.transfer.reset_target()
         try:self.status.setText('ID '+self.identifier()+tr(' · положите одну T5577 на LF-антенну.'));self.prepare.setEnabled(True)
         except ValueError as exc:self.status.setText(str(exc));self.prepare.setEnabled(False)
 
     def review(self,plan):
+        self.show_preflight(plan)
         self.set_directory(plan.directory)
         self.table.setRowCount(3)
         for row,b in enumerate(range(3)):
@@ -119,6 +126,16 @@ class LFWriteDialog(OperationDialog):
                 item=QTableWidgetItem(value);item.setFont(mono_font());self.table.setItem(row,col,item)
         self.active(True,review=True);self.prepare.setEnabled(False);self.clock.setEnabled(False);self.write.setEnabled(True)
         self.status.setText(tr('T5577 подтверждена · копия сохранена. Будут записаны блоки 0–2; 3–7 проверяются на неизменность.'))
+
+    def show_preflight(self,plan):
+        if plan.config is not None:self.transfer.set_target('T5577 / T55x7',details=tr('Микросхема определена. Полное резервное чтение и заводская область проверяются отдельно.'))
+        self.transfer.show_checks([
+            Check(tr('Источник'),'ok',tr('Переносится EM410x ID, а не полный образ исходного чипа.')),
+            Check(tr('Заготовка'),'ok' if plan.ready else 'pending',tr('Нужна T5577/T55x7 без пароля. Обычная карта EM410x не является подтверждённой заготовкой.')),
+            Check(tr('Резервная копия'),'ok' if plan.ready else 'pending',tr('Сохраняются все 8 блоков page 0 и проверяется заводская область page 1.')),
+            Check(tr('Проверка результата'),'limit',tr('Записывается ID и проверяются блоки T5577. UID исходного HF-чипа и его память этим способом не переносятся.'))
+        ],ready=plan.ready and not plan.error)
+        if plan.approved:self.transfer.set_stage(4 if plan.pending and plan.pending[0].startswith(('verify','final','identifier','redetect')) else 3)
 
 
 class ResumeDialog(QDialog):
