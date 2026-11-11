@@ -12,6 +12,9 @@ For the portable version, extract the complete ZIP and open `ProxmarkStudio.exe`
 Keep the `_internal`, `client`, `firmware`, `licenses`, and `sources` directories
 together. Python installation is not required.
 Choose the interface language at the bottom of the sidebar, then restart.
+Interface mode switches immediately: Guided shows explanations and Compact
+keeps optional details collapsed. Updates preserve custom profile arguments in
+this installation's Desktop and Start Menu shortcuts.
 **About** shows the version and opens the library folder.
 
 ## Connection

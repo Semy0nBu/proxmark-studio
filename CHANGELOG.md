@@ -1,6 +1,11 @@
 # Changelog / История изменений
 
-## 0.3.0-preview.7 — 2026-11-11 (local build)
+## 0.3.0-preview.7 — 2026-11-11
+
+- Updates preserve custom library/profile arguments in existing Desktop and
+  Start Menu shortcuts for this installation.
+- Malformed source metadata produces an explained write blocker instead of a
+  type error or an assumed complete source.
 
 - Guided and Compact interface modes, switched live from the sidebar and saved
   per profile. Optional explanations collapse in Compact; blockers, errors and

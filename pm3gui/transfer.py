@@ -36,18 +36,23 @@ def source_facts(dump, record=None, name=''):
     if dump is None:return SourceFacts(name=name)
     record = record or {}
     meta = dump.metadata
-    doc = meta.get('structured_document') or {}
-    raw = meta.get('source_json') or {}
-    validation = meta.get('read_validation') or {}
-    partial = meta.get('partial_dump') or {}
+    invalid=tr('Карта известных байтов повреждена. Выберите другую версию.')
+    if not isinstance(meta,dict):return SourceFacts(name=name,error=invalid)
+    doc = meta.get('structured_document',{})
+    raw = meta.get('source_json',{})
+    validation = meta.get('read_validation',{})
+    partial = meta.get('partial_dump',{})
+    doc,raw,validation,partial=({} if value is None else value for value in (doc,raw,validation,partial))
     if not all(isinstance(value,dict) for value in (doc,raw,validation,partial)):
-        return SourceFacts(name=name,error=tr('Карта известных байтов повреждена. Выберите другую версию.'))
+        return SourceFacts(name=name,error=invalid)
     protocol = str(record.get('protocol') or meta.get('protocol') or doc.get('protocol') or '')
     uid = str(record.get('uid') or partial.get('uid') or meta.get('uid') or raw.get('UID') or '')
     if not re.fullmatch(r'[0-9a-fA-F ]{8,32}', uid):uid = ''
     uid = uid.replace(' ', '').upper()
     family = validation.get('kind') or partial.get('kind') or ''
     ftype = raw.get('FileType', '')
+    if not isinstance(family,str) or not isinstance(ftype,str):
+        return SourceFacts(name=name,error=invalid)
     labels = protocol.lower()
     if not family:
         if ftype in {'mfcard', 'mfc v2', 'mfc v3'} or 'classic' in labels:family = 'mfc'

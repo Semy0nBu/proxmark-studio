@@ -12,13 +12,13 @@ library, with RRG/Iceman tools available from the same interface.
 
 ## Download
 
-Current preview: **0.3.0-preview.6**. The matching Proxmark client and runtime
+Current preview: **0.3.0-preview.7**. The matching Proxmark client and runtime
 are included. You do not need to install Python or a separate client.
 
 | Package | Getting started |
 |---|---|
-| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.6/ProxmarkStudio-0.3.0-preview.6-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.6/ProxmarkStudio-0.3.0-preview.6-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
+| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.7/ProxmarkStudio-0.3.0-preview.7-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.7/ProxmarkStudio-0.3.0-preview.7-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
 
 Installation works offline and does not require administrator rights. Connect
 your Proxmark over USB, select **USB → COM port → Connect**, and place a card on
@@ -29,7 +29,7 @@ the next steps.
 
 ![Proxmark Studio workspace in English](docs/assets/interface-en.png)
 
-*The screenshot uses demo data. Choose the interface language in the sidebar.*
+*The screenshot uses demo data. Choose the language and Guided or Compact mode in the sidebar.*
 
 ## Features
 
@@ -39,7 +39,8 @@ the next steps.
 | **Card library** | Track revisions and memory coverage, inspect gaps, save complete or partial dumps, and resume Classic reads. |
 | **MIFARE keys** | Track candidate and verified values, sources, and dates; import dictionaries and Flipper Zero files, or fetch supported data over USB. |
 | **Data editor** | Edit HEX, inspect encodings, and compare revisions by new data, changed values, and lost information. |
-| **Writing** | Use the one-card HF wizard for target checks, backup, plan review, and readback; access dedicated LF tools. |
+| **Writing** | View source and target side by side, check compatibility and limitations, then approve a backed-up plan and verify the result by readback. Existing HF and LF writers share this view. |
+| **Interface modes** | Guided explains the steps; Compact puts optional detail behind disclosures. Write checks are the same in both modes. |
 | **Library backup** | Save the complete profile to one archive, optionally protect it with a password, and restore to a separate profile. |
 | **Laboratory** | Work with Classic / Magic, NDEF, emulation, traces, waveforms / FFT, SPIFFS, and HF/LF antenna measurements with baselines. |
 

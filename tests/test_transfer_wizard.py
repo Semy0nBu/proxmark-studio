@@ -44,6 +44,16 @@ class TransferFactsTests(unittest.TestCase):
         f=source_facts(DumpData(bytes(1024),'bin',{'source_json':[],'partial_dump':'bad'},16))
         self.assertTrue(f.error);self.assertEqual(hf_checks(f)[0].state,'blocked')
 
+    def test_malformed_metadata_types_fail_closed_instead_of_crashing_or_claiming_coverage(self):
+        cases=[[],{'source_json':[]},{'read_validation':[]},{'partial_dump':[]},
+               {'structured_document':[]},{'read_validation':{'kind':['mfc']}},
+               {'source_json':{'FileType':['mfcard']}}]
+        for metadata in cases:
+            with self.subTest(metadata=metadata):
+                facts=source_facts(DumpData(bytes(1024),'bin',metadata,16))
+                self.assertTrue(facts.error);self.assertIsNone(facts.known)
+                self.assertEqual(hf_checks(facts)[0].state,'blocked')
+
     def test_mismatched_profile_is_blocked_before_device_commands(self):
         f=source_facts(DumpData(fixture.classic_image(),'bin',{},16))
         self.assertTrue(any(c.title and c.state=='blocked' for c in hf_checks(f,options=SimpleNamespace(family='mfu',include_unknown=False))))

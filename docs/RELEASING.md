@@ -18,7 +18,8 @@ local release tooling does not push commits, create GitHub releases, or upload f
 6. Create the portable ZIP, then compile the single-EXE Windows installer from
    the same verified complete payload using the locked Inno Setup compiler.
 7. Test current-user installation without elevation, default Desktop/Start Menu
-   shortcuts, a path containing spaces and non-ASCII characters, offline GUI/native
+   shortcuts, preservation of custom shortcut profile arguments on upgrade,
+   a path containing spaces and non-ASCII characters, offline GUI/native
    diagnostics, reinstall, and uninstall. Use synthetic data to verify that the
    library, settings, backups, and unknown user files survive uninstall. Check
    that running GUI/native processes are not force-stopped.

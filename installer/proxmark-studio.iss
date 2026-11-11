@@ -61,9 +61,9 @@ Type: files; Name: "{group}\Деинсталлировать Proxmark Studio.lnk
 Type: files; Name: "{userdesktop}\Proxmark Studio.lnk"; Tasks: not desktopicon; Check: OwnPreviousInstall
 
 [Icons]
-Name: "{group}\Proxmark Studio"; Filename: "{app}\ProxmarkStudio.exe"; WorkingDir: "{app}"
+Name: "{group}\Proxmark Studio"; Filename: "{app}\ProxmarkStudio.exe"; Parameters: "{code:ShortcutParameters|menu}"; WorkingDir: "{app}"
 Name: "{group}\{cm:UninstallProgram,Proxmark Studio}"; Filename: "{uninstallexe}"
-Name: "{userdesktop}\Proxmark Studio"; Filename: "{app}\ProxmarkStudio.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{userdesktop}\Proxmark Studio"; Filename: "{app}\ProxmarkStudio.exe"; Parameters: "{code:ShortcutParameters|desktop}"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\ProxmarkStudio.exe"; Description: "{cm:LaunchProgram,Proxmark Studio}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
@@ -73,6 +73,8 @@ english.RunningApps=Close Proxmark Studio and all proxmark3.exe processes before
 russian.RunningApps=Закройте Proxmark Studio и все процессы proxmark3.exe перед установкой или удалением приложения. Установщик не будет завершать их автоматически.
 english.ProcessScanFailed=Unable to check running processes. Installation or removal has been stopped without changing the application.
 russian.ProcessScanFailed=Не удалось проверить запущенные процессы. Установка или удаление остановлены без изменения приложения.
+english.ShortcutReadFailed=Unable to read the existing application shortcuts. The update has stopped to preserve their library profile settings.
+russian.ShortcutReadFailed=Не удалось прочитать существующие ярлыки приложения. Обновление остановлено, чтобы сохранить выбор профиля библиотеки.
 english.LibraryDirectory=Choose a separate program folder. This directory overlaps the library folder:
 russian.LibraryDirectory=Выберите отдельную папку программы. Эта папка пересекается с папкой библиотеки:
 english.NonApplicationDirectory=The selected folder is not empty and does not contain a recognized Proxmark Studio installation. Choose an empty folder or the existing application folder.
@@ -93,6 +95,9 @@ type
     Size: Cardinal;
     Data: array[0..563] of Byte;
   end;
+
+var
+  DesktopArguments, MenuArguments: String;
 
 function CreateToolhelp32Snapshot(Flags, ProcessId: Cardinal): THandle;
   external 'CreateToolhelp32Snapshot@kernel32.dll stdcall';
@@ -179,6 +184,43 @@ begin
   if Result then
     Result := CompareText(NormalDirectory(PreviousDirectory),
       NormalDirectory(ExpandConstant('{app}'))) = 0;
+end;
+
+function ExistingShortcutArguments(const Filename: String): String;
+var
+  Shell, Shortcut: Variant;
+  Target: String;
+begin
+  Result := '';
+  if not FileExists(Filename) then Exit;
+  Shell := CreateOleObject('WScript.Shell');
+  Shortcut := Shell.CreateShortcut(Filename);
+  Target := Shortcut.TargetPath;
+  if CompareText(ExpandFileName(Target),
+    ExpandFileName(ExpandConstant('{app}\ProxmarkStudio.exe'))) = 0 then
+    Result := Shortcut.Arguments;
+end;
+
+function CaptureShortcutArguments: String;
+begin
+  Result := '';
+  DesktopArguments := '';
+  MenuArguments := '';
+  if not OwnPreviousInstall then Exit;
+  try
+    DesktopArguments := ExistingShortcutArguments(
+      ExpandConstant('{userdesktop}\Proxmark Studio.lnk'));
+    MenuArguments := ExistingShortcutArguments(
+      ExpandConstant('{group}\Proxmark Studio.lnk'));
+  except
+    Result := CustomMessage('ShortcutReadFailed');
+  end;
+end;
+
+function ShortcutParameters(Kind: String): String;
+begin
+  if Kind = 'desktop' then Result := DesktopArguments
+    else Result := MenuArguments;
 end;
 
 function DirectoryHasFiles(const Directory: String): Boolean;
@@ -302,6 +344,8 @@ begin
   Result := DirectoryError(ExpandConstant('{app}'));
   if Result <> '' then Exit;
   Result := DowngradeError(ExpandConstant('{app}'));
+  if Result <> '' then Exit;
+  Result := CaptureShortcutArguments;
 end;
 
 function InitializeUninstall: Boolean;
