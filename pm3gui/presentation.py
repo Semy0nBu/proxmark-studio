@@ -4,13 +4,13 @@ from .i18n import tr
 
 import json
 import re
-from PySide6.QtCore import QByteArray, Qt, Signal, QRect, QSize
+from PySide6.QtCore import QByteArray, Qt, Signal, QRect, QSize, QEvent
 from datetime import datetime, timezone
 from PySide6.QtGui import QAction, QKeySequence, QShortcut,QColor,QTextCursor
 from PySide6.QtWidgets import (
     QApplication, QAbstractItemView, QCheckBox, QComboBox, QDockWidget,
     QDoubleSpinBox, QFormLayout, QFrame, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QListWidget, QMenu, QPlainTextEdit, QProgressBar, QSizePolicy,
+    QLineEdit, QListWidget, QMenu, QPlainTextEdit, QProgressBar, QSizePolicy, QWidgetAction,
     QSpinBox, QSplitter, QStackedWidget, QTableWidget, QTableWidgetItem, QToolButton, QVBoxLayout, QWidget,QTextEdit,QTabWidget,QTabBar,
 )
 from .antenna import AntennaPlot
@@ -49,6 +49,56 @@ class CardList(QListWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.fit_items()
+
+
+class CardTabs(QTabWidget):
+    """Let the outer detail scroller size the working area to its viewport.
+
+    QTabWidget's height-for-width uses the preferred height of every page,
+    including hidden pages and the splitter's saved editor height. Propagating
+    that value through QScrollArea prevents the editor from shrinking at all.
+    The normal minimum-size hint still protects controls on short windows;
+    the detail scroller makes the remainder reachable there.
+    """
+    def __init__(self):
+        super().__init__()
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
+        self.currentChanged.connect(self._sync_minimum_height)
+
+    def hasHeightForWidth(self):
+        return False
+
+    def heightForWidth(self, width):
+        return -1
+
+    def _sync_minimum_height(self, *_):
+        page = self.currentWidget()
+        if page is None:
+            return
+        height = max(0, page.minimumSizeHint().height())
+        layout = page.layout()
+        if layout is not None:
+            margins = layout.contentsMargins()
+            width = max(1, self.width() - margins.left() - margins.right() - 4)
+            # A wrapped action row or label can need more than its one-line
+            # minimum. Do not include a splitter's preferred editor height.
+            for index in range(layout.count()):
+                item = layout.itemAt(index)
+                if item.hasHeightForWidth():
+                    height += max(0, item.heightForWidth(width) - item.minimumSize().height())
+        height += self.tabBar().sizeHint().height() + 4
+        if height != self.minimumHeight():
+            self.setMinimumHeight(height)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._sync_minimum_height()
+
+    def event(self, event):
+        result = super().event(event)
+        if event.type() == QEvent.Type.LayoutRequest:
+            self._sync_minimum_height()
+        return result
 
 
 class SortableItem(QTableWidgetItem):
@@ -171,64 +221,108 @@ class PresentationMixin:
     def _annotate_partial_bytes(self):
         partial=self.loaded_dump.metadata.get('partial_dump') if self.loaded_dump else None
         selections=[]
-        if partial:
-            value=self.hex_edit.toPlainText()
+        value=self.hex_edit.toPlainText()
+        def mark(first,last,foreground=None,background=None):
+            selection=QTextEdit.ExtraSelection()
+            selection.cursor=QTextCursor(self.hex_edit.document())
+            selection.cursor.setPosition(first)
+            selection.cursor.setPosition(last,QTextCursor.MoveMode.KeepAnchor)
+            if foreground:selection.format.setForeground(QColor(foreground))
+            if background:selection.format.setBackground(QColor(background))
+            selections.append(selection)
+        # Roles are visual annotations over the same plain HEX document.
+        # They never insert addresses, modify bytes or reveal masked key fields.
+        mask=None
+        if self.loaded_dump and self.loaded_dump.block_size==16 and len(self.loaded_dump.data) in (320,1024,2048,4096):
+            from .card_snapshot import adapt_dump,known_byte_mask
+            from .semantic_diff import Protocol
+            from .operations import sector_trailer,CLASSIC_GEOMETRIES
+            try:
+                dump=self._working_dump()
+                snapshot=adapt_dump(dump,source_ref='workbench:colour',protocol=self.protocol.text())
+                if snapshot.snapshot.model.protocol is Protocol.MIFARE_CLASSIC:
+                    nibbles=iter(re.finditer(r'[0-9A-Fa-f]',value))
+                    tokens=[(first.start(),last.end()) for first,last in zip(nibbles,nibbles)]
+                    mask=known_byte_mask(dump,protocol=self.protocol.text())
+                    if len(tokens)==len(dump.data):
+                        mark(tokens[0][0],tokens[min(15,len(tokens)-1)][1],'#edbd76')
+                        count=next(s for s,size in CLASSIC_GEOMETRIES.values() if size==len(dump.data))
+                        for sector in range(count):
+                            base=sector_trailer(sector)*16
+                            for first,last,colour in ((base,base+5,'#9abcf8'),(base+6,base+9,'#a7d6c9'),(base+10,base+15,'#9abcf8')):
+                                mark(tokens[first][0],tokens[last][1],colour)
+            except (ValueError,KeyError,TypeError,IndexError,StopIteration):pass
+        if partial or mask is not None:
             from .core import parse_hex
             try:parse_hex(value)
             except ValueError:
                 self.hex_edit.setExtraSelections([])
                 from .editor_ui import sync_expanded_hex
                 sync_expanded_hex(self)
+                if hasattr(self,'workbench_inspector'):self.workbench_inspector.schedule()
                 return
-            known=set(partial['known_bytes'])
+            known=set(i for i,known in enumerate(mask) if known) if mask is not None else set(partial['known_bytes'])
             start,end=None,None
             spans=[]
-            for index,match in enumerate(re.finditer(r'[0-9A-Fa-f]{2}',value)):
+            nibbles=iter(re.finditer(r'[0-9A-Fa-f]',value))
+            for index,(first,last) in enumerate(zip(nibbles,nibbles)):
                 if index not in known:
-                    if start is None:start=match.start()
-                    end=match.end()
+                    if start is None:start=first.start()
+                    end=last.end()
                 elif start is not None:
                     spans.append((start,end));start=None
             if start is not None:spans.append((start,end))
             for first,last in spans:
-                selection=QTextEdit.ExtraSelection()
-                selection.cursor=QTextCursor(self.hex_edit.document())
-                selection.cursor.setPosition(first)
-                selection.cursor.setPosition(last,QTextCursor.MoveMode.KeepAnchor)
-                selection.format.setBackground(QColor('#4a3827'))
-                selection.format.setForeground(QColor('#f2c99d'))
-                selections.append(selection)
+                mark(first,last,'#f2c99d','#4a3827')
         self.hex_edit.setExtraSelections(selections)
-        self.hex_edit.setToolTip(tr('Подсвеченные байты не были прочитаны с карты. При сохранении дампа пропуски заполнены нулями; ручное редактирование не делает их подтверждёнными чтением.') if partial else '')
+        self.hex_edit.setToolTip(tr('Подсвеченные байты не были прочитаны с карты. При сохранении дампа пропуски заполнены нулями; ручное редактирование не делает их подтверждёнными чтением.') if partial or mask is not None and not all(mask) else '')
         from .editor_ui import sync_expanded_hex
         sync_expanded_hex(self)
+        if hasattr(self,'workbench_inspector'):self.workbench_inspector.schedule()
 
     def _build(self):
+        from .studio_ui import FlowLayout
         host = QWidget()
         self.setCentralWidget(host)
-        outer = QHBoxLayout(host)
+        outer = QVBoxLayout(host)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
-        sidebar = QWidget()
-        sidebar.setObjectName('sidebar')
-        sidebar.setFixedWidth(192)
-        side = column(sidebar, 12, 4)
+        self.workbench_header = QWidget()
+        self.workbench_header.setObjectName('workbenchHeader')
+        header = QHBoxLayout(self.workbench_header)
+        header.setContentsMargins(16, 10, 16, 10)
+        header.setSpacing(16)
         name = text('Proxmark Studio', 'appname', False)
-        side.addWidget(name)
-        side.addSpacing(20)
+        header.addWidget(name)
+        self.workbench_navigation = QWidget()
+        self.workbench_navigation.setObjectName('workbenchNavigation')
+        navigation = FlowLayout()
+        self.workbench_navigation.setLayout(navigation)
         self.nav_buttons = []
         self.page_names = [tr('Рабочая область'), tr('Карты'), tr('Ключи MIFARE'), tr('Антенны'), tr('Кодировки'), tr('Лаборатория')]
         for index, (title, icon) in enumerate(zip(self.page_names, ['device', 'cards', 'keys', 'antenna', 'encoding', 'settings'])):
             nav = command(title, lambda checked=False, i=index: self.navigate(i))
             nav.setObjectName('nav')
             nav.setCheckable(True)
-            nav.setIcon(line_icon(icon, '#bfbfbf'))
+            nav.setIcon(line_icon(icon, '#a0a9b7'))
             nav.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             self.nav_buttons.append(nav)
-            side.addWidget(nav)
-        side.addStretch()
-        side.addWidget(text(tr('Режим интерфейса'),wrap=False))
+            navigation.addWidget(nav)
+        header.addWidget(self.workbench_navigation, 1)
+        self.preferences_button = QToolButton()
+        self.preferences_button.setText(tr('Настройки'))
+        self.preferences_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.preferences_button.setIcon(line_icon('settings', '#a0a9b7'))
+        self.preferences_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.preferences_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.preferences_button.setToolTip(tr('Режим интерфейса, язык и библиотека'))
+        from .preferences_ui import PreferencesMenu
+        self.preferences_menu = PreferencesMenu(self.preferences_button)
+        preferences = QWidget()
+        side = column(preferences, 16, 8)
+        side.addWidget(text(tr('Режим интерфейса'), 'section', False))
         self.interface_mode_selector=QComboBox()
+        self.interface_mode_selector.setAccessibleName(tr('Режим интерфейса'))
         self.interface_mode_selector.addItem(tr('Пошаговый'),'guided')
         self.interface_mode_selector.addItem(tr('Компактный'),'compact')
         self.interface_mode_selector.setCurrentIndex(self.interface_mode_selector.findData(self.interface_mode))
@@ -238,30 +332,51 @@ class PresentationMixin:
         self.interface_mode_notice=text('');self.interface_mode_notice.hide();side.addWidget(self.interface_mode_notice)
         side.addWidget(text(tr('Язык / Language'),wrap=False))
         self.language_selector=QComboBox()
+        self.language_selector.setAccessibleName(tr('Язык / Language'))
         for code,title in LANGUAGES.items():self.language_selector.addItem(title,code)
         self.language_selector.setCurrentIndex(self.language_selector.findData(self.ui_language))
         self.language_selector.setToolTip(tr('Выбор сохраняется и применяется при следующем запуске.'))
         self.language_selector.currentIndexChanged.connect(self.choose_language);side.addWidget(self.language_selector)
         self.language_notice=text('');self.language_notice.hide();side.addWidget(self.language_notice)
         side.addWidget(text('RDV4 / RDV4.01', wrap=False))
-        self.backup_button = command(tr('Библиотека…'), self.show_library_backup)
+        self.backup_button = command(tr('Библиотека…'), self._workbench_backup)
         self.backup_button.setToolTip(tr('Резервная копия, восстановление и выбор профиля'))
         side.addWidget(self.backup_button)
         from .about import AboutDialog
-        side.addWidget(command(tr('О программе'), lambda: AboutDialog(self).exec()))
-        outer.addWidget(sidebar)
-        body = QWidget()
-        layout = column(body, 20, 14)
-        heading = QHBoxLayout()
-        self.page_title = text('', 'title', False)
-        heading.addWidget(self.page_title, 1)
+        self.about_button = command(tr('О программе'), lambda: (self.preferences_menu.hide(), AboutDialog(self).exec()))
+        side.addWidget(self.about_button)
+        preferences.setMinimumWidth(300)
+        preference_action = QWidgetAction(self.preferences_menu)
+        preference_action.setDefaultWidget(preferences)
+        self.preferences_menu.addAction(preference_action)
+        self.preferences_menu.set_focus_controls((self.interface_mode_selector,self.language_selector,self.backup_button,self.about_button))
+        self.preferences_button.setMenu(self.preferences_menu)
+        header.addWidget(self.preferences_button)
+        outer.addWidget(self.workbench_header)
+        self.connection_strip = QWidget()
+        self.connection_strip.setObjectName('connectionStrip')
+        connection = QHBoxLayout(self.connection_strip)
+        connection.setContentsMargins(16, 7, 16, 7)
+        connection.setSpacing(12)
+        self.global_connection = text(tr('Нет подключения'), wrap=False)
+        self.global_connection.setObjectName('connectionIndicator')
+        self.global_connection.setMinimumWidth(170)
+        connection.addWidget(self.global_connection)
+        self.connection_shortcut = command(tr('Подключение…'), self._workbench_connection)
+        connection.addWidget(self.connection_shortcut)
+        connection.addStretch()
         self.operation_badge = text(tr('Ожидание действия'), 'status', False)
-        heading.addWidget(self.operation_badge)
+        connection.addWidget(self.operation_badge)
         self.stop_button = command(tr('Остановить'), self.cancel_operation)
         self.stop_button.setToolTip(tr('Остановить текущую операцию устройства'))
         self.stop_button.setEnabled(False)
-        heading.addWidget(self.stop_button)
-        layout.addLayout(heading)
+        connection.addWidget(self.stop_button)
+        outer.addWidget(self.connection_strip)
+        body = QWidget()
+        layout = column(body, 16, 10)
+        self.page_title = text('', 'title', False)
+        self.page_title.setParent(body)
+        self.page_title.hide()
         self.operation_progress = QProgressBar()
         self.operation_progress.setRange(0, 0)
         self.operation_progress.setTextVisible(False)
@@ -271,12 +386,11 @@ class PresentationMixin:
         self.ui_has_operation = False
         for build in (self._device_page, self._library_page, self._keys_page, self._antenna_page, self._encoding_page, self._build_studio_page):
             self.stack.addWidget(build())
+        # Reuse the same action and controller binding in the persistent strip.
+        connection.insertWidget(2, self.session_button)
         layout.addWidget(self.stack, 1)
         outer.addWidget(body, 1)
         self._build_journal()
-        self.global_connection = text(tr('Нет подключения'), wrap=False)
-        self.global_connection.setMinimumWidth(170)
-        self.statusBar().addWidget(self.global_connection)
         self.global_operation = text(tr('Ожидание действия'), wrap=False)
         self.global_operation.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.statusBar().addWidget(self.global_operation, 1)
@@ -292,6 +406,15 @@ class PresentationMixin:
         self.log_shortcut = QShortcut(QKeySequence('Ctrl+J'), self)
         self.log_shortcut.activated.connect(lambda: self.journal_toggle.toggle())
         self._restore_presentation()
+
+    def _workbench_backup(self):
+        self.preferences_menu.hide()
+        self.show_library_backup()
+
+    def _workbench_connection(self):
+        self.navigate(0)
+        self.connection_details.setExpanded(True)
+        self.ports.setFocus()
 
     def _build_journal(self):
         self.journal = QDockWidget(tr('Журнал клиента'), self)
@@ -507,6 +630,9 @@ class PresentationMixin:
             self.navigate(1)
 
     def _library_page(self):
+        from .studio_ui import FlowLayout
+        from .hex_view import WorkbenchHexEdit
+        from .workbench_ui import WorkbenchInspector
         page = QWidget()
         layout = column(page)
         toolbar = QHBoxLayout()
@@ -521,8 +647,8 @@ class PresentationMixin:
         for title,band in [(tr('Все'),'all'),('HF','hf'),('LF','lf'),(tr('Без типа'),'unknown')]:
             index=self.library_bands.addTab(title);self.library_bands.setTabData(index,band)
         self.library_bands.currentChanged.connect(self.refresh_library)
-        layout.addWidget(self.library_bands)
         filters = QHBoxLayout()
+        filters.addWidget(self.library_bands)
         self.library_collection_filter = QComboBox()
         self.library_collection_filter.setToolTip(tr('Фильтр по коллекции'))
         self.library_collection_filter.addItem(tr('Все коллекции'), None)
@@ -533,15 +659,17 @@ class PresentationMixin:
         for widget in (self.library_collection_filter, self.library_tag_filter):
             widget.setMinimumContentsLength(12)
             widget.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+            widget.setMaximumWidth(240)
             filters.addWidget(widget, 1)
             widget.currentIndexChanged.connect(self.refresh_library)
         layout.addLayout(filters)
         self.library_count = text('')
-        layout.addWidget(self.library_count)
+        self.library_count.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        filters.addWidget(self.library_count, 1)
         self.library_splitter = QSplitter(Qt.Orientation.Horizontal)
         self.library_splitter.setChildrenCollapsible(False)
         self.cards = CardList()
-        self.cards.setMinimumWidth(190)
+        self.cards.setMinimumWidth(170)
         self.cards.setWordWrap(True)
         self.cards.setTextElideMode(Qt.TextElideMode.ElideNone)
         self.cards.currentItemChanged.connect(self._card_selected)
@@ -598,6 +726,7 @@ class PresentationMixin:
         details.addLayout(row)
         row = QHBoxLayout()
         self.dump_info = text('')
+        self.dump_info.setSizePolicy(QSizePolicy.Policy.Ignored,QSizePolicy.Policy.Preferred)
         row.addWidget(self.dump_info, 1)
         self.save_button = command(tr('Сохранить'), self.save_card, True)
         row.addWidget(self.save_button)
@@ -606,26 +735,33 @@ class PresentationMixin:
         row.addWidget(self.write_card_button)
         self.save_button.setEnabled(False)
         details.addLayout(row)
-        self.card_tabs = QTabWidget()
+        self.card_tabs = CardTabs()
+        self.card_tabs.setObjectName('workbenchCardTabs')
         editor_page = QWidget()
         details.addWidget(self.card_tabs, 1)
         self.card_tabs.addTab(editor_page, tr('Редактор'))
         details = column(editor_page, 0, 8)
-        row = QHBoxLayout()
+        row = FlowLayout()
         self.encoding = codecs()
         self.encoding.currentIndexChanged.connect(self._update_decoded)
         row.addWidget(self.encoding)
-        row.addStretch()
+        self.workbench_text_toggle = QCheckBox(tr('Текст'))
+        self.workbench_text_toggle.setToolTip(tr('Показать текст рядом с рабочим HEX'))
+        self.workbench_text_toggle.toggled.connect(self._workbench_text_preview)
+        row.addWidget(self.workbench_text_toggle)
         row.addWidget(command(tr('В конвертер'), self.copy_to_converter))
         details.addLayout(row)
-        row=QHBoxLayout()
+        row=FlowLayout()
         row.addWidget(command(tr('Эмуляция…'),self.open_emulation))
         self.memory_button=command(tr('Карта памяти…'),self.open_memory_map);row.addWidget(self.memory_button)
         self.memory_button.setToolTip(tr('Цветовая карта секторов MIFARE Classic Mini/1K/2K/4K'))
-        self.resume_card_button=command(tr('Продолжить чтение…'),self.open_resume_read);row.addWidget(self.resume_card_button);row.addStretch();details.addLayout(row)
-        self.card_editors = QSplitter(Qt.Orientation.Horizontal)
+        self.resume_card_button=command(tr('Продолжить чтение…'),self.open_resume_read);row.addWidget(self.resume_card_button)
+        from .editor_ui import open_hex_editor
+        row.addWidget(command(tr('Развернуть HEX…'), lambda:open_hex_editor(self)))
+        self.workbench_editor_actions=row
+        self.card_editors = QSplitter(Qt.Orientation.Vertical)
         self.card_editors.setChildrenCollapsible(False)
-        self.hex_edit, self.decoded = QPlainTextEdit(), QPlainTextEdit()
+        self.hex_edit, self.decoded = WorkbenchHexEdit(), QPlainTextEdit()
         self.hex_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.hex_edit.setPlaceholderText('00 01 02 03 …')
         self.decoded.setPlaceholderText(tr('Текст выбранной кодировки'))
@@ -635,10 +771,27 @@ class PresentationMixin:
             pane = editor(title, widget)
             pane.setMinimumWidth(130)
             self.card_editors.addWidget(pane)
-        self.card_editors.setSizes([420, 320])
-        from .editor_ui import open_hex_editor
-        details.addWidget(command(tr('Развернуть HEX…'), lambda:open_hex_editor(self)))
-        details.addWidget(self.card_editors, 1)
+        self.card_editors.setCollapsible(1, True)
+        self.card_editors.setSizes([650, 0])
+        self.workbench_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.workbench_splitter.setObjectName('workbenchEditorSplit')
+        self.workbench_splitter.setChildrenCollapsible(False)
+        self.workbench_splitter.setMinimumHeight(190)
+        self.workbench_splitter.addWidget(self.card_editors)
+        self.workbench_inspector = WorkbenchInspector(self)
+        self.workbench_inspector_scroll = SmoothScrollArea()
+        self.workbench_inspector_scroll.setObjectName('workbenchInspectorScroll')
+        self.workbench_inspector_scroll.setWidgetResizable(True)
+        self.workbench_inspector_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.workbench_inspector_scroll.setMinimumWidth(190)
+        self.workbench_inspector_scroll.setMaximumWidth(300)
+        self.workbench_inspector_scroll.setWidget(self.workbench_inspector)
+        self.workbench_splitter.addWidget(self.workbench_inspector_scroll)
+        self.workbench_splitter.setStretchFactor(0,1)
+        self.workbench_splitter.setStretchFactor(1,0)
+        self.workbench_splitter.setSizes([800,230])
+        details.addWidget(self.workbench_splitter, 1)
+        details.addLayout(self.workbench_editor_actions)
         self.decode_info = text('')
         details.addWidget(self.decode_info)
         hint = text(tr('Изменения сохраняются новой версией.'))
@@ -646,15 +799,23 @@ class PresentationMixin:
         details.addWidget(Guidance(self,hint))
         scroll = SmoothScrollArea()
         scroll.setWidgetResizable(True)
-        self.card_editors.setMinimumHeight(140)
+        self.card_editors.setMinimumHeight(100)
         scroll.setWidget(detail)
         self.detail_stack.addWidget(scroll)
         self.library_splitter.addWidget(self.detail_stack)
         self.library_splitter.setStretchFactor(0, 1)
         self.library_splitter.setStretchFactor(1, 3)
-        self.library_splitter.setSizes([350, 850])
+        self.library_splitter.setSizes([220, 1060])
         layout.addWidget(self.library_splitter, 1)
         return page
+
+    def _workbench_text_preview(self, expanded):
+        if not hasattr(self,'card_editors'):return
+        identifier=bool(self.loaded_dump and self.loaded_dump.metadata.get('record_kind')=='identifier')
+        self.card_editors.widget(1).setVisible(not identifier)
+        height=max(300,self.card_editors.height())
+        self.card_editors.setSizes([int(height*.65),int(height*.35)] if expanded and not identifier else [height,0])
+        if hasattr(self,'decode_info'):self.decode_info.setVisible(not identifier and (expanded or bool(self.text_error)))
 
     def _card_context(self, point):
         item = self.cards.itemAt(point)
@@ -862,13 +1023,18 @@ class PresentationMixin:
         connected = self.runner.session_open
         self.global_connection.setText(f'{tr('Подключено') if connected else tr('Нет подключения')} · {profile} · {port}')
         self.global_connection.setToolTip(self.connection_status.text())
+        if self.global_connection.property('connected')!=connected:
+            self.global_connection.setProperty('connected',connected)
+            self.global_connection.style().unpolish(self.global_connection)
+            self.global_connection.style().polish(self.global_connection)
 
     def _restore_presentation(self):
         self.geometry_restored = False
         state = self.settings.get('ui', {})
         if not isinstance(state, dict):
             return
-        for name, target in [('geometry', self), ('docks', self), ('library', self.library_splitter), ('card_editors', self.card_editors), ('converter', self.converter_splitter), ('key_header', self.key_table.horizontalHeader())]:
+        for name, target in [('geometry', self), ('docks', self), ('library', self.library_splitter), ('card_editors', self.card_editors), ('workbench_editor',self.workbench_splitter), ('converter', self.converter_splitter), ('key_header', self.key_table.horizontalHeader())]:
+            if name in {'library','card_editors','workbench_editor'} and state.get('layout')!='workbench-v1':continue
             value = state.get(name)
             if isinstance(value, str) and len(value) < 20000:
                 try:
@@ -879,10 +1045,14 @@ class PresentationMixin:
                         target.restoreState(data)
                 except (ValueError, UnicodeError):
                     pass
+        self.card_editors.setOrientation(Qt.Orientation.Vertical)
+        self.workbench_text_toggle.setChecked(state.get('text_preview') is True if state.get('layout')=='workbench-v1' else False)
+        if not self.workbench_text_toggle.isChecked():self._workbench_text_preview(False)
 
     def _save_presentation(self):
         state = dict(self.settings.get('ui', {})) if isinstance(self.settings.get('ui'), dict) else {}
-        for name, target in [('geometry', self), ('docks', self), ('library', self.library_splitter), ('card_editors', self.card_editors), ('converter', self.converter_splitter), ('key_header', self.key_table.horizontalHeader())]:
+        state.update(layout='workbench-v1',text_preview=self.workbench_text_toggle.isChecked())
+        for name, target in [('geometry', self), ('docks', self), ('library', self.library_splitter), ('card_editors', self.card_editors), ('workbench_editor',self.workbench_splitter), ('converter', self.converter_splitter), ('key_header', self.key_table.horizontalHeader())]:
             state[name] = bytes(target.saveGeometry() if name == 'geometry' else target.saveState()).hex()
         # Only UI fields are persisted here. Unsaved connection edits remain unsaved.
         try:

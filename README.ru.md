@@ -12,13 +12,13 @@
 
 ## Скачать
 
-Текущий предварительный выпуск — **0.3.0-preview.8**. Python и отдельная установка клиента
+Текущий предварительный выпуск — **0.3.0-preview.9**. Python и отдельная установка клиента
 Proxmark не нужны: согласованный комплект уже внутри.
 
 | Вариант | Как запустить |
 |---|---|
-| **[Установщик для Windows](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.8/ProxmarkStudio-0.3.0-preview.8-Setup-x64.exe)** | Установить для текущего пользователя. Ярлыки на рабочем столе и в «Пуск» создаются по умолчанию. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.8/ProxmarkStudio-0.3.0-preview.8-windows-x64.zip) | Распаковать архив целиком и открыть `ProxmarkStudio.exe`. |
+| **[Установщик для Windows](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.9/ProxmarkStudio-0.3.0-preview.9-Setup-x64.exe)** | Установить для текущего пользователя. Ярлыки на рабочем столе и в «Пуск» создаются по умолчанию. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.9/ProxmarkStudio-0.3.0-preview.9-windows-x64.zip) | Распаковать архив целиком и открыть `ProxmarkStudio.exe`. |
 
 Установка работает без интернета и прав администратора. Подключите Proxmark
 по USB, выберите **USB → COM-порт → Подключить**, затем положите карту на
@@ -27,9 +27,9 @@ Proxmark не нужны: согласованный комплект уже в�
 
 ## Интерфейс
 
-![Рабочая область Proxmark Studio на английском](docs/assets/interface-en.png)
+![Proxmark Studio Workbench — HEX и инспектор секторов](docs/assets/interface-ru.png)
 
-*На скриншоте — демонстрационные данные. Язык и режим «Пошаговый» / «Компактный» выбираются в боковой панели.*
+*Workbench с демонстрационными данными: рабочий HEX, карта секторов и инспектор прав доступа. Язык, режим интерфейса и резервное копирование — в «Настройках».*
 
 ## Что умеет
 

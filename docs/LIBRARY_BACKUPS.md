@@ -4,7 +4,7 @@ Available since **0.3.0-preview.6**, in both the installer and portable package.
 
 ## English
 
-Select **Library…** in the sidebar. The current profile's path appears at the top.
+Select **Settings → Library…**. The current profile's path appears at the top.
 
 1. In **Back up**, choose a new `.pm3backup` filename outside your profile.
    The archive includes saved cards, every revision, partial-read metadata,
@@ -58,7 +58,7 @@ beside the new profile. Do not attach library backups to public bug reports.
 
 ## По-русски
 
-Откройте **Библиотека…** внизу бокового меню. В окне указан путь текущего профиля.
+Откройте **Настройки → Библиотека…**. В окне указан путь текущего профиля.
 
 1. На вкладке **Создать копию** выберите новый файл `.pm3backup` вне папки
    профиля. Сохраняются карты, все версии и сведения о непрочитанных областях,

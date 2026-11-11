@@ -1424,5 +1424,9 @@
   "Допускается до 32 меток, разделённых запятыми.": "Use up to 32 comma-separated tags.",
   "Метки должны быть текстом.": "Tags must be text.",
   "Метка: до 48 символов, без запятых и управляющих знаков.": "Each tag accepts up to 48 characters without commas or control characters.",
-  "Развернуть HEX…": "Expand HEX…"
+  "Развернуть HEX…": "Expand HEX…",
+  "Настройки": "Settings",
+  "Режим интерфейса, язык и библиотека": "Interface mode, language and library",
+  "Показать текст рядом с рабочим HEX": "Show text alongside the working HEX",
+  "Подключение…": "Connection…"
 }

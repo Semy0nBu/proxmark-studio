@@ -12,13 +12,13 @@ library, with RRG/Iceman tools available from the same interface.
 
 ## Download
 
-Current preview: **0.3.0-preview.8**. The matching Proxmark client and runtime
+Current preview: **0.3.0-preview.9**. The matching Proxmark client and runtime
 are included. You do not need to install Python or a separate client.
 
 | Package | Getting started |
 |---|---|
-| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.8/ProxmarkStudio-0.3.0-preview.8-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.8/ProxmarkStudio-0.3.0-preview.8-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
+| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.9/ProxmarkStudio-0.3.0-preview.9-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.9/ProxmarkStudio-0.3.0-preview.9-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
 
 Installation works offline and does not require administrator rights. Connect
 your Proxmark over USB, select **USB → COM port → Connect**, and place a card on
@@ -27,9 +27,9 @@ the next steps.
 
 ## Interface
 
-![Proxmark Studio workspace in English](docs/assets/interface-en.png)
+![Proxmark Studio Workbench — HEX editor and sector inspector](docs/assets/interface-en.png)
 
-*The screenshot uses demo data. Choose the language and Guided or Compact mode in the sidebar.*
+*Workbench with demo data: the working HEX editor, sector map and access inspector. Language, interface mode and library backup are in Settings.*
 
 ## Features
 

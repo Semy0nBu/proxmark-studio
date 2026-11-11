@@ -136,7 +136,7 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
         self.card_tabs.insertTab(0, self.card_workspace.passport, tr('Паспорт'))
         self.card_tabs.insertTab(1, self.card_workspace.changes, tr('Изменения'))
         self.card_tabs.addTab(self.card_workspace.result, tr('Результат операции'))
-        self.card_tabs.setCurrentIndex(0)
+        self.card_tabs.setCurrentIndex(2)
         self.runner.output.connect(self._log)
         self.runner.busy_changed.connect(self._busy_changed)
         self.runner.completed.connect(self._step_completed)
@@ -547,6 +547,7 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
         self.memory_button.setEnabled(band!='lf' and self.loaded_dump.block_size==16 and len(self.loaded_dump.data) in {v[1] for v in CLASSIC_GEOMETRIES.values()})
         self.resume_card_button.setVisible(band!='lf')
         self.hex_edit.setPlainText(format_hex(self.loaded_dump.data, self.loaded_dump.block_size))
+        self.hex_edit.set_bytes_per_block(self.loaded_dump.block_size)
         self.dump_info.setText(tr('{0} байт · {1} · блок {2} Б', f'{len(self.loaded_dump.data)}', f'{self.loaded_dump.format.upper()}', f'{self.loaded_dump.block_size}'))
         if self.loaded_dump.metadata.get('record_kind')=='identifier':self.dump_info.setText(self.dump_info.text()+tr(' · LF · только идентификатор'))
         partial = self.loaded_dump.metadata.get('partial_dump')
@@ -557,7 +558,11 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
 
         identifier=self.loaded_dump.metadata.get('record_kind')=='identifier'
         self.card_editors.widget(1).setVisible(not identifier)
-        self.encoding.setVisible(not identifier);self.decode_info.setVisible(not identifier)
+        self.workbench_text_toggle.setVisible(not identifier)
+        self._workbench_text_preview(self.workbench_text_toggle.isChecked())
+        self.encoding.setVisible(not identifier)
+        self.decode_info.setVisible(not identifier and (self.workbench_text_toggle.isChecked() or bool(self.text_error)))
+        self.workbench_inspector.schedule()
 
     def _revision_selected(self, index: int):
         if self.loading or index < 0 or not self.card_id:
@@ -621,6 +626,8 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
             self.text_error = str(exc)
             self.encoding.setEnabled(False)
             self.hex_edit.setReadOnly(True)
+            self.workbench_text_toggle.setChecked(True)
+            self.workbench_inspector.schedule()
             notice(self.decode_info, tr('Исправьте текст: {0}', f'{exc}'), error=True)
         self._mark_dirty()
 

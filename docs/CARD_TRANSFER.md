@@ -9,7 +9,7 @@ fresh target observation. On a small window, the two cards stack vertically.
 
 ## Interface modes
 
-Choose **Guided** or **Compact** in the sidebar. The preference applies immediately
+Choose **Guided** or **Compact** in **Settings → Interface mode**. The preference applies immediately
 to open views and new dialogs, and is saved per library profile. Guided is the
 default and shows steps and explanations inline. Compact keeps the card pair,
 short statuses and the plan visible; **Compatibility and limitations** and
@@ -80,7 +80,7 @@ physical chip capabilities are introduced by this interface change.
 
 ## По-русски
 
-В боковой панели выберите «Пошаговый» или «Компактный». Выбор применяется сразу
+В **Настройках → Режим интерфейса** выберите «Пошаговый» или «Компактный». Выбор применяется сразу
 и сохраняется для текущего профиля. В компактном режиме длинные пояснения
 открываются по запросу. Ошибки, запреты и предупреждения о неполном источнике
 остаются видны. Параметры и обязательные проверки операции не меняются.

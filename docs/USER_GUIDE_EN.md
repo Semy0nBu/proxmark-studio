@@ -11,11 +11,25 @@ Start Menu shortcuts are selected by default.
 For the portable version, extract the complete ZIP and open `ProxmarkStudio.exe`.
 Keep the `_internal`, `client`, `firmware`, `licenses`, and `sources` directories
 together. Python installation is not required.
-Choose the interface language at the bottom of the sidebar, then restart.
+Use **Settings → Language** to choose the interface language, then restart.
 Interface mode switches immediately: Guided shows explanations and Compact
 keeps optional details collapsed. Updates preserve custom profile arguments in
 this installation's Desktop and Start Menu shortcuts.
 **About** shows the version and opens the library folder.
+
+## Workbench layout
+
+Use the top navigation to switch between Workspace, Cards, MIFARE keys,
+Antennas, Encodings and Laboratory. The connection state and Stop remain visible
+across all pages. **Connection…** opens the device settings.
+
+Cards opens on the working HEX editor. Its gutter shows byte offsets without
+adding them to the dump. Manufacturer data, key fields and access fields use
+different colors; unread bytes keep their own warning highlight. The inspector
+follows the cursor and sector selection. Recorded key availability and saved
+access conditions describe the selected snapshot, not a fresh authentication.
+Use **Text** for an optional decoded view; Overview, Changes and Operation result
+remain separate tabs.
 
 ## Connection
 
@@ -75,7 +89,7 @@ filenames and user labels remain intact. Displayed times use UTC+3 without a suf
 
 ## Write
 
-Use the sidebar **Interface mode** selector for **Guided** explanations or
+Use **Settings → Interface mode** for **Guided** explanations or
 **Compact** details on demand. The choice takes effect immediately and is saved
 for the current profile. Both modes keep the same operations and write checks.
 
@@ -130,7 +144,7 @@ Neither the application installer nor connecting a board flashes firmware automa
 
 ## Data, backup, and updates
 
-**Library…** in the sidebar creates one archive
+**Settings → Library…** creates one archive
 of your saved library, with optional password protection. **Restore** creates a
 separate profile. See [Library backup](LIBRARY_BACKUPS.md) for the steps and format.
 

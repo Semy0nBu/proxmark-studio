@@ -196,6 +196,33 @@ def check_desktop_workflows(window):
             'passed':True,'physical_device_access':False}
 
 
+def check_workbench(window):
+    """Check the actual editor shell without touching a reader or a saved dump."""
+    from .core import DumpData, parse_hex
+    from .hex_view import WorkbenchHexEdit
+    image=bytearray(1024)
+    for sector in range(16):
+        image[(sector*4+3)*16:(sector*4+4)*16]=bytes.fromhex('FFFFFFFFFFFFFF078069FFFFFFFFFFFF')
+    cid=window.library.create_card('Workbench fixture',DumpData(bytes(image),'bin',{},16),
+                                   protocol='MIFARE Classic 1K')
+    window.load_card(cid);window.navigate(1);window.card_tabs.setCurrentIndex(2)
+    window.resize(1440,960);window.show();QApplication.processEvents()
+    inspector=window.workbench_inspector
+    inspector.refresh();inspector.select_sector(15)
+    assert isinstance(window.hex_edit,WorkbenchHexEdit)
+    assert inspector.classic and inspector.sector_count==16 and inspector.sector==15
+    assert parse_hex(window.hex_edit.toPlainText())==bytes(image) and not window.dirty
+    assert window.session_button.parent() is window.connection_strip
+    for index in range(6):
+        window.navigate(index);QApplication.processEvents()
+        assert window.connection_strip.isVisible()
+        assert [n.isChecked() for n in window.nav_buttons]==[n==index for n in range(6)]
+    assert window.preferences_button.menu() is window.preferences_menu
+    window.navigate(1);window.card_tabs.setCurrentIndex(2)
+    return {'name':'workbench-shell-hex-and-sector-inspector','passed':True,
+            'physical_device_access':False,'dump_preserved':True}
+
+
 def run_release_check(report_path: Path, *, language='en') -> int:
     report = {'version': APP_VERSION, 'frozen': is_frozen(), 'checks': [],
               'hardware_commands': 0, 'personal_data_opened': False, 'passed': False}
@@ -256,6 +283,7 @@ def run_release_check(report_path: Path, *, language='en') -> int:
             report['checks'].append(check_card_workspace(window))
             report['checks'].append(check_interface_modes(window))
             report['checks'].append(check_desktop_workflows(window))
+            report['checks'].append(check_workbench(window))
         finally:
             window.runner.run, window.runner.run_operation = original_run, original_typed
         report['checks'].append(check_stop_completion(window))

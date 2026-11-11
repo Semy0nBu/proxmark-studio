@@ -1,5 +1,22 @@
 # Changelog / История изменений
 
+## 0.3.0-preview.9 — 2026-11-11
+
+- Workbench interface with top navigation and a persistent connection / Stop bar.
+  Language, Guided / Compact mode and library backup are grouped in Settings.
+- The card editor opens on HEX, with address gutters and separate colors for
+  manufacturer data, keys, access fields and unread bytes. Text remains optional.
+- A sector inspector follows the cursor, shows recorded key availability without
+  exposing values, and decodes known Classic access conditions. Unknown fields
+  remain unknown; the inspector does not authenticate or send device commands.
+- Existing profiles migrate their layout while preserving library records,
+  revisions, key evidence and connection settings.
+- README and English/Russian guides show the native Workbench interface using
+  synthetic data. Reader firmware is unchanged in this update.
+
+По-русски: интерфейс Workbench, HEX с адресами и цветами областей, инспектор
+секторов и постоянная строка подключения. Данные библиотеки сохраняются.
+
 ## 0.3.0-preview.8 — 2026-11-11
 
 - Collections and tags for library records, with combined search and HF/LF
