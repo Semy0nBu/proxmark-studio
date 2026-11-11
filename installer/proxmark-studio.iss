@@ -188,7 +188,7 @@ end;
 
 function ExistingShortcutArguments(const Filename: String): String;
 var
-  Shell, Folder, Shortcut: Variant;
+  Shell, Folder, Shortcut, Value: Variant;
   Target: String;
 begin
   Result := '';
@@ -196,10 +196,15 @@ begin
   Shell := CreateOleObject('Shell.Application');
   Folder := Shell.NameSpace(ExtractFileDir(Filename));
   Shortcut := Folder.ParseName(ExtractFileName(Filename));
-  Target := Shortcut.ExtendedProperty('System.Link.TargetParsingPath');
+  Value := Shortcut.ExtendedProperty('System.Link.TargetParsingPath');
+  if VarIsNull(Value) or VarIsEmpty(Value) then Exit;
+  Target := Value;
   if CompareText(ExpandFileName(Target),
     ExpandFileName(ExpandConstant('{app}\ProxmarkStudio.exe'))) = 0 then
-    Result := Shortcut.ExtendedProperty('System.Link.Arguments');
+  begin
+    Value := Shortcut.ExtendedProperty('System.Link.Arguments');
+    if not VarIsNull(Value) and not VarIsEmpty(Value) then Result := Value;
+  end;
 end;
 
 function CaptureShortcutArguments: String;
