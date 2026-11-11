@@ -3,3 +3,4 @@
 *.ico binary
 *.zip binary
 *.exe binary
+tools/client-patches/windows-blueshark-rfcomm.patch -text
