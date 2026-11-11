@@ -147,8 +147,9 @@ def _source_export(path):
                      len(parts)>2 and parts[:2]==('docs','licenses') or
                      len(parts)==2 and parts[0]=='tools' and parts[1] in PUBLIC_TOOLS or
                      len(parts)==2 and parts[0]=='installer' and parts[1] in {'proxmark-studio.iss','toolchain.json'} or
-                     len(parts)>2 and parts[:2]==('tools','native-client-tests') and relative.suffix in {'.py','.c','.md'} or
+                     len(parts)>2 and parts[:2]==('tools','native-client-tests') and relative.suffix in {'.py','.c','.cpp','.md'} or
                      len(parts)>2 and parts[:2]==('tools','client-patches') and relative.suffix=='.patch' or
+                     len(parts)==3 and parts[:2]==('tools','client-patches') and parts[2] in {'USB_HARDNESTED.md','usb-hardnested-sources.json'} or
                      len(parts)>1 and parts[0]=='.github' and relative.suffix in {'.yml','.yaml'} or
                      str(relative)=='.github/ISSUE_TEMPLATE/bug_report.md')
             if not allowed:

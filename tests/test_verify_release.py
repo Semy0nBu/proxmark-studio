@@ -58,6 +58,9 @@ class VerifyReleaseTests(unittest.TestCase):
         with zipfile.ZipFile(self.root/'sources/proxmark-studio-source.zip','a') as source:
             source.writestr('proxmark-studio/.github/ISSUE_TEMPLATE/bug_report.md','public issue template')
             source.writestr('proxmark-studio/SOURCE_SNAPSHOT.json','{}')
+            source.writestr('proxmark-studio/tools/native-client-tests/production_usb_control_test.cpp','// public test fixture')
+            source.writestr('proxmark-studio/tools/client-patches/USB_HARDNESTED.md','Public build recipe')
+            source.writestr('proxmark-studio/tools/client-patches/usb-hardnested-sources.json','{}')
         checksum_manifest(self.root)
         result=verify_release(self.root)
         self.assertTrue(result['passed'],result['errors']);self.assertFalse(result['hardware_access'])
@@ -99,6 +102,11 @@ class VerifyReleaseTests(unittest.TestCase):
         self.assertFalse(result['passed'])
         self.assertTrue(any('native-runtime-resources-and-notices' in e for e in result['errors']))
         self.assertTrue(any('portable-firmware-profiles' in e for e in result['errors']))
+
+    def test_reviewed_patch_metadata_does_not_allow_other_lab_json(self):
+        with zipfile.ZipFile(self.root/'sources/proxmark-studio-source.zip','a') as source:
+            source.writestr('proxmark-studio/tools/client-patches/private-lab.json','{}')
+        self.assertTrue(any('unreviewed path' in e for e in verify_release(self.root)['errors']))
 
     def test_relative_firmware_paths_may_reach_sibling_client_but_cannot_escape_bundle(self):
         self.assertEqual(_inside(self.root,self.root/'firmware','../client/proxmark3.exe'),self.root/'client/proxmark3.exe')
