@@ -12,13 +12,13 @@ library, with RRG/Iceman tools available from the same interface.
 
 ## Download
 
-Current preview: **0.3.0-preview.9**. The matching Proxmark client and runtime
+Current preview: **0.3.0-preview.10**. The matching Proxmark client and runtime
 are included. You do not need to install Python or a separate client.
 
 | Package | Getting started |
 |---|---|
-| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.9/ProxmarkStudio-0.3.0-preview.9-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.9/ProxmarkStudio-0.3.0-preview.9-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
+| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.10/ProxmarkStudio-0.3.0-preview.10-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.10/ProxmarkStudio-0.3.0-preview.10-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
 
 Installation works offline and does not require administrator rights. Connect
 your Proxmark over USB, select **USB → COM port → Connect**, and place a card on
@@ -70,6 +70,10 @@ The project's hardware test setup is a **Proxmark3 RDV4.01 with Blue Shark**.
 | **USB** | A cable and the Proxmark COM port in Windows. |
 | **Blue Shark** | Bluetooth **Classic SPP**: pair the module in Windows and select its COM port. |
 | **TCP** | A separately configured compatible network bridge and a `tcp:host:port` address. The application does not host the bridge. |
+
+In preview.10, **Connect** with the bundled client opens a direct Bluetooth
+connection, bypassing the Windows virtual COM port. Leave **Keep connection**
+enabled for this path; select the paired COM entry as before.
 
 With **Keep connection** enabled, an idle disconnect triggers a bounded version
 check. Card operations are never replayed automatically. Stop waits for client

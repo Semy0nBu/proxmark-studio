@@ -12,13 +12,13 @@
 
 ## Скачать
 
-Текущий предварительный выпуск — **0.3.0-preview.9**. Python и отдельная установка клиента
+Текущий предварительный выпуск — **0.3.0-preview.10**. Python и отдельная установка клиента
 Proxmark не нужны: согласованный комплект уже внутри.
 
 | Вариант | Как запустить |
 |---|---|
-| **[Установщик для Windows](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.9/ProxmarkStudio-0.3.0-preview.9-Setup-x64.exe)** | Установить для текущего пользователя. Ярлыки на рабочем столе и в «Пуск» создаются по умолчанию. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.9/ProxmarkStudio-0.3.0-preview.9-windows-x64.zip) | Распаковать архив целиком и открыть `ProxmarkStudio.exe`. |
+| **[Установщик для Windows](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.10/ProxmarkStudio-0.3.0-preview.10-Setup-x64.exe)** | Установить для текущего пользователя. Ярлыки на рабочем столе и в «Пуск» создаются по умолчанию. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.10/ProxmarkStudio-0.3.0-preview.10-windows-x64.zip) | Распаковать архив целиком и открыть `ProxmarkStudio.exe`. |
 
 Установка работает без интернета и прав администратора. Подключите Proxmark
 по USB, выберите **USB → COM-порт → Подключить**, затем положите карту на
@@ -66,6 +66,10 @@ Proxmark не нужны: согласованный комплект уже в�
 | **USB** | Кабель и COM-порт Proxmark в Windows. |
 | **Blue Shark** | Bluetooth **Classic SPP**: сопрячь модуль в Windows и выбрать его COM-порт. |
 | **TCP** | Отдельный совместимый сетевой мост и адрес `tcp:host:port`. Сервер-мост в приложении не запускается. |
+
+В preview.10 кнопка **Connect** с комплектным клиентом открывает прямое
+Bluetooth-соединение, обходя виртуальный COM-порт Windows. Для него оставьте
+**Keep connection** включённым; COM-порт выбирается как прежде.
 
 При включённом **«Держать соединение»** после обрыва в простое выполняется
 ограниченная проверка версии. Операции с картами автоматически не повторяются.
