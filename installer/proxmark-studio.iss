@@ -188,17 +188,18 @@ end;
 
 function ExistingShortcutArguments(const Filename: String): String;
 var
-  Shell, Shortcut: Variant;
+  Shell, Folder, Shortcut: Variant;
   Target: String;
 begin
   Result := '';
   if not FileExists(Filename) then Exit;
-  Shell := CreateOleObject('WScript.Shell');
-  Shortcut := Shell.CreateShortcut(Filename);
-  Target := Shortcut.TargetPath;
+  Shell := CreateOleObject('Shell.Application');
+  Folder := Shell.NameSpace(ExtractFileDir(Filename));
+  Shortcut := Folder.ParseName(ExtractFileName(Filename));
+  Target := Shortcut.ExtendedProperty('System.Link.TargetParsingPath');
   if CompareText(ExpandFileName(Target),
     ExpandFileName(ExpandConstant('{app}\ProxmarkStudio.exe'))) = 0 then
-    Result := Shortcut.Arguments;
+    Result := Shortcut.ExtendedProperty('System.Link.Arguments');
 end;
 
 function CaptureShortcutArguments: String;
@@ -217,9 +218,9 @@ begin
   end;
 end;
 
-function ShortcutParameters(Kind: String): String;
+function ShortcutParameters(Param: String): String;
 begin
-  if Kind = 'desktop' then Result := DesktopArguments
+  if Param = 'desktop' then Result := DesktopArguments
     else Result := MenuArguments;
 end;
 
