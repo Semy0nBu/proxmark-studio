@@ -3,7 +3,7 @@
 ## First launch
 
 Windows 10 (1903+) / 11 x64 is required. Run
-`ProxmarkStudio-0.3.0-preview.1-Setup-x64.exe` and choose English or Russian for
+the release's `ProxmarkStudio-<version>-Setup-x64.exe` and choose English or Russian for
 the installer. It installs for the current user without administrator rights.
 The default folder is `%LOCALAPPDATA%\Programs\Proxmark Studio`; Desktop and
 Start Menu shortcuts are selected by default.
@@ -50,6 +50,22 @@ Use Cards to rename, annotate, import/export, inspect HEX, and save edits as a n
 revision. Encodings provides text and printable-string views. Hiding MF keys
 changes the view, preserving the source data.
 
+In **Card details**, choose or type a **Collection** and enter comma-separated
+**Tags**, then Save. These labels belong to this library entry, even when another
+entry has the same UID. Updating them preserves the selected memory revision;
+it does not add a memory version or change the dump. Clearing a field removes
+the assignment. Up to 32 tags are supported, with 48 characters per tag.
+
+Search includes collections and tags. The collection and tag selectors combine
+with the text search and HF/LF filter. **Unsorted** finds entries without a
+collection. Filtering preserves unsaved edits; changing to another card still
+offers Save, Discard or Cancel.
+
+The **Overview** tab shows coverage for the selected saved revision or working
+copy. **Changes** compares two explicitly selected versions; unknown fillers
+are not new data. **Operation result** explains an interrupted HF write and
+offers a new read-and-compare step. See [Card workspace](CARD_WORKSPACE.md).
+
 ## MIFARE keys
 
 Import dictionaries or saved Flipper files, or retrieve supported files over
@@ -73,6 +89,30 @@ Use family tools and a compatible writable blank for LF. An EM410x read alone
 does not establish a T5577 chip. Laboratory provides family workflows, blocks,
 NDEF, emulation, traces, signals, and board files. Check the actual target type
 before choosing a family-specific operation.
+
+## Quick actions and client capabilities
+
+Open **Laboratory → Console → Quick actions…** to keep a named sequence in
+the current profile. Choose New, enter a name and one command per line, select
+the per-command timeout, and Save. A sequence accepts 1–20 commands. Opening,
+selecting or saving it sends nothing to the reader.
+
+**Review and run…** shows the sequence before starting it. Commands run in
+order; an error or Stop ends the remaining steps. Completed writes are not
+undone. **Without a device** is for offline client operations; RF commands
+require device mode. The saved commands may contain your own arguments or keys,
+so treat the profile and its backup as private data.
+
+Open **Laboratory → Console → Selected client catalog…** to collect help from
+the selected client without opening a reader. Choose **Update from client**
+after changing the client EXE.
+The saved catalog is tied to that executable's SHA256; its comparison shows
+added, removed and changed commands. A help entry does not prove support on
+your card or firmware. New or changed syntax remains inspectable while old
+forms cannot execute it as though it were confirmed. Cancel stops the update;
+opening a catalog or a confirmed form does not start a command.
+
+See [Desktop workflows](DESKTOP_WORKFLOWS.md) for these tools and diagnostics.
 
 ## Stop and connection status
 
@@ -115,3 +155,46 @@ complete library with both instances closed and preserve the original copy.
 For an issue report, include the About version, transport, and relevant log
 excerpt. Card libraries, dumps, and key files contain card data and are not
 needed for an ordinary interface report.
+
+## Troubleshooting and diagnostic packages
+
+Open **Laboratory → Diagnostics → Diagnostic report…**, refresh the snapshot
+and review the displayed JSON, then choose **Save ZIP…**. The package contains application/runtime
+versions, the client hash, connection/operation state and numeric completion
+codes. Dumps, keys, card IDs, commands, raw logs, settings and personal paths
+are excluded. This action does not query the device or upload anything. Send
+the ZIP yourself with the steps that triggered the problem. **Save log…** is
+a separate raw export and can include card data and keys.
+
+| Message | What to check next |
+| --- | --- |
+| `Win32 error 2` opening a COM port | The selected port no longer exists. Refresh ports, check the USB data cable and select the currently enumerated Proxmark. |
+| `Win32 error 5` / access denied | Another client or app may hold the port. Disconnect that client, then reconnect from one application. |
+| `Win32 error 1168` on Blue Shark | Windows could not open the paired SPP service. Check Battery/BTpower and Windows pairing; a remembered COM number alone is not a working radio link. |
+| `Win32 error 121` | The Windows operation timed out. Check power, radio range or the cable, then request a fresh connection check. This does not establish a card-authentication failure. |
+| CRC or truncated bulk transfer | The received data is not confirmed. Stop, wait for cleanup and a fresh connection check, then retry a read. Do not automatically repeat an uncertain write. |
+| `AcquireEncryptedNonces: Auth2 error` | A nested authentication step was rejected. Check the antenna position, selected card profile and known keys. This is a card/RF step; it does not by itself establish a Bluetooth disconnect. |
+
+The client's exit code `-5` and **Win32 error 5** are different values from
+different layers. Read the associated message before choosing a remedy. During
+an active firmware write, allow the flasher to finish; reconnecting power is
+not a normal way to clear an interface error.
+
+## Recorded hardware coverage
+
+These are dated checks on a specific RDV4.01, not a promise that every feature
+works with every card. No card UID or personal dump is needed to identify the
+scope of a test.
+
+| Date | Card or transport | Confirmed scope and limits |
+| --- | --- | --- |
+| 2026-11-09 | MIFARE Classic 1K, Magic Gen1a | Detection, partial/full reading, resuming missing data, and one user-block write (block 4) followed by restoration. The final image matched the original. UID/key/access-bit changes and other Magic generations were not established by that test. |
+| 2026-11-09 | Ordinary EM410x LF card | Identifier reading and automatic intake. Its writable-chip type was not confirmed; no card memory was written. |
+| 2026-11-09 | Card sold or described as “H2” | Not identified. A successful read or write is not claimed. |
+| 2026-11-09 | T5577 blank | No confirmed writable blank was available. Physical LF writing remains unverified. |
+| 2026-11-11 | USB, preview.7, no card | Fresh version replies, bulk transfer, cancellation with RF cleanup, and reconnection checks passed. No card or firmware writes were performed. |
+| 2026-11-11 | Blue Shark, preview.7 | The SPP port was unavailable with Windows error 1168. Radio-outage recovery was not retested in that run. |
+
+Other families, NDEF writing and compatibility with an external reader need
+their own physical checks. Software and offscreen UI tests use simulated
+responses; they do not extend this hardware coverage.

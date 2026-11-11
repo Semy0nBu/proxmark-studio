@@ -31,6 +31,13 @@ card contents. The client's `--incognito` option does not disable the GUI's own
 logs and history. Console history can be cleared in its interface; this does not
 remove data from other reports, the library, or backups.
 
+Named quick actions keep their command arguments in `quick-actions.json`.
+The selected-client catalog cache contains the local executable path and its
+offline help. These are private profile files and are included in whole-profile
+backups. The diagnostic ZIP is separate: it exports only the reviewed,
+allowlisted versions, states, client hash and numeric codes, without raw logs,
+commands, identifiers, library data, settings or paths. It is not uploaded.
+
 Review logs and screenshots before sharing them. An ordinary bug report usually
 needs the version, reproduction steps, and a relevant output excerpt. Do not
 attach the entire library folder.

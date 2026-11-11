@@ -10,6 +10,31 @@ COMMANDS = {**HF, **LF, **{row['command']: row for row in CATALOG['commands']}}
 _LONGEST = sorted(COMMANDS, key=len, reverse=True)
 
 
+def bundled_client_matches(executable, root=None):
+    """The shipped forms are usable with the exact tested bundled binary."""
+    from .paths import application_root
+    from .catalog_snapshot import executable_sha256
+    try:
+        folder = Path(root) if root is not None else application_root()
+        manifest = json.loads((folder/'release.json').read_text(encoding='utf-8'))
+        if not isinstance(manifest,dict):return False
+        expected = manifest.get('native_client_sha256')
+        return bool(isinstance(expected,str) and re.fullmatch('[0-9a-f]{64}',expected)
+                    and executable_sha256(executable) == expected)
+    except (OSError,ValueError,TypeError):
+        return False
+
+
+def confirmed_command(snapshot, executable, command, arguments=''):
+    """Confirm shipped forms against one selected binary's advertised syntax.
+
+    Kept explicit: normal native workflows do not depend on refreshing a catalog.
+    This boundary is for the user-selected expert tools and catalog UI only.
+    """
+    from .catalog_snapshot import require_confirmed_command
+    return require_confirmed_command(snapshot, executable, command, arguments, reference=COMMANDS)
+
+
 def split_command(line):
     if not isinstance(line, str) or not line.strip():
         raise ValueError('Choose a client command.')

@@ -157,6 +157,45 @@ def check_stop_completion(window):
     return {'name':'stop-completion-ownership-and-idle-recovery','passed':True,'physical_device_access':False}
 
 
+def check_desktop_workflows(window):
+    from .quick_actions import QuickAction, load_actions, save_actions
+    from .quick_actions_ui import QuickActionsDialog
+    from .catalog_snapshot import CatalogSnapshot, executable_sha256, save_catalog, load_catalog
+    from .catalog_ui import CatalogDialog
+    from .client_catalog import COMMANDS
+    from .diagnostics import DiagnosticSnapshot, prepare_diagnostics, export_diagnostics
+    from .editor_ui import open_hex_editor
+    cid=window.card_id; revision=window.loaded_revision; before=window.loaded_dump.data
+    record=window.library.get_card(cid)
+    window.library.update_card(cid,name=record['name'],uid=record['uid'],protocol=record['protocol'],
+                               notes=record['notes'],collection='Synthetic checks',tags=['fixture','HF'])
+    window.refresh_library();window.load_card(cid,revision)
+    assert window.loaded_revision==revision and window.loaded_dump.data==before
+    assert window.library.list_cards(collection='synthetic checks',tag='hf')
+    action=QuickAction('Synthetic status',('hw status',))
+    path=window.data_dir/'quick-actions.json';save_actions(path,[action])
+    assert load_actions(path)==[action]
+    actions=QuickActionsDialog(window.studio);assert actions.choices.count()==1;actions.close()
+    dummy=window.data_dir/'synthetic-client';dummy.write_bytes(b'Synthetic client fingerprint')
+    snapshot=CatalogSnapshot(str(dummy.resolve()),executable_sha256(dummy),'Synthetic version','2026-11-11T00:00:00Z',
+                             {'hw status':COMMANDS['hw status']})
+    cache=window.data_dir/'client-catalog.json';save_catalog(snapshot,cache)
+    assert load_catalog(cache,executable=dummy).client_sha256==snapshot.client_sha256
+    catalog=CatalogDialog(window,executable=dummy,snapshot=snapshot)
+    assert catalog.commands.count()==len(COMMANDS)
+    catalog.search.setText('hw status')
+    assert catalog.commands.count()==1 and catalog.open_button.isEnabled();catalog.close()
+    prepared=prepare_diagnostics(DiagnosticSnapshot(transport='usb',connection='disconnected',operation='idle'))
+    result=export_diagnostics(prepared,window.data_dir.parent/'diagnostic.zip',active_profile=window.data_dir)
+    assert result['files']==3 and result['bytes']<32768
+    editor=open_hex_editor(window)
+    assert editor.editor.document() is window.hex_edit.document()
+    assert editor.editor.isReadOnly()==window.hex_edit.isReadOnly();editor.close()
+    assert window.read_job is None and not window.runner.busy and not window.dirty
+    return {'name':'library-organization-quick-actions-catalog-diagnostics-expanded-hex',
+            'passed':True,'physical_device_access':False}
+
+
 def run_release_check(report_path: Path, *, language='en') -> int:
     report = {'version': APP_VERSION, 'frozen': is_frozen(), 'checks': [],
               'hardware_commands': 0, 'personal_data_opened': False, 'passed': False}
@@ -216,6 +255,7 @@ def run_release_check(report_path: Path, *, language='en') -> int:
         try:
             report['checks'].append(check_card_workspace(window))
             report['checks'].append(check_interface_modes(window))
+            report['checks'].append(check_desktop_workflows(window))
         finally:
             window.runner.run, window.runner.run_operation = original_run, original_typed
         report['checks'].append(check_stop_completion(window))

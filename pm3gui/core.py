@@ -16,6 +16,7 @@ import json
 from pathlib import Path
 import re
 import sqlite3
+import unicodedata
 from uuid import uuid4
 from .card_band import card_band
 
@@ -298,6 +299,15 @@ class Library:
                 block_size INTEGER NOT NULL, sha256 TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS revisions_card ON revisions(card_id, created_at DESC);
+            CREATE TABLE IF NOT EXISTS card_organization (
+                card_id TEXT PRIMARY KEY REFERENCES cards(id) ON DELETE CASCADE,
+                collection TEXT NOT NULL DEFAULT ''
+            );
+            CREATE TABLE IF NOT EXISTS card_tags (
+                card_id TEXT NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+                tag TEXT NOT NULL, tag_key TEXT NOT NULL,
+                PRIMARY KEY(card_id, tag_key)
+            );
             PRAGMA user_version=1;
         """)
 
@@ -310,8 +320,65 @@ class Library:
             raise ValueError(tr('Введите название карты.'))
         return name.strip()
 
-    def list_cards(self, query=""):
-        query = str(query).casefold().strip()
+    @staticmethod
+    def normalize_collection(value):
+        if not isinstance(value, str):
+            raise ValueError(tr('Коллекция должна быть текстом.'))
+        value = unicodedata.normalize('NFC', value).strip()
+        if len(value) > 96 or any(unicodedata.category(char).startswith('C') for char in value):
+            raise ValueError(tr('Название коллекции: до 96 символов, без управляющих знаков.'))
+        return value
+
+    @staticmethod
+    def normalize_tags(values):
+        if isinstance(values, str):
+            values = values.split(',')
+        if not isinstance(values, (list, tuple, set, frozenset)) or len(values) > 32:
+            raise ValueError(tr('Допускается до 32 меток, разделённых запятыми.'))
+        result = {}
+        for value in values:
+            if not isinstance(value, str):
+                raise ValueError(tr('Метки должны быть текстом.'))
+            value = unicodedata.normalize('NFC', value).strip()
+            if not value:
+                continue
+            if len(value) > 48 or ',' in value or any(unicodedata.category(char).startswith('C') for char in value):
+                raise ValueError(tr('Метка: до 48 символов, без запятых и управляющих знаков.'))
+            result.setdefault(value.casefold(), value)
+        return sorted(result.values(), key=str.casefold)
+
+    def _organization(self):
+        collections = {row['card_id']: row['collection'] for row in self.connection.execute(
+            'SELECT card_id,collection FROM card_organization')}
+        tags = {}
+        for row in self.connection.execute('SELECT card_id,tag FROM card_tags ORDER BY tag_key'):
+            tags.setdefault(row['card_id'], []).append(row['tag'])
+        return collections, tags
+
+    def _set_organization(self, card_id, collection, tags):
+        if collection is not None:
+            self.connection.execute('INSERT INTO card_organization(card_id,collection) VALUES(?,?) '
+                'ON CONFLICT(card_id) DO UPDATE SET collection=excluded.collection', (card_id, collection))
+        if tags is not None:
+            self.connection.execute('DELETE FROM card_tags WHERE card_id=?', (card_id,))
+            self.connection.executemany('INSERT INTO card_tags(card_id,tag,tag_key) VALUES(?,?,?)',
+                                       [(card_id, tag, tag.casefold()) for tag in tags])
+
+    def organization_options(self):
+        collections, tags = self._organization()
+        def unique(values):
+            choices = {}
+            for value in values:
+                if value:choices.setdefault(value.casefold(), value)
+            return sorted(choices.values(), key=str.casefold)
+        return {'collections': unique(collections.values()), 'tags': unique(
+            tag for values in tags.values() for tag in values)}
+
+    def list_cards(self, query="", *, collection=None, tag=None):
+        query = unicodedata.normalize('NFC', str(query)).casefold().strip()
+        collection = None if collection is None else self.normalize_collection(collection).casefold()
+        tag = None if tag is None else unicodedata.normalize('NFC', str(tag)).strip().casefold()
+        collections, tags = self._organization()
         rows = self.connection.execute("""
             SELECT c.*,
               (SELECT length(data) FROM revisions r WHERE r.card_id=c.id
@@ -329,7 +396,13 @@ class Library:
         result=[]
         for row in rows:
             card=dict(row);card['rf_band']=card_band(card,json.loads(card.pop('band_metadata') or '{}'))
-            if not query or query in ' '.join(str(card[field]) for field in ('name','uid','protocol','notes')).casefold():result.append(card)
+            card['collection'] = collections.get(card['id'], '')
+            card['tags'] = tags.get(card['id'], [])
+            if collection is not None and card['collection'].casefold() != collection:continue
+            if tag is not None and tag not in {value.casefold() for value in card['tags']}:continue
+            search = ' '.join(str(card[field]) for field in ('name','uid','protocol','notes','collection'))
+            search += ' ' + ' '.join(card['tags'])
+            if not query or query in search.casefold():result.append(card)
         return result
 
     def get_card(self, card_id):
@@ -342,7 +415,13 @@ class Library:
         """, (card_id,)).fetchone()
         if row is None:
             raise KeyError(card_id)
-        return dict(row)
+        card = dict(row)
+        organization = self.connection.execute('SELECT collection FROM card_organization WHERE card_id=?',
+                                               (card_id,)).fetchone()
+        card['collection'] = organization['collection'] if organization else ''
+        card['tags'] = [tag['tag'] for tag in self.connection.execute(
+            'SELECT tag FROM card_tags WHERE card_id=? ORDER BY tag_key', (card_id,))]
+        return card
 
     def _insert_revision(self, card_id, dump, note, timestamp):
         _checked(dump)
@@ -355,22 +434,27 @@ class Library:
               hashlib.sha256(dump.data).hexdigest()))
         return revision_id
 
-    def create_card(self, name, dump, *, uid="", protocol="", notes=""):
+    def create_card(self, name, dump, *, uid="", protocol="", notes="", collection="", tags=()):
         name = self._name(name)
         _checked(dump)
+        collection, tags = self.normalize_collection(collection), self.normalize_tags(tags)
         card_id = str(uuid4())
         timestamp = _now()
         with self.connection:
             self.connection.execute("INSERT INTO cards VALUES(?,?,?,?,?,?,?)",
                                     (card_id, name, str(uid), str(protocol), str(notes), timestamp, timestamp))
             self._insert_revision(card_id, dump, tr('Импорт'), timestamp)
+            self._set_organization(card_id, collection, tags)
         return card_id
 
-    def update_card(self, card_id, *, name, uid, protocol, notes):
+    def update_card(self, card_id, *, name, uid, protocol, notes, collection=None, tags=None):
         self.get_card(card_id)
+        collection = None if collection is None else self.normalize_collection(collection)
+        tags = None if tags is None else self.normalize_tags(tags)
         with self.connection:
             self.connection.execute("UPDATE cards SET name=?,uid=?,protocol=?,notes=?,updated_at=? WHERE id=?",
                                     (self._name(name), str(uid), str(protocol), str(notes), _now(), card_id))
+            self._set_organization(card_id, collection, tags)
 
     def save_revision(self, card_id, dump, note=""):
         self.get_card(card_id)

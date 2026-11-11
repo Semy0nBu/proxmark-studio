@@ -12,13 +12,13 @@ library, with RRG/Iceman tools available from the same interface.
 
 ## Download
 
-Current preview: **0.3.0-preview.7**. The matching Proxmark client and runtime
+Current preview: **0.3.0-preview.8**. The matching Proxmark client and runtime
 are included. You do not need to install Python or a separate client.
 
 | Package | Getting started |
 |---|---|
-| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.7/ProxmarkStudio-0.3.0-preview.7-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
-| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.7/ProxmarkStudio-0.3.0-preview.7-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
+| **[Windows installer](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.8/ProxmarkStudio-0.3.0-preview.8-Setup-x64.exe)** | Installs for the current user, with desktop and Start Menu shortcuts selected by default. |
+| [Portable ZIP](https://github.com/Semy0nBu/proxmark-studio/releases/download/v0.3.0-preview.8/ProxmarkStudio-0.3.0-preview.8-windows-x64.zip) | Extract the entire archive and open `ProxmarkStudio.exe`. |
 
 Installation works offline and does not require administrator rights. Connect
 your Proxmark over USB, select **USB → COM port → Connect**, and place a card on
@@ -36,13 +36,14 @@ the next steps.
 | Area | What you can do |
 |---|---|
 | **HF / LF reading** | Detect and identify cards, work in either band, or use automatic intake with duplicate suppression. |
-| **Card library** | Track revisions and memory coverage, inspect gaps, save complete or partial dumps, and resume Classic reads. |
+| **Card library** | Organize records into collections and tags; track revisions, coverage and gaps, and resume Classic reads. |
 | **MIFARE keys** | Track candidate and verified values, sources, and dates; import dictionaries and Flipper Zero files, or fetch supported data over USB. |
-| **Data editor** | Edit HEX, inspect encodings, and compare revisions by new data, changed values, and lost information. |
+| **Data editor** | Expand the working HEX editor, inspect encodings, and compare revisions by new data, changed values, and lost information. |
 | **Writing** | View source and target side by side, check compatibility and limitations, then approve a backed-up plan and verify the result by readback. Existing HF and LF writers share this view. |
 | **Interface modes** | Guided explains the steps; Compact puts optional detail behind disclosures. Write checks are the same in both modes. |
 | **Library backup** | Save the complete profile to one archive, optionally protect it with a password, and restore to a separate profile. |
 | **Laboratory** | Work with Classic / Magic, NDEF, emulation, traces, waveforms / FFT, SPIFFS, and HF/LF antenna measurements with baselines. |
+| **Expert workflow** | Save reviewed named actions, inspect a catalog bound to the selected client, and export a diagnostic package with private data excluded. |
 
 Partial dumps retain a **known-byte map**. Gaps can be filled with zeros while
 remaining marked as unread. The write wizard presents a plan before changing
@@ -57,6 +58,8 @@ view leads through readback and comparison to a new plan that needs approval.
 **Library…** creates one archive for cards,
 all versions, keys, settings and profile files, optional password protection, and
 restore to a separate profile. See [Library backup](docs/LIBRARY_BACKUPS.md).
+Collections, quick actions, the client catalog and expanded HEX are described
+in [Library and expert workflows](docs/DESKTOP_WORKFLOWS.md).
 
 ## Connections and hardware
 

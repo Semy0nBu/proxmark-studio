@@ -110,6 +110,7 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
         self.converter_origin=None
         self.converter_text_snapshot=None
         self.current_command = ""
+        self.diagnostic_error_codes = []
         self.operation_output = ""
         self.current_session: Path | None = None
         self.read_job: dict | None = None
@@ -415,8 +416,31 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
             self.refresh_library()
         return True
 
+    def _refresh_library_organization(self):
+        options = self.library.organization_options()
+        for combo, entries in ((self.library_collection_filter,
+                [(tr('Все коллекции'), None), (tr('Без коллекции'), '')] + [(value, value) for value in options['collections']]),
+                (self.library_tag_filter, [(tr('Все метки'), None)] + [(value, value) for value in options['tags']])):
+            value = combo.currentData()
+            blocked = combo.blockSignals(True)
+            combo.clear()
+            for title, data in entries:combo.addItem(title, data)
+            index = combo.findData(value)
+            combo.setCurrentIndex(max(0, index))
+            combo.blockSignals(blocked)
+        # Rebuilding the suggestions must not overwrite an unsaved collection.
+        value = self.card_collection.currentText()
+        blocked = self.card_collection.blockSignals(True)
+        self.card_collection.clear()
+        self.card_collection.addItem('')
+        self.card_collection.addItems(options['collections'])
+        self.card_collection.setEditText(value)
+        self.card_collection.blockSignals(blocked)
+
     def refresh_library(self, *_):
-        cards = self.library.list_cards(self.search.text())
+        self._refresh_library_organization()
+        cards = self.library.list_cards(self.search.text(),
+            collection=self.library_collection_filter.currentData(), tag=self.library_tag_filter.currentData())
         all_cards = self.library.list_cards()
         band=self.library_bands.tabData(self.library_bands.currentIndex())
         cards=[card for card in cards if band=='all' or card['rf_band']==band]
@@ -428,6 +452,10 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
             item = QListWidgetItem(tr('{0}\n{1} · {2} Б\nUID: {3}', f"{card['name']}", f"{card['protocol'] or tr('Тип не указан')}", f"{card['size']}", f"{card['uid'] or '—'}"))
             if card.get('partial_version'):
                 item.setText(tr('НЕПОЛНЫЙ ДАМП · ')+item.text())
+            organization = []
+            if card['collection']:organization.append(card['collection'])
+            if card['tags']:organization.append(', '.join(card['tags']))
+            if organization:item.setText(item.text() + '\n' + ' · '.join(organization))
             item.setToolTip(item.text())
             item.setData(Qt.ItemDataRole.UserRole, card["id"])
             self.cards.addItem(item)
@@ -475,7 +503,7 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
         self.load_card(card_id)
         self.refresh_library()
 
-    def load_card(self, card_id: str):
+    def load_card(self, card_id: str, revision_id=None):
         self.loading = True
         try:
             card = self.library.get_card(card_id)
@@ -484,6 +512,8 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
             self.uid.setText(card["uid"])
             self.protocol.setText(card["protocol"])
             self.notes.setText(card["notes"])
+            self.card_collection.setEditText(card['collection'])
+            self.card_tags.setText(', '.join(card['tags']))
             self.card_summary.setText(card["name"])
             self.card_summary.setToolTip(card["name"])
             self.revisions.blockSignals(True)
@@ -493,7 +523,7 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
                 title = tr('{0} · {1} Б · {2}', f'{time}', f"{rev['size']}", display_revision_note(rev['note']))
                 self.revisions.addItem(title, rev["id"])
                 self.revisions.setItemData(self.revisions.count()-1, title, Qt.ItemDataRole.ToolTipRole)
-            self.revisions.setCurrentIndex(0)
+            self.revisions.setCurrentIndex(max(0, self.revisions.findData(revision_id)) if revision_id else 0)
             self.revisions.blockSignals(False)
             self._load_revision(self.revisions.currentData())
             self.detail_stack.setCurrentIndex(1)
@@ -683,11 +713,15 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
             name = self.card_name.text().strip()
             if not name:
                 raise ValueError(tr('Укажите название карты.'))
+            collection = self.library.normalize_collection(self.card_collection.currentText())
+            tags = self.library.normalize_tags(self.card_tags.text())
             dump = self._working_dump()
-            if dump.data != self.loaded_dump.data:
+            changed = dump.data != self.loaded_dump.data
+            selected_revision = self.loaded_revision
+            if changed:
                 self.library.save_revision(self.card_id, dump, tr('Изменение в редакторе'))
-            self.library.update_card(self.card_id, name=name, uid=self.uid.text().strip(), protocol=self.protocol.text().strip(), notes=self.notes.text())
-            self.load_card(self.card_id)
+            self.library.update_card(self.card_id, name=name, uid=self.uid.text().strip(), protocol=self.protocol.text().strip(), notes=self.notes.text(), collection=collection, tags=tags)
+            self.load_card(self.card_id, None if changed else selected_revision)
             self.refresh_library()
             self.statusBar().showMessage(tr('Изменения сохранены. Предыдущие версии доступны в истории.'), 6000)
             return True
@@ -973,6 +1007,11 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
         if hasattr(self,'reconnector') and not _reconnect:self.reconnector.cancel()
         if self.firmware_busy:
             raise ValueError(tr('Дождитесь завершения прошивки.'))
+        snapshot=getattr(self,'client_catalog_snapshot',None)
+        if snapshot is not None and isinstance(operation,Operation) and operation.kind in {'expert_tool','hf_tool','lf_tool'}:
+            from .client_catalog import confirmed_command,split_command
+            command,args=split_command(operation.render())
+            confirmed_command(snapshot,self.client_path.text(),command,args)
         self.operation_output = ''
         self.current_command = operation if isinstance(operation, str) else operation.kind
         self.current_step_bulk = (operation in {'hf search','lf search'} if isinstance(operation, str)
@@ -1536,6 +1575,8 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
         if reconnect_probe:self.reconnector.completed(output,code)
 
     def _finished(self, code: int, status: str):
+        if type(code) is int and code:
+            self.diagnostic_error_codes=(getattr(self,'diagnostic_error_codes',[])+[code])[-30:]
         output = self.operation_output
         try:
             if getattr(self, 'current_step_profile', self._device_profile()) == self._device_profile():
@@ -1644,6 +1685,24 @@ class MainWindow(InterfaceModeMixin, LibraryBackupMixin, PresentationMixin, Lang
             self._backup_worker.requestInterruption()
             event.ignore()
             return
+        # Help exports and report preparation have their own cancellable host
+        # workers. Finish them asynchronously before destroying their parent.
+        from .catalog_ui import CatalogDialog
+        from .diagnostics_ui import DiagnosticBundleDialog
+        pending=[]
+        for cls in (CatalogDialog,DiagnosticBundleDialog):
+            for dialog in self.findChildren(cls):
+                worker=getattr(dialog,'worker',None)
+                if worker is not None:
+                    pending.append((dialog,worker))
+        if pending:
+            for dialog,worker in pending:
+                if not getattr(worker,'_owner_close_connected',False):
+                    worker._owner_close_connected=True
+                    worker.finished.connect(lambda:QTimer.singleShot(0,self.close))
+                worker.requestInterruption()
+                dialog.close()
+            event.ignore();return
         if self.firmware_busy:
             QMessageBox.information(self, tr('Идёт прошивка'), tr('Дождитесь завершения записи и проверки прошивки.'))
             event.ignore()

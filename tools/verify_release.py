@@ -22,7 +22,7 @@ PUBLIC_ROOT = {'README.md', 'README.en.md', 'README.ru.md', 'LICENSE', 'THIRD_PA
                'requirements.txt', 'requirements-build.txt', 'run_gui.py',
                'start.ps1', 'launch-gui.vbs', 'auto-write.ps1', '.gitignore', 'SOURCE_SNAPSHOT.json'}
 PUBLIC_DOCS = {'USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'BUILDING.md', 'RELEASING.md',
-               'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md', 'LIBRARY_BACKUPS.md', 'CARD_TRANSFER.md'}
+               'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md', 'LIBRARY_BACKUPS.md', 'CARD_TRANSFER.md', 'DESKTOP_WORKFLOWS.md'}
 PUBLIC_TOOLS = {'build_release.py', 'release_native.py', 'release_firmware.py',
                 'release_gui_licenses.py', 'release_gui_sources.json', 'release_sources.py',
                 'verify_release.py', 'audit_english_catalog.py', 'release_windows_manifest.py',
@@ -142,7 +142,8 @@ def _source_export(path):
             allowed=(len(parts)==1 and parts[0] in PUBLIC_ROOT or
                      len(parts)>1 and parts[0] in {'pm3gui','tests'} and relative.suffix in {'.py','.json','.svg'} or
                      len(parts)==2 and parts[0]=='docs' and parts[1] in PUBLIC_DOCS or
-                     len(parts)==3 and parts[:2]==('docs','assets') and parts[2] in {'banner.svg','interface-en.png','interface-ru.png'} or
+                     len(parts)==3 and parts[:2]==('docs','assets') and parts[2] in {'banner.svg','interface-en.png','interface-ru.png',
+                         'library-en.png','quick-actions-en.png','catalog-en.png','diagnostics-en.png'} or
                      len(parts)>2 and parts[:2]==('docs','licenses') or
                      len(parts)==2 and parts[0]=='tools' and parts[1] in PUBLIC_TOOLS or
                      len(parts)==2 and parts[0]=='installer' and parts[1] in {'proxmark-studio.iss','toolchain.json'} or

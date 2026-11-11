@@ -15,6 +15,8 @@ from .connection_checks import (version_probe_status, record_cleanup_version_che
 
 class LabControllerMixin:
     def _lab_available(self):
+        if self.backup_busy:
+            raise ValueError(tr('Дождитесь завершения резервного копирования или восстановления.'))
         if self.runner.busy or self.read_job is not None or self.antenna_job is not None or self.firmware_busy:
             raise ValueError(tr('Завершите текущую операцию устройства.'))
 

@@ -135,6 +135,10 @@ class SignalPlot(QWidget):
 class StudioPage(QWidget):
     def __init__(self,owner):
         super().__init__();self.owner=owner;self.buttons=[];self.last_output='';self.last_session=None
+        if not hasattr(owner,'client_catalog_snapshot'):
+            from .catalog_snapshot import load_catalog,CatalogError
+            try:owner.client_catalog_snapshot=load_catalog(owner.data_dir/'client-catalog.json')
+            except CatalogError:owner.client_catalog_snapshot=None
         self.dump=None;self.record={};self.trace_frames=[];self.samples=[];self.sample_rate=None;self.ndef=b''
         layout=QVBoxLayout(self);layout.setContentsMargins(0,0,0,0)
         toolbar=row(layout)
@@ -868,6 +872,7 @@ class StudioPage(QWidget):
 
     def diagnostics_page(self):
         w,layout=panel();toolbar=row(layout)
+        self.button(toolbar,'Отчёт для диагностики…','Diagnostic report…',self.open_diagnostics,False)
         self.button(toolbar,'Статус платы','Device status',lambda:self.run(one_command('hw status'),say('Статус платы','Device status')))
         self.button(toolbar,'Внешнее поле HF','External HF field',lambda:self.run(one_command('hw detectreader','-H',120000),say('Внешнее HF-поле','External HF field'),True))
         self.button(toolbar,'Внешнее поле LF','External LF field',lambda:self.run(one_command('hw detectreader','-L',120000),say('Внешнее LF-поле','External LF field'),True))
@@ -881,6 +886,11 @@ class StudioPage(QWidget):
         self.button(layout,'Запустить установленный автономный режим…','Start installed standalone mode…',self.start_standalone)
         layout.addWidget(Guidance(self.owner,label('Диагностика антенн не измеряет заряд Blue Shark и не гарантирует устранение Auth2.','Antenna diagnostics do not measure Blue Shark battery charge or guarantee an Auth2 fix.')))
         return w
+
+    def open_diagnostics(self):
+        from .diagnostics_ui import DiagnosticBundleDialog
+        self.diagnostics_dialog=DiagnosticBundleDialog(self.owner)
+        self.diagnostics_dialog.show()
 
     def show_decay(self,result):
         # Raw numerical table is retained in the session in addition to the plot.
@@ -916,6 +926,8 @@ class StudioPage(QWidget):
         self.console_timeout=QSpinBox();self.console_timeout.setRange(5,1800);self.console_timeout.setValue(120);self.console_timeout.setSuffix(say(' с',' s'));layout.addWidget(self.console_timeout)
         self.command_help=QPlainTextEdit();self.command_help.setReadOnly(True);self.command_help.setMaximumHeight(140);layout.addWidget(self.command_help)
         self.button(layout,'Выполнить с просмотром…','Review and run…',self.run_console)
+        self.button(layout,'Избранные действия…','Quick actions…',self.open_quick_actions,False)
+        self.button(layout,'Каталог выбранного клиента…','Selected client catalog…',self.open_client_catalog,False)
         self.history=QComboBox();self.history.setMinimumContentsLength(20);layout.addWidget(self.history)
         self.history.activated.connect(self.restore_history)
         self.button(layout,'Очистить историю','Clear history',self.clear_history,False)
@@ -950,6 +962,7 @@ class StudioPage(QWidget):
     def run_form(self,command,form,rf=False):self.run_reviewed(command,form.arguments(),rf=rf)
 
     def run_reviewed(self,command,args='',rf=None,on_done=None,offline=False):
+        self.confirm_expert(command,args)
         request=Request(command,args);line=request.line
         if self.review(say('Проверка команды','Review command'),line):
             self.remember_command(line);self.run(one_command(command,args,self.console_timeout.value()*1000 if hasattr(self,'console_timeout') else 120000),command,
@@ -962,6 +975,56 @@ class StudioPage(QWidget):
             if not command or self.command_form is None:raise ValueError('Choose a command.')
             args=self.command_form.arguments()
         self.run_reviewed(command,args,offline=self.console_offline.isChecked())
+
+    def open_quick_actions(self):
+        from .quick_actions import QuickAction
+        from .quick_actions_ui import QuickActionsDialog
+        previous=getattr(self,'quick_actions_dialog',None)
+        if previous is not None and previous.isVisible():previous.raise_();return
+        if previous is not None:previous.deleteLater()
+        try:
+            if self.console_manual.isChecked():command,args=split_command(self.console_line.text())
+            else:
+                command=self.command_choice.currentData();args=self.command_form.arguments() if self.command_form else ''
+            initial=QuickAction('',(command+(' '+args if args else ''),),self.console_timeout.value(),self.console_offline.isChecked())
+        except (ValueError,TypeError):initial=None
+        self.quick_actions_dialog=QuickActionsDialog(self,initial)
+        self.quick_actions_dialog.show()
+
+    def run_quick_action(self, action):
+        from .quick_actions import action_flow
+        action=action.validated()
+        self.owner._lab_available()
+        for line in action.lines:self.confirm_expert(*split_command(line))
+        details='\n'.join(f'{i+1}. {line}' for i,line in enumerate(action.lines))
+        details+='\n\n'+say('Без устройства' if action.offline else 'Подключённое устройство',
+                            'Without a device' if action.offline else 'Connected device')
+        if not self.review(action.name,details):return False
+        self.run(action_flow(action),action.name,rf=not action.offline and any(uses_rf(split_command(line)[0]) for line in action.lines),offline=action.offline)
+        return True
+
+    def confirm_expert(self,command,args=''):
+        snapshot=getattr(self.owner,'client_catalog_snapshot',None)
+        if snapshot is not None:
+            from .client_catalog import confirmed_command
+            confirmed_command(snapshot,self.owner.client_path.text(),command,args)
+        elif Path(self.owner.client_path.text()).is_file():
+            from .client_catalog import bundled_client_matches
+            from .catalog_snapshot import CatalogError
+            if not bundled_client_matches(self.owner.client_path.text()):
+                raise CatalogError('Update the command catalog for the selected client before using these tools.')
+
+    def open_client_catalog(self):
+        from .catalog_ui import CatalogDialog
+        previous=getattr(self,'catalog_dialog',None)
+        if previous is not None and previous.isVisible():previous.raise_();return
+        self.catalog_dialog=CatalogDialog(self.owner,snapshot=self.owner.client_catalog_snapshot,on_open=self.choose_command)
+        self.catalog_dialog.snapshot_updated.connect(self.catalog_updated)
+        self.catalog_dialog.show()
+
+    def catalog_updated(self,snapshot):
+        self.owner.client_catalog_snapshot=snapshot
+        self.status.setText(say('Каталог выбранного клиента обновлён.','Selected client catalog updated.'))
 
     def load_history(self):
         path=self.owner.data_dir/'studio-history.json'

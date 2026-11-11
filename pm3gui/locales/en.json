@@ -1407,5 +1407,22 @@
   "План готов": "Plan ready",
   "Запись не завершена": "Write incomplete",
   "Запись…": "Writing…",
-  "Проверка чтением…": "Verifying by readback…"
+  "Проверка чтением…": "Verifying by readback…",
+  "Поиск карт · название, UID, коллекция, метки  (Ctrl+F)": "Search cards · name, UID, collection, tags  (Ctrl+F)",
+  "Фильтр по коллекции": "Filter by collection",
+  "Все коллекции": "All collections",
+  "Без коллекции": "Unsorted",
+  "Фильтр по метке": "Filter by tag",
+  "Все метки": "All tags",
+  "Выберите или создайте коллекцию": "Choose or create a collection",
+  "Например: тестовая, офис": "For example: test, office",
+  "До 32 меток, разделённых запятыми. Метки относятся к записи карты.": "Up to 32 comma-separated tags. Tags belong to this library entry.",
+  "Коллекция": "Collection",
+  "Метки": "Tags",
+  "Коллекция должна быть текстом.": "Collection must be text.",
+  "Название коллекции: до 96 символов, без управляющих знаков.": "Collection names accept up to 96 characters without control characters.",
+  "Допускается до 32 меток, разделённых запятыми.": "Use up to 32 comma-separated tags.",
+  "Метки должны быть текстом.": "Tags must be text.",
+  "Метка: до 48 символов, без запятых и управляющих знаков.": "Each tag accepts up to 48 characters without commas or control characters.",
+  "Развернуть HEX…": "Expand HEX…"
 }

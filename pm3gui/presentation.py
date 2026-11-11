@@ -177,6 +177,8 @@ class PresentationMixin:
             try:parse_hex(value)
             except ValueError:
                 self.hex_edit.setExtraSelections([])
+                from .editor_ui import sync_expanded_hex
+                sync_expanded_hex(self)
                 return
             known=set(partial['known_bytes'])
             start,end=None,None
@@ -198,6 +200,8 @@ class PresentationMixin:
                 selections.append(selection)
         self.hex_edit.setExtraSelections(selections)
         self.hex_edit.setToolTip(tr('Подсвеченные байты не были прочитаны с карты. При сохранении дампа пропуски заполнены нулями; ручное редактирование не делает их подтверждёнными чтением.') if partial else '')
+        from .editor_ui import sync_expanded_hex
+        sync_expanded_hex(self)
 
     def _build(self):
         host = QWidget()
@@ -507,7 +511,7 @@ class PresentationMixin:
         layout = column(page)
         toolbar = QHBoxLayout()
         self.search = QLineEdit()
-        self.search.setPlaceholderText(tr('Поиск карт · название, UID, тип, заметки  (Ctrl+F)'))
+        self.search.setPlaceholderText(tr('Поиск карт · название, UID, коллекция, метки  (Ctrl+F)'))
         self.search.textChanged.connect(self.refresh_library)
         toolbar.addWidget(self.search, 1)
         toolbar.addWidget(command(tr('Импорт…'), self.import_card, True))
@@ -518,6 +522,20 @@ class PresentationMixin:
             index=self.library_bands.addTab(title);self.library_bands.setTabData(index,band)
         self.library_bands.currentChanged.connect(self.refresh_library)
         layout.addWidget(self.library_bands)
+        filters = QHBoxLayout()
+        self.library_collection_filter = QComboBox()
+        self.library_collection_filter.setToolTip(tr('Фильтр по коллекции'))
+        self.library_collection_filter.addItem(tr('Все коллекции'), None)
+        self.library_collection_filter.addItem(tr('Без коллекции'), '')
+        self.library_tag_filter = QComboBox()
+        self.library_tag_filter.setToolTip(tr('Фильтр по метке'))
+        self.library_tag_filter.addItem(tr('Все метки'), None)
+        for widget in (self.library_collection_filter, self.library_tag_filter):
+            widget.setMinimumContentsLength(12)
+            widget.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+            filters.addWidget(widget, 1)
+            widget.currentIndexChanged.connect(self.refresh_library)
+        layout.addLayout(filters)
         self.library_count = text('')
         layout.addWidget(self.library_count)
         self.library_splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -551,6 +569,19 @@ class PresentationMixin:
         for title, widget in [(tr('Название'), self.card_name), ('UID / ID', self.uid), (tr('Тип'), self.protocol), (tr('Заметки'), self.notes)]:
             form.addRow(title, widget)
             widget.textChanged.connect(self._mark_dirty)
+        self.card_collection = QComboBox()
+        self.card_collection.setEditable(True)
+        self.card_collection.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.card_collection.lineEdit().setMaxLength(96)
+        self.card_collection.lineEdit().setPlaceholderText(tr('Выберите или создайте коллекцию'))
+        self.card_collection.currentTextChanged.connect(self._mark_dirty)
+        self.card_tags = QLineEdit()
+        self.card_tags.setMaxLength(32 * 50)
+        self.card_tags.setPlaceholderText(tr('Например: тестовая, офис'))
+        self.card_tags.setToolTip(tr('До 32 меток, разделённых запятыми. Метки относятся к записи карты.'))
+        self.card_tags.textChanged.connect(self._mark_dirty)
+        form.addRow(tr('Коллекция'), self.card_collection)
+        form.addRow(tr('Метки'), self.card_tags)
         self.card_fields.body.addLayout(form)
         details.addWidget(self.card_fields)
         row = QHBoxLayout()
@@ -605,6 +636,8 @@ class PresentationMixin:
             pane.setMinimumWidth(130)
             self.card_editors.addWidget(pane)
         self.card_editors.setSizes([420, 320])
+        from .editor_ui import open_hex_editor
+        details.addWidget(command(tr('Развернуть HEX…'), lambda:open_hex_editor(self)))
         details.addWidget(self.card_editors, 1)
         self.decode_info = text('')
         details.addWidget(self.decode_info)

@@ -1,5 +1,27 @@
 # Changelog / История изменений
 
+## 0.3.0-preview.8 — 2026-11-11
+
+- Collections and tags for library records, with combined search and HF/LF
+  filters. Grouping changes preserve the selected revision and dump bytes;
+  existing libraries and password backups retain cards, versions and keys.
+- Named quick actions in the expert console: review up to 20 sequential commands,
+  stop on error or cancellation, preserve SPIFFS completion fences. Concurrent
+  editors cannot overwrite newer saves, and a backup blocks device startup.
+- A selected-client catalog collected from offline help, bound to the exact EXE
+  SHA256. Inspect added, removed and changed syntax; stale or incompatible expert
+  forms are blocked. New command syntax remains help-only until supported.
+- A reviewed diagnostic ZIP with allowlisted versions, states, hashes and numeric
+  completion codes. No logs, commands, card IDs, dumps, keys or personal paths.
+- Expanded HEX shares the working document, read-only safeguards and unknown-byte
+  highlighting. Host-side help/report workers cancel cleanly when the app closes.
+- English/Russian guides include troubleshooting, workflow screenshots and dated
+  hardware coverage. These desktop changes do not replace reader firmware.
+
+По-русски: коллекции и метки, избранные сценарии, каталог конкретного клиента,
+обезличенный диагностический архив и большое окно HEX. Дампы и история версий
+сохраняются; ошибочные и отменённые команды автоматически не повторяются.
+
 ## 0.3.0-preview.7 — 2026-11-11
 
 - Updates preserve custom library/profile arguments in existing Desktop and

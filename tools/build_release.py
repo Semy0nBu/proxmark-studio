@@ -21,13 +21,14 @@ PUBLIC_ROOT_FILES = ('README.md', 'README.en.md', 'README.ru.md', 'LICENSE', 'TH
                      'requirements.txt', 'requirements-build.txt', 'run_gui.py',
                      'start.ps1', 'launch-gui.vbs', 'auto-write.ps1', '.gitignore')
 PUBLIC_DOCS = ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'BUILDING.md', 'RELEASING.md',
-               'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md', 'LIBRARY_BACKUPS.md', 'CARD_TRANSFER.md')
+               'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md', 'LIBRARY_BACKUPS.md', 'CARD_TRANSFER.md', 'DESKTOP_WORKFLOWS.md')
 PUBLIC_TOOLS = ('build_release.py', 'release_native.py', 'release_firmware.py',
                 'release_gui_licenses.py', 'release_gui_sources.json', 'release_sources.py',
                 'release_windows_manifest.py', 'verify_release.py',
                 'audit_english_catalog.py', 'build_installer.py', 'verify_installer_install.py')
 PUBLIC_INSTALLER = ('proxmark-studio.iss', 'toolchain.json')
-PUBLIC_ASSETS = ('banner.svg', 'interface-en.png', 'interface-ru.png')
+PUBLIC_ASSETS = ('banner.svg', 'interface-en.png', 'interface-ru.png',
+                 'library-en.png', 'quick-actions-en.png', 'catalog-en.png', 'diagnostics-en.png')
 PUBLIC_TEST_EXCLUDES = {'test_connection_lab.py', 'test_live_functional_harness.py'}
 FORBIDDEN_NAMES = {'library.sqlite3', 'settings.json', 'startup-error.log',
                    'device-flash-before.bin', 'device-flash-after.bin', 'client-log.txt'}
@@ -190,7 +191,7 @@ def stage_public_documents(app):
     if (ROOT/'README.ru.md').is_file():
         shutil.copy2(ROOT/'README.ru.md', app/'README.ru.md')
     (app/'docs').mkdir(exist_ok=True)
-    for name in ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md', 'LIBRARY_BACKUPS.md', 'CARD_TRANSFER.md'):
+    for name in ('USER_GUIDE_RU.md', 'USER_GUIDE_EN.md', 'PRIVACY_RU.md', 'PRIVACY_EN.md', 'CARD_WORKSPACE.md', 'STABILITY_AND_MOTION.md', 'LIBRARY_BACKUPS.md', 'CARD_TRANSFER.md', 'DESKTOP_WORKFLOWS.md'):
         shutil.copy2(ROOT/'docs'/name, app/'docs'/name)
     for name in PUBLIC_ASSETS:
         source = ROOT/'docs/assets'/name

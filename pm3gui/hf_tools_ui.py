@@ -210,6 +210,7 @@ class HFToolsDialog(QDialog):
             if self.owner.runner.busy or self.owner.read_job is not None or self.owner.antenna_job is not None or self.owner.firmware_busy:
                 raise ValueError(tr('Завершите текущую операцию.'))
             op=self.operation();command=op.lf_command if self.band=='lf' else op.hf_command;name=action_title(command)
+            self.owner.studio.confirm_expert(command,op.lf_args if self.band=='lf' else op.hf_args)
             values=self.parameter_form.values() if not self.manual.isChecked() else None
             if values is None:review=op.render()
             else:
