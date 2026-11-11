@@ -124,6 +124,14 @@ class TransferWizardTests(unittest.TestCase):
         self.assertEqual(card.writes,[1]);self.assertEqual(d.transfer.status,'verified')
         self.assertEqual(d.dump.data[16],41);self.assertEqual(d.transfer.stage,4)
 
+    def test_frozen_mode_probe_uses_real_controls_without_reader_access(self):
+        from pm3gui.release_check import check_interface_modes
+        self.source().close()
+        result=check_interface_modes(self.w)
+        self.assertTrue(result['passed']);self.assertFalse(result['physical_device_access'])
+        self.assertEqual(self.w.interface_mode,'guided');self.assertIsNone(self.w.read_job)
+        self.run.assert_not_called();self.ops.assert_not_called()
+
     def test_mode_switch_at_review_preserves_plan_and_requires_manual_approval(self):
         d,card=self.prepare();plan=d.plan;token=d.source_token()
         self.w.interface_mode_selector.setCurrentIndex(self.w.interface_mode_selector.findData('compact'))

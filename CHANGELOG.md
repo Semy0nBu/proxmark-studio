@@ -1,6 +1,6 @@
 # Changelog / История изменений
 
-## Unreleased
+## 0.3.0-preview.7 — 2026-11-11 (local build)
 
 - Guided and Compact interface modes, switched live from the sidebar and saved
   per profile. Optional explanations collapse in Compact; blockers, errors and

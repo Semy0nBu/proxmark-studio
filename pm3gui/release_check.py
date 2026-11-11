@@ -83,6 +83,44 @@ def check_card_workspace(window):
             'physical_device_access': False}
 
 
+def check_interface_modes(window):
+    """Exercise the bundled controls and writers without any reader access."""
+    from .interface_mode import Guidance
+    window.open_write_dialog()
+    dialog=window.write_dialog
+    source=bytes(dialog.dump.data)
+    options=dialog.options()
+    assert window.interface_mode=='guided' and not dialog.transfer.compact
+    assert not dialog.write_button.isEnabled()
+    window.interface_mode_selector.setCurrentIndex(window.interface_mode_selector.findData('compact'))
+    assert window.interface_mode=='compact' and dialog.transfer.compact
+    assert not dialog.transfer.details.header.isChecked()
+    assert bytes(dialog.dump.data)==source and dialog.options()==options
+    assert not dialog.write_button.isEnabled() and window.read_job is None
+    assert json.loads(window.settings_path.read_text(encoding='utf8'))['interface_mode']=='compact'
+    assert window._load_settings()['interface_mode']=='compact'
+    hints=window.findChildren(Guidance)
+    assert hints and all(not hint.header.isChecked() for hint in hints)
+    dialog.close()
+    family=window.open_family_wizard()
+    assert family.transfer.compact
+    for index in range(family.operation.count()):
+        family.operation.setCurrentIndex(index)
+        assert family.transfer.compact and not family.commit.isEnabled()
+    family.close()
+    window.open_lf_write()
+    assert window.lf_write_dialog.transfer.compact
+    assert not window.lf_write_dialog.write.isEnabled()
+    window.lf_write_dialog.close()
+    window.interface_mode_selector.setCurrentIndex(window.interface_mode_selector.findData('guided'))
+    assert not dialog.transfer.compact and dialog.transfer.details.header.isChecked()
+    assert all(hint.header.isChecked() for hint in hints)
+    assert json.loads(window.settings_path.read_text(encoding='utf8'))['interface_mode']=='guided'
+    return {'name':'interface-modes-and-source-target-wizards','passed':True,
+            'modes':['guided','compact'],'preference_persisted':True,
+            'source_and_parameters_preserved':True,'physical_device_access':False}
+
+
 def check_stop_completion(window):
     """Exercise the real completion signal with a runner that cannot access I/O."""
     runner=window.runner
@@ -177,6 +215,7 @@ def run_release_check(report_path: Path, *, language='en') -> int:
         window.runner.run = window.runner.run_operation = prohibit_device_io
         try:
             report['checks'].append(check_card_workspace(window))
+            report['checks'].append(check_interface_modes(window))
         finally:
             window.runner.run, window.runner.run_operation = original_run, original_typed
         report['checks'].append(check_stop_completion(window))
