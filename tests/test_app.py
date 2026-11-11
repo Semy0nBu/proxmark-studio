@@ -1095,7 +1095,11 @@ class AppTests(unittest.TestCase):
         self.assertFalse(saved.metadata['read_validation']['complete'])
         self.assertIn('НЕПОЛНЫЙ',self.window.dump_info.text())
         self.assertIn('НЕПОЛНЫЙ',self.window.cards.item(0).text())
-        spans=[(e.cursor.selectionStart(),e.cursor.selectionEnd()) for e in self.window.hex_edit.extraSelections()]
+        # Byte-role foreground colours are independent of unread-byte markers.
+        # Only the amber background claims that bytes are unknown.
+        spans=[(e.cursor.selectionStart(),e.cursor.selectionEnd())
+               for e in self.window.hex_edit.extraSelections()
+               if e.format.background().color().name()=='#4a3827']
         self.assertTrue(any(a<=48<b for a,b in spans))
         self.assertFalse(any(a<=12<b for a,b in spans))  # A real zero in read block0.
         self.warning.assert_not_called()

@@ -250,7 +250,9 @@ class WorkbenchShellTests(unittest.TestCase):
         before = w.library.list_revisions(cid)
         self.assertEqual(w.card_tabs.currentIndex(), 2)
         for sector in (15, 0, 2):w.workbench_inspector.select_sector(sector)
-        QTest.qWait(30)
+        deadline = time.monotonic()+3
+        while w.hex_edit.offset_status == 'pending' and time.monotonic() < deadline:QTest.qWait(10)
+        self.assertEqual(w.hex_edit.offset_status, 'valid')
         self.assertEqual(w.loaded_revision, old)
         self.assertEqual(w.loaded_dump.data, old_bytes)
         self.assertEqual(parse_hex(w.hex_edit.toPlainText()), old_bytes)
